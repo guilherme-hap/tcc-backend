@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import evaluationRoutes from './routes/evaluation.routes.js';
+import { setupSwagger } from './config/swagger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -7,6 +8,8 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 app.use('/api/evaluate', evaluationRoutes);
+
+setupSwagger(app);
 
 app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'OK', message: 'TCC Backend is running' });

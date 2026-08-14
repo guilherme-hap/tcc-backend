@@ -20,6 +20,8 @@
     "axios": "^1.19.0",
     "express": "^5.2.1",
     "mysql2": "^3.23.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "typeorm": "^1.1.0"
   },
   "overrides": {
@@ -28,6 +30,8 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.6",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
