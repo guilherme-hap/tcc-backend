@@ -1,34 +1,55 @@
-import core from '@stoplight/spectral-core';
-import parsers from '@stoplight/spectral-parsers';
-import rulesets from '@stoplight/spectral-rulesets';
+import pkgSpectralCore from '@stoplight/spectral-core';
+import pkgSpectralParsers from '@stoplight/spectral-parsers';
+import { oas } from '@stoplight/spectral-rulesets';
 import axios from 'axios';
+import { AppDataSource } from '../config/data-source.js';
+import { Evaluation } from '../entities/Evaluation.js';
+import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
 
-// Extrai as classes de dentro do objeto importado
-const { Spectral, Document } = core;
+const { Spectral, Document } = pkgSpectralCore;
+const { Json } = pkgSpectralParsers;
 
 export class SpectralService {
-  async evaluateContract(swaggerUrl: string) {
-    try {
-      const response = await axios.get(swaggerUrl, { 
-        responseType: 'text' 
-      });
+    public async processEvaluation(evaluationId: string, swaggerUrl: string, userRulesConfig: Record<string, boolean> = {}) {
+        const evaluationRepository = AppDataSource.getRepository(Evaluation);
 
-      const document = new Document(
-        response.data, 
-        parsers.Yaml, 
-        swaggerUrl
-      );
+        try {
+            await evaluationRepository.update(evaluationId, { status: 'IN_PROGRESS' });
 
-      const spectral = new Spectral();
+            const response = await axios.get(swaggerUrl);
+            const data = response.data;
+            const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
 
-      spectral.setRuleset(rulesets.oas as any);
+            const customRules: Record<string, any> = {};
+            for (const [key, value] of Object.entries(userRulesConfig)) {
+                customRules[key] = value ? true : 'off';
+            }
 
-      const results = await spectral.run(document);
-      
-      return results;
+            const spectral = new Spectral();
+            spectral.setRuleset({
+                extends: [
+                    [oas as any, 'recommended'],
+                ],
+                rules: customRules
+            });
 
-    } catch (error: any) {
-      throw new Error(`Falha ao avaliar o contrato da API: ${error.message}`);
+            const document = new Document(stringifiedData, Json as any, swaggerUrl);
+
+            const rawResults = await spectral.run(document);
+
+            const formattedResults = SpectralResponseDto.formatSpectralResults(rawResults);
+
+            await evaluationRepository.update(evaluationId, {
+                spectralResult: formattedResults,
+                status: 'COMPLETED'
+            });
+
+        } catch (error: any) {
+            console.error(`Error processing evaluation ${evaluationId}:`, error);
+            await evaluationRepository.update(evaluationId, {
+                status: 'ERROR',
+                spectralResult: { error: error.message || 'Unknown error' }
+            });
+        }
     }
-  }
-}
+}

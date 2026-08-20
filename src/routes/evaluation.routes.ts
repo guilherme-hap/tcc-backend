@@ -28,28 +28,28 @@ const evaluationController = new EvaluationController();
  *                 type: string
  *                 description: The public URL where the target API contract is hosted.
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
+ *               baseUrl:
+ *                 type: string
+ *                 description: Optional base URL of the target API for live tests/evaluations.
+ *                 example: "https://petstore.swagger.io/v2"
+ *               rulesConfig:
+ *                 type: object
+ *                 description: Optional custom rules configuration.
+ *                 example: { "operation-tags": true }
  *     responses:
- *       200:
- *         description: Evaluation completed successfully. Returns the array of Spectral validations.
+ *       202:
+ *         description: Evaluation queued successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   code:
- *                     type: string
- *                     description: The violated rule code.
- *                     example: "operation-tags"
- *                   message:
- *                     type: string
- *                     description: Human-readable error description.
- *                     example: "Operation tags must be defined."
- *                   severity:
- *                     type: integer
- *                     description: Severity level (0 = Error, 1 = Warning, 2 = Info, 3 = Hint).
- *                     example: 1
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Avaliação enfileirada com sucesso"
+ *                 evaluationId:
+ *                   type: string
+ *                   example: "123e4567-e89b-12d3-a456-426614174000"
  *       400:
  *         description: Request validation error (e.g., URL not provided).
  *         content:
@@ -71,6 +71,6 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "Failed to evaluate API contract: Request failed with status code 404"
  */
-router.post('/contract', evaluationController.evaluateContract);
+router.post('/contract', evaluationController.evaluateApi);
 
 export default router;
