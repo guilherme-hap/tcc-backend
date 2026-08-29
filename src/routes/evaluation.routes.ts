@@ -8,7 +8,7 @@ const evaluationController = new EvaluationController();
  * @openapi
  * tags:
  *   - name: Evaluation
- *     description: Rotas responsáveis pelo disparo e consulta de avaliações de contratos OpenAPI e testes de performance.
+ *     description: Endpoints responsible for triggering and querying OpenAPI contract evaluations and performance tests.
  *
  * /api/evaluate/contract:
  *   post:
