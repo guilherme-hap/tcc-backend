@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import evaluationRoutes from './routes/evaluation.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { bootstrap } from './config/bootstrap.js';
@@ -8,6 +9,10 @@ import { registerWorkers } from './workers/index.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
+
+app.use(cors({ origin: allowedOrigins }));
 
 app.use(express.json());
 
