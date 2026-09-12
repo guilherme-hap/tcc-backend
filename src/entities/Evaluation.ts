@@ -19,19 +19,19 @@ export class Evaluation {
     @Column({ name: 'status', type: 'varchar', default: 'PENDING' })
     status!: EvaluationStatus;
 
-    @Column({ name: 'spectral_result', type: 'json', nullable: true })
+    @Column({ name: 'spectral_result', type: 'jsonb', nullable: true })
     spectralResult!: any;
 
-    @Column({ name: 'autocannon_result', type: 'json', nullable: true })
+    @Column({ name: 'autocannon_result', type: 'jsonb', nullable: true })
     autocannonResult!: any;
 
-    @Column({ name: 'security_result', type: 'json', nullable: true })
+    @Column({ name: 'security_result', type: 'jsonb', nullable: true })
     securityResult!: any;
 
     @Column({ name: 'final_score', type: 'float', nullable: true })
     finalScore!: number | null;
 
-    @Column({ name: 'failed_pillars', type: 'json', nullable: true })
+    @Column({ name: 'failed_pillars', type: 'jsonb', nullable: true })
     failedPillars!: IFailedPillar[] | null;
 
     @Column({ name: 'error_message', type: 'varchar', nullable: true })
