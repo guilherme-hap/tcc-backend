@@ -3,13 +3,14 @@ import {
     EvaluationType,
     IContractRequest,
     IPerformanceRequest,
+    ISecurityRequest,
     IFullEvaluationRequest,
 } from '../interfaces/evaluation.interface.js';
 
 export interface EvaluationJob {
     evaluationId: string;
     type: EvaluationType;
-    params: IContractRequest | IPerformanceRequest | IFullEvaluationRequest;
+    params: IContractRequest | IPerformanceRequest | ISecurityRequest | IFullEvaluationRequest;
 }
 
 class EvaluationQueue extends EventEmitter {

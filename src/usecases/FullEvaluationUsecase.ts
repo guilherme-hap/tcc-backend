@@ -3,7 +3,7 @@ import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { IFullEvaluationRequest } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 
-const DEFAULT_WEIGHTS = { contract: 0.5, performance: 0.5 };
+const DEFAULT_WEIGHTS = { contract: 0.3, performance: 0.4, security: 0.3 };
 
 export class FullEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -37,25 +37,27 @@ export class FullEvaluationUsecase {
         };
     }
 
-    private validateWeights(weights?: { contract?: number; performance?: number }): void {
+    private validateWeights(weights?: { contract?: number; performance?: number; security?: number }): void {
         if (!weights) return;
 
         const hasContract = weights.contract !== undefined;
         const hasPerformance = weights.performance !== undefined;
+        const hasSecurity = weights.security !== undefined;
 
-        if (!hasContract && !hasPerformance) return;
+        if (!hasContract && !hasPerformance && !hasSecurity) return;
 
         const contractWeight = weights.contract ?? DEFAULT_WEIGHTS.contract;
         const performanceWeight = weights.performance ?? DEFAULT_WEIGHTS.performance;
+        const securityWeight = weights.security ?? DEFAULT_WEIGHTS.security;
 
-        if (contractWeight < 0 || performanceWeight < 0) {
+        if (contractWeight < 0 || performanceWeight < 0 || securityWeight < 0) {
             throw new AppError('Weights must be non-negative', 400);
         }
 
-        const sum = contractWeight + performanceWeight;
+        const sum = contractWeight + performanceWeight + securityWeight;
         if (Math.abs(sum - 1) > 0.001) {
             throw new AppError(
-                `Weights must sum to 1. Received: contract=${contractWeight}, performance=${performanceWeight} (sum=${sum})`,
+                `Weights must sum to 1. Received: contract=${contractWeight}, performance=${performanceWeight}, security=${securityWeight} (sum=${sum})`,
                 400
             );
         }
