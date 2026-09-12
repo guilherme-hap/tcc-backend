@@ -1,4 +1,5 @@
-import { evaluationQueue, EvaluationJob } from '../queues/EvaluationQueue.js';
+import { evaluationQueue } from '../queues/EvaluationQueue.js';
+import type { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { ContractEvaluationWorker } from './ContractEvaluationWorker.js';
 import { PerformanceEvaluationWorker } from './PerformanceEvaluationWorker.js';
 import { FullEvaluationWorker } from './FullEvaluationWorker.js';
@@ -7,27 +8,27 @@ const contractWorker = new ContractEvaluationWorker();
 const performanceWorker = new PerformanceEvaluationWorker();
 const fullWorker = new FullEvaluationWorker();
 
-export function registerWorkers(): void {
-    evaluationQueue.on('evaluation', (job: EvaluationJob) => {
-        let promise: Promise<void> | undefined;
+function buildHandler(type: string): (job: EvaluationJob) => Promise<void> {
+    switch (type) {
+        case 'contract':
+            return (job) => contractWorker.handle(job);
+        case 'performance':
+            return (job) => performanceWorker.handle(job);
+        case 'full':
+            return (job) => fullWorker.handle(job);
+        default:
+            throw new Error(`Unknown evaluation type: ${type}`);
+    }
+}
 
-        switch (job.type) {
-            case 'contract':
-                promise = contractWorker.handle(job);
-                break;
-            case 'performance':
-                promise = performanceWorker.handle(job);
-                break;
-            case 'full':
-                promise = fullWorker.handle(job);
-                break;
-            default:
-                console.error(`[Workers] Unknown evaluation type: ${(job as any).type}`);
-                return;
-        }
+export async function registerWorkers(): Promise<void> {
+    await evaluationQueue.recoverOrphanedJobs();
 
-        promise.catch((err) => {
-            console.error(`[Workers] Unhandled rejection in ${job.type} worker for evaluation ${job.evaluationId}:`, err);
-        });
-    });
+    const types = ['contract', 'performance', 'full'] as const;
+
+    for (const type of types) {
+        const envKey = `${type.toUpperCase()}_WORKER_CONCURRENCY`;
+        const concurrency = Number(process.env[envKey]) || (type === 'contract' ? 10 : 2);
+        await evaluationQueue.listen(type, concurrency, buildHandler(type));
+    }
 }
