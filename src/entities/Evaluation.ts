@@ -25,6 +25,9 @@ export class Evaluation {
     @Column({ name: 'autocannon_result', type: 'json', nullable: true })
     autocannonResult!: any;
 
+    @Column({ name: 'security_score', type: 'float', nullable: true })
+    securityScore!: number | null;
+
     @Column({ name: 'security_result', type: 'json', nullable: true })
     securityResult!: any;
 

@@ -1,5 +1,6 @@
 import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
 import { IAutocannonResult } from '../services/AutocannonService.js';
+import type { SecurityEvaluationResult } from '../interfaces/security.interface.js';
 
 export interface ILoadTestOptions {
     duration?: number;
@@ -23,6 +24,10 @@ export interface IPerformanceRequest {
     loadTestOptions?: ILoadTestOptions;
 }
 
+export interface ISecurityRequest {
+    baseUrl: string;
+}
+
 export interface IFullEvaluationRequest {
     swaggerUrl: string;
     baseUrl?: string;
@@ -31,6 +36,7 @@ export interface IFullEvaluationRequest {
     weights?: {
         contract?: number;
         performance?: number;
+        security?: number;
     };
 }
 
@@ -43,10 +49,11 @@ export interface IFullEvaluationResult {
     finalScore: number | null;
     contractResult: SpectralResponseDto[] | null;
     performanceResult: IAutocannonResult | null;
+    securityResult: SecurityEvaluationResult | null;
     failedPillars: IFailedPillar[];
     status: EvaluationStatus;
 }
 
 export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
 
-export type EvaluationType = 'contract' | 'performance' | 'full';
+export type EvaluationType = 'contract' | 'performance' | 'security' | 'full';
