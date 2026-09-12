@@ -1,10 +1,12 @@
 import { evaluationQueue, EvaluationJob } from '../queues/EvaluationQueue.js';
 import { ContractEvaluationWorker } from './ContractEvaluationWorker.js';
 import { PerformanceEvaluationWorker } from './PerformanceEvaluationWorker.js';
+import { SecurityEvaluationWorker } from './SecurityEvaluationWorker.js';
 import { FullEvaluationWorker } from './FullEvaluationWorker.js';
 
 const contractWorker = new ContractEvaluationWorker();
 const performanceWorker = new PerformanceEvaluationWorker();
+const securityWorker = new SecurityEvaluationWorker();
 const fullWorker = new FullEvaluationWorker();
 
 export function registerWorkers(): void {
@@ -17,6 +19,9 @@ export function registerWorkers(): void {
                 break;
             case 'performance':
                 promise = performanceWorker.handle(job);
+                break;
+            case 'security':
+                promise = securityWorker.handle(job);
                 break;
             case 'full':
                 promise = fullWorker.handle(job);
