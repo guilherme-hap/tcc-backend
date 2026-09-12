@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import { ContractEvaluationUsecase } from '../usecases/ContractEvaluationUsecase.js';
 import { PerformanceEvaluationUsecase } from '../usecases/PerformanceEvaluationUsecase.js';
+import { SecurityEvaluationUsecase } from '../usecases/SecurityEvaluationUsecase.js';
 import { FullEvaluationUsecase } from '../usecases/FullEvaluationUsecase.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import {
     IContractRequest,
     IPerformanceRequest,
+    ISecurityRequest,
     IFullEvaluationRequest,
 } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
@@ -13,12 +15,14 @@ import { AppError } from '../errors/AppError.js';
 export class EvaluationController {
     private contractUsecase: ContractEvaluationUsecase;
     private performanceUsecase: PerformanceEvaluationUsecase;
+    private securityUsecase: SecurityEvaluationUsecase;
     private fullUsecase: FullEvaluationUsecase;
     private lifecycle: EvaluationLifecycleService;
 
     constructor() {
         this.contractUsecase = new ContractEvaluationUsecase();
         this.performanceUsecase = new PerformanceEvaluationUsecase();
+        this.securityUsecase = new SecurityEvaluationUsecase();
         this.fullUsecase = new FullEvaluationUsecase();
         this.lifecycle = new EvaluationLifecycleService();
     }
@@ -30,6 +34,11 @@ export class EvaluationController {
 
     public evaluatePerformance = async (req: Request<{}, {}, IPerformanceRequest>, res: Response): Promise<void> => {
         const result = await this.performanceUsecase.execute(req.body);
+        res.status(202).json(result);
+    };
+
+    public evaluateSecurity = async (req: Request<{}, {}, ISecurityRequest>, res: Response): Promise<void> => {
+        const result = await this.securityUsecase.execute(req.body);
         res.status(202).json(result);
     };
 
