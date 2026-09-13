@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-export async function resolveBaseUrl(swaggerUrl: string): Promise<string> {
+export async function resolveBaseUrl(openApiUrl: string): Promise<string> {
     try {
-        const response = await axios.get(swaggerUrl);
+        const response = await axios.get(openApiUrl);
         const data = response.data;
         const spec = typeof data === 'string' ? JSON.parse(data) : data;
 
@@ -12,7 +12,7 @@ export async function resolveBaseUrl(swaggerUrl: string): Promise<string> {
             if (serverUrl.startsWith('http://') || serverUrl.startsWith('https://')) {
                 return serverUrl;
             }
-            return new URL(serverUrl, swaggerUrl).toString();
+            return new URL(serverUrl, openApiUrl).toString();
         }
 
         // Swagger 2.0
@@ -23,12 +23,19 @@ export async function resolveBaseUrl(swaggerUrl: string): Promise<string> {
         }
 
         // Fallback
-        return new URL(swaggerUrl).origin;
+        return new URL(openApiUrl).origin;
     } catch (error) {
         try {
-            return new URL(swaggerUrl).origin;
+            return new URL(openApiUrl).origin;
         } catch {
-            return swaggerUrl;
+            return openApiUrl;
         }
     }
 }
+
+export function buildTargetUrl(baseUrl: string, targetPath: string): string {
+    const cleanBase = baseUrl.trim().replace(/\/+$/, '');
+    const cleanPath = targetPath.trim().replace(/^\/+/, '');
+    return cleanPath ? `${cleanBase}/${cleanPath}` : cleanBase;
+}
+

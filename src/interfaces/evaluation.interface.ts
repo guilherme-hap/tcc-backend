@@ -1,31 +1,39 @@
 import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
 import { IAutocannonResult } from '../services/AutocannonService.js';
 
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
 export interface ILoadTestOptions {
     duration?: number;
     connections?: number;
     targetLatency?: number;
     maxRequests?: number;
     requestsPerSecond?: number;
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+    method?: HttpMethod;
     headers?: Record<string, string>;
     body?: string;
 }
 
 export interface IContractRequest {
-    swaggerUrl: string;
+    openApiUrl: string;
     rulesConfig?: Record<string, boolean>;
 }
 
 export interface IPerformanceRequest {
-    swaggerUrl: string;
-    baseUrl?: string;
+    openApiUrl: string;
+    targetPath: string;
+    apiBaseUrl?: string;
+    targetMethod?: HttpMethod | string;
+    payload?: any;
     loadTestOptions?: ILoadTestOptions;
 }
 
 export interface IFullEvaluationRequest {
-    swaggerUrl: string;
-    baseUrl?: string;
+    openApiUrl: string;
+    targetPath: string;
+    apiBaseUrl?: string;
+    targetMethod?: HttpMethod | string;
+    payload?: any;
     rulesConfig?: Record<string, boolean>;
     loadTestOptions?: ILoadTestOptions;
     weights?: {

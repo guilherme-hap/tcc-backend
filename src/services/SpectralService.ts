@@ -8,8 +8,8 @@ const { Spectral, Document } = pkgSpectralCore;
 const { Json } = pkgSpectralParsers;
 
 export class SpectralService {
-    public async analyze(swaggerUrl: string, rulesConfig: Record<string, boolean> = {}): Promise<SpectralResponseDto[]> {
-        const response = await axios.get(swaggerUrl);
+    public async analyze(openApiUrl: string, rulesConfig: Record<string, boolean> = {}): Promise<SpectralResponseDto[]> {
+        const response = await axios.get(openApiUrl);
         const data = response.data;
         const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
 
@@ -26,7 +26,7 @@ export class SpectralService {
             rules: customRules
         });
 
-        const document = new Document(stringifiedData, Json as any, swaggerUrl);
+        const document = new Document(stringifiedData, Json as any, openApiUrl);
 
         const rawResults = await spectral.run(document);
 

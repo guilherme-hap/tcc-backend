@@ -8,13 +8,17 @@ export class EvaluationLifecycleService {
     }
 
     async create(data: {
-        swaggerUrl: string;
-        baseUrl?: string | null;
+        openApiUrl: string;
+        apiBaseUrl?: string | null;
+        targetPath?: string | null;
+        targetMethod?: string | null;
         evaluationType: EvaluationType;
     }): Promise<Evaluation> {
         const evaluation = this.repository.create({
-            swaggerUrl: data.swaggerUrl,
-            baseUrl: data.baseUrl || null,
+            openApiUrl: data.openApiUrl,
+            apiBaseUrl: data.apiBaseUrl || null,
+            targetPath: data.targetPath || null,
+            targetMethod: data.targetMethod || null,
             evaluationType: data.evaluationType,
             status: 'PENDING',
         });

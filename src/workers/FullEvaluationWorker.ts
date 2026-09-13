@@ -1,7 +1,7 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { SpectralService } from '../services/SpectralService.js';
 import { AutocannonService } from '../services/AutocannonService.js';
-import { resolveBaseUrl } from '../utils/resolveBaseUrl.js';
+import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { calculateContractScore } from '../utils/calculateContractScore.js';
 import { DEFAULT_WEIGHTS } from '../usecases/FullEvaluationUsecase.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
@@ -21,8 +21,11 @@ export class FullEvaluationWorker {
     async handle(job: EvaluationJob): Promise<void> {
         const { evaluationId, params } = job;
         const {
-            swaggerUrl,
-            baseUrl,
+            openApiUrl,
+            apiBaseUrl,
+            targetPath,
+            targetMethod,
+            payload,
             rulesConfig,
             loadTestOptions,
             weights,
@@ -31,13 +34,12 @@ export class FullEvaluationWorker {
         try {
             await this.lifecycle.start(evaluationId);
 
-            const targetBaseUrl = baseUrl?.trim()
-                ? baseUrl.trim()
-                : await resolveBaseUrl(swaggerUrl);
+            const targetUrl = await resolveTargetUrl(openApiUrl, targetPath, apiBaseUrl);
+            const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions });
 
             const [contractSettled, performanceSettled] = await Promise.allSettled([
-                this.spectralService.analyze(swaggerUrl, rulesConfig || {}),
-                this.autocannonService.runLoadTest(targetBaseUrl, loadTestOptions || {}),
+                this.spectralService.analyze(openApiUrl, rulesConfig || {}),
+                this.autocannonService.runLoadTest(targetUrl, options),
             ]);
 
             const contractOk = contractSettled.status === 'fulfilled';

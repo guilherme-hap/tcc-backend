@@ -7,11 +7,17 @@ export class Evaluation {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
-    @Column({ name: 'swagger_url', type: 'varchar' })
-    swaggerUrl!: string;
+    @Column({ name: 'openapi_url', type: 'varchar' })
+    openApiUrl!: string;
 
-    @Column({ name: 'base_url', type: 'varchar', nullable: true })
-    baseUrl!: string | null;
+    @Column({ name: 'api_base_url', type: 'varchar', nullable: true })
+    apiBaseUrl!: string | null;
+
+    @Column({ name: 'target_path', type: 'varchar', nullable: true })
+    targetPath!: string | null;
+
+    @Column({ name: 'target_method', type: 'varchar', nullable: true })
+    targetMethod!: string | null;
 
     @Column({ name: 'evaluation_type', type: 'varchar' })
     evaluationType!: EvaluationType;

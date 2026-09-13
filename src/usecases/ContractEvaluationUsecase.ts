@@ -11,12 +11,12 @@ export class ContractEvaluationUsecase {
     }
 
     async execute(data: IContractRequest) {
-        if (!data.swaggerUrl) {
-            throw new AppError('swaggerUrl is required', 400);
+        if (!data?.openApiUrl || typeof data.openApiUrl !== 'string' || !data.openApiUrl.trim()) {
+            throw new AppError('openApiUrl is required', 400);
         }
 
         const evaluation = await this.lifecycle.create({
-            swaggerUrl: data.swaggerUrl,
+            openApiUrl: data.openApiUrl,
             evaluationType: 'contract',
         });
 

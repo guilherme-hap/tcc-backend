@@ -13,15 +13,20 @@ export class FullEvaluationUsecase {
     }
 
     async execute(data: IFullEvaluationRequest) {
-        if (!data.swaggerUrl) {
-            throw new AppError('swaggerUrl is required', 400);
+        if (!data?.openApiUrl || typeof data.openApiUrl !== 'string' || !data.openApiUrl.trim()) {
+            throw new AppError('openApiUrl is required', 400);
+        }
+        if (!data?.targetPath || typeof data.targetPath !== 'string' || !data.targetPath.trim()) {
+            throw new AppError('targetPath is required', 400);
         }
 
         this.validateWeights(data.weights);
 
         const evaluation = await this.lifecycle.create({
-            swaggerUrl: data.swaggerUrl,
-            baseUrl: data.baseUrl,
+            openApiUrl: data.openApiUrl,
+            apiBaseUrl: data.apiBaseUrl,
+            targetPath: data.targetPath,
+            targetMethod: data.targetMethod,
             evaluationType: 'full',
         });
 

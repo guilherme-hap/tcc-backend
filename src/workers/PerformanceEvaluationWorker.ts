@@ -1,6 +1,6 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { AutocannonService } from '../services/AutocannonService.js';
-import { resolveBaseUrl } from '../utils/resolveBaseUrl.js';
+import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { IPerformanceRequest } from '../interfaces/evaluation.interface.js';
 
@@ -15,16 +15,22 @@ export class PerformanceEvaluationWorker {
 
     async handle(job: EvaluationJob): Promise<void> {
         const { evaluationId, params } = job;
-        const { swaggerUrl, baseUrl, loadTestOptions } = params as IPerformanceRequest;
+        const {
+            openApiUrl,
+            apiBaseUrl,
+            targetPath,
+            targetMethod,
+            payload,
+            loadTestOptions,
+        } = params as IPerformanceRequest;
 
         try {
             await this.lifecycle.start(evaluationId);
 
-            const targetBaseUrl = baseUrl?.trim()
-                ? baseUrl.trim()
-                : await resolveBaseUrl(swaggerUrl);
+            const targetUrl = await resolveTargetUrl(openApiUrl, targetPath, apiBaseUrl);
+            const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions });
 
-            const result = await this.autocannonService.runLoadTest(targetBaseUrl, loadTestOptions || {});
+            const result = await this.autocannonService.runLoadTest(targetUrl, options);
 
             await this.lifecycle.complete(evaluationId, {
                 autocannonResult: result,
