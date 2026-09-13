@@ -2,6 +2,7 @@ import { EvaluationLifecycleService } from '../services/EvaluationLifecycleServi
 import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { IFullEvaluationRequest } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
+import { validateLoadTestMethod } from '../utils/httpMethodUtils.js';
 
 const DEFAULT_WEIGHTS = { contract: 0.5, performance: 0.5 };
 
@@ -21,6 +22,13 @@ export class FullEvaluationUsecase {
         }
 
         this.validateWeights(data.weights);
+
+        validateLoadTestMethod({
+            targetMethod: data.targetMethod,
+            targetPath: data.targetPath,
+            loadTestMethod: data.loadTestOptions?.method,
+            allowMutatingMethods: data.loadTestOptions?.allowMutatingMethods,
+        });
 
         const evaluation = await this.lifecycle.create({
             openApiUrl: data.openApiUrl,
