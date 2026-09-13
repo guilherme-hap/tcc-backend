@@ -12,6 +12,8 @@ export interface ILoadTestOptions {
     method?: HttpMethod;
     headers?: Record<string, string>;
     body?: string;
+    payloadFactory?: () => string | undefined;
+    allowMutatingMethods?: boolean;
 }
 
 export interface IContractRequest {
