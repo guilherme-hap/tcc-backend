@@ -1,6 +1,6 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { AutocannonService } from '../services/AutocannonService.js';
-import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
+import { resolveTargetUrlWithSpec, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { IPerformanceRequest } from '../interfaces/evaluation.interface.js';
 
@@ -27,8 +27,14 @@ export class PerformanceEvaluationWorker {
         try {
             await this.lifecycle.start(evaluationId);
 
-            const targetUrl = await resolveTargetUrl(openApiUrl, targetPath, apiBaseUrl);
-            const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions });
+            const effectiveMethod = (targetMethod || loadTestOptions?.method)?.toUpperCase();
+            const { targetUrl, spec } = await resolveTargetUrlWithSpec(
+                openApiUrl,
+                targetPath,
+                apiBaseUrl,
+                effectiveMethod,
+            );
+            const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions, spec, targetPath });
 
             const result = await this.autocannonService.runLoadTest(targetUrl, options);
 
