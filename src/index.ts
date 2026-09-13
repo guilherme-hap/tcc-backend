@@ -15,7 +15,7 @@ app.use(cors({ origin: allowedOrigins }));
 
 app.use(express.json());
 
-app.use('/api/evaluate', evaluationRoutes);
+app.use('/api/evaluations', evaluationRoutes);
 
 app.use(errorHandler);
 

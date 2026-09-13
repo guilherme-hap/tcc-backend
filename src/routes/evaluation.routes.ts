@@ -8,12 +8,12 @@ const evaluationController = new EvaluationController();
  * @openapi
  * tags:
  *   - name: Evaluation
- *     description: Endpoints responsible for triggering and querying OpenAPI contract evaluations and performance tests.
+ *     description: "Endpoints responsáveis pelo disparo e consulta de auditorias de contrato OpenAPI e testes de performance."
  *
- * /api/evaluate/contract:
+ * /api/evaluations/contract:
  *   post:
- *     summary: Executes API contract linting
- *     description: Downloads the OpenAPI file (JSON/YAML) from the provided URL and runs a validation based on the official rulesets (OAS). The evaluation is queued and processed asynchronously. Use GET /api/evaluate/:id to poll for results.
+ *     summary: "Executa o linting de conformidade do contrato OpenAPI"
+ *     description: "Baixa o arquivo OpenAPI (JSON/YAML) diretamente da URL informada e valida as regras oficiais do Spectral sobre a especificação completa. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado."
  *     tags: [Evaluation]
  *     requestBody:
  *       required: true
@@ -22,19 +22,19 @@ const evaluationController = new EvaluationController();
  *           schema:
  *             type: object
  *             required:
- *               - swaggerUrl
+ *               - openApiUrl
  *             properties:
- *               swaggerUrl:
+ *               openApiUrl:
  *                 type: string
- *                 description: The public URL where the target API contract is hosted.
+ *                 description: "URL direta para o arquivo JSON ou YAML da especificação OpenAPI/Swagger (não utilize o link da interface HTML do Swagger UI)."
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
  *               rulesConfig:
  *                 type: object
- *                 description: Optional custom rules configuration.
+ *                 description: "Configuração opcional de regras customizadas para o Spectral."
  *                 example: { "operation-tags": true }
  *     responses:
  *       202:
- *         description: Evaluation queued successfully.
+ *         description: "Avaliação enfileirada com sucesso."
  *         content:
  *           application/json:
  *             schema:
@@ -42,17 +42,18 @@ const evaluationController = new EvaluationController();
  *               properties:
  *                 evaluationId:
  *                   type: string
+ *                   format: uuid
  *                   example: "123e4567-e89b-12d3-a456-426614174000"
  *                 status:
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: Request validation error (e.g., URL not provided).
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente)."
  *
- * /api/evaluate/performance:
+ * /api/evaluations/performance:
  *   post:
- *     summary: Executes API load/performance test
- *     description: Runs a load test against the target API using Autocannon. Resolves the base URL from the OpenAPI spec if not provided. The evaluation is queued and processed asynchronously.
+ *     summary: "Executa teste de carga/performance em um endpoint alvo"
+ *     description: "Realiza teste de estresse utilizando o Autocannon exclusivamente na rota informada em targetPath. Caso apiBaseUrl não seja fornecida, a URL base será resolvida automaticamente a partir da especificação OpenAPI informada em openApiUrl."
  *     tags: [Evaluation]
  *     requestBody:
  *       required: true
@@ -61,50 +62,56 @@ const evaluationController = new EvaluationController();
  *           schema:
  *             type: object
  *             required:
- *               - swaggerUrl
+ *               - openApiUrl
+ *               - targetPath
  *             properties:
- *               swaggerUrl:
+ *               openApiUrl:
  *                 type: string
- *                 description: The public URL where the target API contract is hosted.
+ *                 description: "URL direta para o arquivo JSON ou YAML da especificação OpenAPI/Swagger (não utilize o link da interface HTML do Swagger UI)."
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
- *               baseUrl:
+ *               targetPath:
  *                 type: string
- *                 description: Optional base URL of the target API. If not provided, it will be resolved from the OpenAPI spec.
+ *                 description: "Rota específica da API a ser testada pelo Autocannon (exemplo: /orders ou /pet/findByStatus)."
+ *                 example: "/pet/findByStatus"
+ *               apiBaseUrl:
+ *                 type: string
+ *                 description: "URL raiz opcional para sobrescrever o servidor da API. Caso omitida, será resolvida automaticamente do contrato OpenAPI."
  *                 example: "https://petstore.swagger.io/v2"
+ *               targetMethod:
+ *                 type: string
+ *                 description: "Método HTTP a ser utilizado pelo teste de carga."
+ *                 enum: [GET, POST, PUT, DELETE, PATCH]
+ *                 example: "GET"
+ *               payload:
+ *                 description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
+ *                 example: { "status": "available" }
  *               loadTestOptions:
  *                 type: object
- *                 description: Optional load test configuration.
+ *                 description: "Opções adicionais e avançadas de configuração do Autocannon."
  *                 properties:
  *                   duration:
  *                     type: number
- *                     description: Duration of the test in seconds.
+ *                     description: "Duração do teste em segundos."
  *                     example: 10
  *                   connections:
  *                     type: number
- *                     description: Number of concurrent connections.
+ *                     description: "Número de conexões concorrentes simultâneas."
  *                     example: 10
  *                   targetLatency:
  *                     type: number
- *                     description: Target latency threshold in ms for Apdex calculation.
+ *                     description: "Limite de latência alvo em milissegundos para cálculo do índice Apdex."
  *                     example: 300
  *                   maxRequests:
  *                     type: number
- *                     description: Maximum total requests (stops when reached or duration expires).
+ *                     description: "Quantidade máxima de requisições a disparar."
  *                     example: 1000
  *                   requestsPerSecond:
  *                     type: number
- *                     description: Maximum requests per second.
+ *                     description: "Taxa máxima de requisições por segundo."
  *                     example: 100
- *                   method:
- *                     type: string
- *                     enum: [GET, POST, PUT, DELETE, PATCH]
- *                   headers:
- *                     type: object
- *                   body:
- *                     type: string
  *     responses:
  *       202:
- *         description: Evaluation queued successfully.
+ *         description: "Avaliação enfileirada com sucesso."
  *         content:
  *           application/json:
  *             schema:
@@ -112,17 +119,18 @@ const evaluationController = new EvaluationController();
  *               properties:
  *                 evaluationId:
  *                   type: string
+ *                   format: uuid
  *                   example: "123e4567-e89b-12d3-a456-426614174000"
  *                 status:
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: Request validation error.
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targetPath ausentes)."
  *
- * /api/evaluate/full:
+ * /api/evaluations/full:
  *   post:
- *     summary: Executes full API evaluation (contract + performance)
- *     description: Runs both contract linting and load testing in parallel, then calculates a weighted final score. Weights default to 50/50 if not specified. If provided, weights must sum to 1.
+ *     summary: "Executa avaliação completa (Contrato global + Performance pontual)"
+ *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl e o teste de carga com Autocannon pontualmente na rota indicada em targetPath. Ao final, pondera as notas individuais calculando o score global."
  *     tags: [Evaluation]
  *     requestBody:
  *       required: true
@@ -131,23 +139,36 @@ const evaluationController = new EvaluationController();
  *           schema:
  *             type: object
  *             required:
- *               - swaggerUrl
+ *               - openApiUrl
+ *               - targetPath
  *             properties:
- *               swaggerUrl:
+ *               openApiUrl:
  *                 type: string
- *                 description: The public URL where the target API contract is hosted.
+ *                 description: "URL direta para o arquivo JSON ou YAML da especificação OpenAPI/Swagger (não utilize o link da interface HTML do Swagger UI)."
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
- *               baseUrl:
+ *               targetPath:
  *                 type: string
- *                 description: Optional base URL. Resolved from spec if not provided.
+ *                 description: "Rota específica da API a ser testada pelo Autocannon (exemplo: /orders ou /pet/findByStatus)."
+ *                 example: "/pet/findByStatus"
+ *               apiBaseUrl:
+ *                 type: string
+ *                 description: "URL raiz opcional para sobrescrever o servidor da API. Caso omitida, será resolvida automaticamente do contrato OpenAPI."
  *                 example: "https://petstore.swagger.io/v2"
+ *               targetMethod:
+ *                 type: string
+ *                 description: "Método HTTP para o teste de carga."
+ *                 enum: [GET, POST, PUT, DELETE, PATCH]
+ *                 example: "GET"
+ *               payload:
+ *                 description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
+ *                 example: { "status": "available" }
  *               rulesConfig:
  *                 type: object
- *                 description: Optional custom Spectral rules configuration.
+ *                 description: "Configuração opcional de regras customizadas para o Spectral."
  *                 example: { "operation-tags": true }
  *               loadTestOptions:
  *                 type: object
- *                 description: Optional load test configuration.
+ *                 description: "Opções adicionais de teste do Autocannon."
  *                 properties:
  *                   duration:
  *                     type: number
@@ -166,7 +187,7 @@ const evaluationController = new EvaluationController();
  *                     example: 100
  *               weights:
  *                 type: object
- *                 description: Optional weights for the final score calculation. Must sum to 1 if provided. Defaults to 50/50.
+ *                 description: "Pesos opcionais para o cálculo da nota final. A soma deve ser igual a 1. Padrão 50/50 (0.5 cada)."
  *                 properties:
  *                   contract:
  *                     type: number
@@ -176,7 +197,7 @@ const evaluationController = new EvaluationController();
  *                     example: 0.4
  *     responses:
  *       202:
- *         description: Evaluation queued successfully.
+ *         description: "Avaliação enfileirada com sucesso."
  *         content:
  *           application/json:
  *             schema:
@@ -184,17 +205,18 @@ const evaluationController = new EvaluationController();
  *               properties:
  *                 evaluationId:
  *                   type: string
+ *                   format: uuid
  *                   example: "123e4567-e89b-12d3-a456-426614174000"
  *                 status:
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: Validation error (e.g., weights don't sum to 1).
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl/targetPath ausentes ou pesos inválidos)."
  *
- * /api/evaluate/{id}:
+ * /api/evaluations/{id}:
  *   get:
- *     summary: Get evaluation status and results
- *     description: Returns the current status and results of an evaluation. COMPLETED, PARTIAL, and FAILED are all valid evaluation outcomes returned with HTTP 200. PARTIAL means at least one pillar succeeded and at least one failed (finalScore will be null). FAILED means no pillar succeeded.
+ *     summary: "Consulta o status e o resultado detalhado de uma avaliação"
+ *     description: "Retorna o estado atual e os resultados consolidados da auditoria. Quando concluída (COMPLETED), exibe os relatórios de Spectral, Autocannon e nota calculada."
  *     tags: [Evaluation]
  *     parameters:
  *       - in: path
@@ -203,10 +225,10 @@ const evaluationController = new EvaluationController();
  *         schema:
  *           type: string
  *           format: uuid
- *         description: The evaluation ID returned by the POST endpoint.
+ *         description: "Identificador único UUID da avaliação retornado no endpoint de criação."
  *     responses:
  *       200:
- *         description: Evaluation found (any status).
+ *         description: "Avaliação encontrada."
  *         content:
  *           application/json:
  *             schema:
@@ -214,8 +236,18 @@ const evaluationController = new EvaluationController();
  *               properties:
  *                 id:
  *                   type: string
- *                 swaggerUrl:
+ *                   format: uuid
+ *                 openApiUrl:
  *                   type: string
+ *                 apiBaseUrl:
+ *                   type: string
+ *                   nullable: true
+ *                 targetPath:
+ *                   type: string
+ *                   nullable: true
+ *                 targetMethod:
+ *                   type: string
+ *                   nullable: true
  *                 evaluationType:
  *                   type: string
  *                   enum: [contract, performance, full]
@@ -225,7 +257,7 @@ const evaluationController = new EvaluationController();
  *                 finalScore:
  *                   type: number
  *                   nullable: true
- *                   description: Weighted final score (0-100). Null if PARTIAL or FAILED.
+ *                   description: "Nota final ponderada (0-100)."
  *                 spectralResult:
  *                   type: array
  *                   nullable: true
@@ -245,9 +277,9 @@ const evaluationController = new EvaluationController();
  *                 errorMessage:
  *                   type: string
  *                   nullable: true
- *                   description: Error reason when status is FAILED.
+ *                   description: "Motivo do erro quando o status for FAILED."
  *       404:
- *         description: Evaluation not found.
+ *         description: "Avaliação não encontrada."
  */
 router.post('/contract', evaluationController.evaluateContract);
 router.post('/performance', evaluationController.evaluatePerformance);
