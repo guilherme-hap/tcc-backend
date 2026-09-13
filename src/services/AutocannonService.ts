@@ -1,12 +1,6 @@
 import autocannon from 'autocannon';
 import { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 
-declare module 'autocannon' {
-    interface Histogram {
-        totalCount?: number;
-    }
-}
-
 export interface IAutocannonResult {
     score: number;
     averageLatency: number;
@@ -16,13 +10,13 @@ export interface IAutocannonResult {
 }
 
 export class AutocannonService {
-    public async runLoadTest(baseUrl: string, options: ILoadTestOptions = {}): Promise<IAutocannonResult> {
+    public async runLoadTest(targetUrl: string, options: ILoadTestOptions = {}): Promise<IAutocannonResult> {
         const { duration = 10, connections = 10, targetLatency = 300, maxRequests, requestsPerSecond, method, headers, body } = options;
 
         const result = await new Promise<autocannon.Result>((resolve, reject) => {
             autocannon(
                 {
-                    url: baseUrl,
+                    url: targetUrl,
                     duration,
                     connections,
                     ...(maxRequests && { amount: maxRequests }),
@@ -55,33 +49,41 @@ export class AutocannonService {
         const totalSent = result.requests?.sent ?? 0;
         if (totalSent === 0) return 0;
 
-        const totalCount = result.latency?.totalCount ?? result.latency?.total ?? 0;
-
-        if (result.latency?.max === 0) {
-            const spEdge = totalCount / totalSent;
-            return Math.min(100, Math.round(spEdge * 100 * 100) / 100);
+        if (!result.latency || result.latency.max === undefined) {
+            return 0;
         }
 
-        if (totalCount === 0 || result.latency?.max === undefined) return 0;
+        const apdexScore = result.latency.max === 0
+            ? 100
+            : this.calculatePercentileApdex(result.latency, T);
 
+        const errors = result.errors ?? 0;
+        const successRatio = Math.max(0, (totalSent - errors) / totalSent);
+
+        const finalScore = apdexScore * successRatio;
+
+        return Math.min(100, Math.max(0, Math.round(finalScore * 100) / 100));
+    }
+
+    private calculatePercentileApdex(latency: autocannon.Histogram, T: number): number {
         const percentiles = [
-            { p: 0, v: result.latency.min ?? 0 },
-            { p: 0.001, v: result.latency.p0_001 ?? 0 },
-            { p: 0.01, v: result.latency.p0_01 ?? 0 },
-            { p: 0.1, v: result.latency.p0_1 ?? 0 },
-            { p: 1, v: result.latency.p1 ?? 0 },
-            { p: 2.5, v: result.latency.p2_5 ?? 0 },
-            { p: 10, v: result.latency.p10 ?? 0 },
-            { p: 25, v: result.latency.p25 ?? 0 },
-            { p: 50, v: result.latency.p50 ?? 0 },
-            { p: 75, v: result.latency.p75 ?? 0 },
-            { p: 90, v: result.latency.p90 ?? 0 },
-            { p: 97.5, v: result.latency.p97_5 ?? 0 },
-            { p: 99, v: result.latency.p99 ?? 0 },
-            { p: 99.9, v: result.latency.p99_9 ?? 0 },
-            { p: 99.99, v: result.latency.p99_99 ?? 0 },
-            { p: 99.999, v: result.latency.p99_999 ?? 0 },
-            { p: 100, v: result.latency.max ?? 0 },
+            { p: 0, v: latency.min ?? 0 },
+            { p: 0.001, v: latency.p0_001 ?? 0 },
+            { p: 0.01, v: latency.p0_01 ?? 0 },
+            { p: 0.1, v: latency.p0_1 ?? 0 },
+            { p: 1, v: latency.p1 ?? 0 },
+            { p: 2.5, v: latency.p2_5 ?? 0 },
+            { p: 10, v: latency.p10 ?? 0 },
+            { p: 25, v: latency.p25 ?? 0 },
+            { p: 50, v: latency.p50 ?? 0 },
+            { p: 75, v: latency.p75 ?? 0 },
+            { p: 90, v: latency.p90 ?? 0 },
+            { p: 97.5, v: latency.p97_5 ?? 0 },
+            { p: 99, v: latency.p99 ?? 0 },
+            { p: 99.9, v: latency.p99_9 ?? 0 },
+            { p: 99.99, v: latency.p99_99 ?? 0 },
+            { p: 99.999, v: latency.p99_999 ?? 0 },
+            { p: 100, v: latency.max ?? 0 },
         ];
 
         const getPercentileForValue = (value: number): number => {
@@ -107,11 +109,6 @@ export class AutocannonService {
         const toleratingPctUpper = getPercentileForValue(4 * T);
         const toleratingPct = Math.max(0, toleratingPctUpper - satisfiedPct);
 
-        const satisfied = (satisfiedPct / 100) * totalCount;
-        const tolerating = (toleratingPct / 100) * totalCount;
-
-        const sp = (satisfied + (tolerating / 2)) / totalSent;
-
-        return Math.min(100, Math.round(sp * 100 * 100) / 100);
+        return satisfiedPct + (toleratingPct / 2);
     }
 }
