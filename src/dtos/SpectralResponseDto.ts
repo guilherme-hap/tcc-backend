@@ -1,4 +1,6 @@
-export type SpectralSeverity = 'Error' | 'Warning' | 'Info' | 'Hint' | 'Unknown';
+import type { Severity } from '../types/severity.js';
+
+export type SpectralSeverity = Severity;
 
 export interface ISpectralItemResponse {
     endpoint: string;
