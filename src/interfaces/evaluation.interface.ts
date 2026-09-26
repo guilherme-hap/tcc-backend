@@ -1,5 +1,6 @@
 import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
 import { IAutocannonResult } from '../services/AutocannonService.js';
+import { ISecurityCheckResult } from '../services/SecurityService.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -30,6 +31,11 @@ export interface IPerformanceRequest {
     loadTestOptions?: ILoadTestOptions;
 }
 
+export interface ISecurityRequest {
+    openApiUrl: string;
+    apiBaseUrl?: string;
+}
+
 export interface IFullEvaluationRequest {
     openApiUrl: string;
     targetPath: string;
@@ -41,6 +47,7 @@ export interface IFullEvaluationRequest {
     weights?: {
         contract?: number;
         performance?: number;
+        security?: number;
     };
 }
 
@@ -53,10 +60,11 @@ export interface IFullEvaluationResult {
     finalScore: number | null;
     contractResult: SpectralResponseDto[] | null;
     performanceResult: IAutocannonResult | null;
+    securityResult: ISecurityCheckResult[] | null;
     failedPillars: IFailedPillar[];
     status: EvaluationStatus;
 }
 
 export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
 
-export type EvaluationType = 'contract' | 'performance' | 'full';
+export type EvaluationType = 'contract' | 'performance' | 'security' | 'full';
