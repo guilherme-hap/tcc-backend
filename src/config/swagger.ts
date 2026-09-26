@@ -9,6 +9,16 @@ const options = {
             title: 'API de Avaliação - TCC',
             version: '1.0.0',
         },
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                    description: 'Token JWT obtido via POST /api/auth/login ou /api/auth/register.',
+                },
+            },
+        },
     },
     apis: ['./src/routes/*.ts'],
 };
