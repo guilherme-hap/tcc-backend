@@ -1,40 +1,50 @@
 import { Request, Response } from 'express';
 import { ContractEvaluationUsecase } from '../usecases/ContractEvaluationUsecase.js';
 import { PerformanceEvaluationUsecase } from '../usecases/PerformanceEvaluationUsecase.js';
+import { SecurityEvaluationUsecase } from '../usecases/SecurityEvaluationUsecase.js';
 import { FullEvaluationUsecase } from '../usecases/FullEvaluationUsecase.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import {
     IContractRequest,
     IPerformanceRequest,
+    ISecurityRequest,
     IFullEvaluationRequest,
 } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
+import { AuthenticatedRequest } from '../middlewares/optionalAuth.js';
 
 export class EvaluationController {
     private contractUsecase: ContractEvaluationUsecase;
     private performanceUsecase: PerformanceEvaluationUsecase;
+    private securityUsecase: SecurityEvaluationUsecase;
     private fullUsecase: FullEvaluationUsecase;
     private lifecycle: EvaluationLifecycleService;
 
     constructor() {
         this.contractUsecase = new ContractEvaluationUsecase();
         this.performanceUsecase = new PerformanceEvaluationUsecase();
+        this.securityUsecase = new SecurityEvaluationUsecase();
         this.fullUsecase = new FullEvaluationUsecase();
         this.lifecycle = new EvaluationLifecycleService();
     }
 
-    public evaluateContract = async (req: Request<{}, {}, IContractRequest>, res: Response): Promise<void> => {
-        const result = await this.contractUsecase.execute(req.body);
+    public evaluateContract = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        const result = await this.contractUsecase.execute(req.body as IContractRequest, req.userId);
         res.status(202).json(result);
     };
 
-    public evaluatePerformance = async (req: Request<{}, {}, IPerformanceRequest>, res: Response): Promise<void> => {
-        const result = await this.performanceUsecase.execute(req.body);
+    public evaluatePerformance = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        const result = await this.performanceUsecase.execute(req.body as IPerformanceRequest, req.userId);
         res.status(202).json(result);
     };
 
-    public evaluateFull = async (req: Request<{}, {}, IFullEvaluationRequest>, res: Response): Promise<void> => {
-        const result = await this.fullUsecase.execute(req.body);
+    public evaluateFull = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        const result = await this.fullUsecase.execute(req.body as IFullEvaluationRequest, req.userId);
+        res.status(202).json(result);
+    };
+
+    public evaluateSecurity = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        const result = await this.securityUsecase.execute(req.body as ISecurityRequest, req.userId);
         res.status(202).json(result);
     };
 
