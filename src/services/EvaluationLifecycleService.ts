@@ -13,6 +13,7 @@ export class EvaluationLifecycleService {
         targetPath?: string | null;
         targetMethod?: string | null;
         evaluationType: EvaluationType;
+        userId?: string | null;
     }): Promise<Evaluation> {
         const evaluation = this.repository.create({
             openApiUrl: data.openApiUrl,
@@ -20,6 +21,7 @@ export class EvaluationLifecycleService {
             targetPath: data.targetPath || null,
             targetMethod: data.targetMethod || null,
             evaluationType: data.evaluationType,
+            userId: data.userId ?? null,
             status: 'PENDING',
         });
         return this.repository.save(evaluation);

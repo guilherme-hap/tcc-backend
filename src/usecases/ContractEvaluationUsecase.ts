@@ -10,7 +10,7 @@ export class ContractEvaluationUsecase {
         this.lifecycle = new EvaluationLifecycleService();
     }
 
-    async execute(data: IContractRequest) {
+    async execute(data: IContractRequest, userId?: string | null) {
         if (!data?.openApiUrl || typeof data.openApiUrl !== 'string' || !data.openApiUrl.trim()) {
             throw new AppError('openApiUrl is required', 400);
         }
@@ -18,6 +18,7 @@ export class ContractEvaluationUsecase {
         const evaluation = await this.lifecycle.create({
             openApiUrl: data.openApiUrl,
             evaluationType: 'contract',
+            userId: userId ?? null,
         });
 
         evaluationQueue.enqueue({

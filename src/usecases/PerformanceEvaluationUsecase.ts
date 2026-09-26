@@ -11,7 +11,7 @@ export class PerformanceEvaluationUsecase {
         this.lifecycle = new EvaluationLifecycleService();
     }
 
-    async execute(data: IPerformanceRequest) {
+    async execute(data: IPerformanceRequest, userId?: string | null) {
         if (!data?.openApiUrl || typeof data.openApiUrl !== 'string' || !data.openApiUrl.trim()) {
             throw new AppError('openApiUrl is required', 400);
         }
@@ -32,6 +32,7 @@ export class PerformanceEvaluationUsecase {
             targetPath: data.targetPath,
             targetMethod: data.targetMethod,
             evaluationType: 'performance',
+            userId: userId ?? null,
         });
 
         evaluationQueue.enqueue({

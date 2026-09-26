@@ -1,11 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import type { EvaluationStatus, EvaluationType } from '../interfaces/evaluation.interface.js';
 import type { IFailedPillar } from '../interfaces/evaluation.interface.js';
+import { User } from './User.js';
 
 @Entity('evaluations')
 export class Evaluation {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
+
+    @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
+    @JoinColumn({ name: 'user_id' })
+    user!: User | null;
+
+    @Column({ name: 'user_id', type: 'uuid', nullable: true })
+    userId!: string | null;
 
     @Column({ name: 'openapi_url', type: 'varchar' })
     openApiUrl!: string;
