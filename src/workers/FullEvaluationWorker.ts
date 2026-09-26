@@ -1,8 +1,11 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { SpectralService } from '../services/SpectralService.js';
 import { AutocannonService } from '../services/AutocannonService.js';
+import { SecurityService } from '../services/SecurityService.js';
 import { resolveTargetUrlWithSpec, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
+import { resolveBaseUrlFromSpec } from '../utils/resolveBaseUrl.js';
 import { calculateContractScore } from '../utils/calculateContractScore.js';
+import { calculateSecurityScore } from '../utils/calculateSecurityScore.js';
 import { DEFAULT_WEIGHTS } from '../usecases/FullEvaluationUsecase.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { IFullEvaluationRequest, IFailedPillar } from '../interfaces/evaluation.interface.js';
@@ -11,11 +14,13 @@ export class FullEvaluationWorker {
     private lifecycle: EvaluationLifecycleService;
     private spectralService: SpectralService;
     private autocannonService: AutocannonService;
+    private securityService: SecurityService;
 
     constructor() {
         this.lifecycle = new EvaluationLifecycleService();
         this.spectralService = new SpectralService();
         this.autocannonService = new AutocannonService();
+        this.securityService = new SecurityService();
     }
 
     async handle(job: EvaluationJob): Promise<void> {
@@ -43,29 +48,41 @@ export class FullEvaluationWorker {
             );
             const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions, spec, targetPath });
 
-            const [contractSettled, performanceSettled] = await Promise.allSettled([
+            const runSecurityPillar = async () => {
+                const securityTargetUrl = apiBaseUrl?.trim()
+                    ? apiBaseUrl.trim()
+                    : resolveBaseUrlFromSpec(spec, openApiUrl);
+                return this.securityService.analyze(securityTargetUrl);
+            };
+
+            const [contractSettled, performanceSettled, securitySettled] = await Promise.allSettled([
                 this.spectralService.analyze(openApiUrl, rulesConfig || {}),
                 this.autocannonService.runLoadTest(targetUrl, options),
+                runSecurityPillar(),
             ]);
 
             const contractOk = contractSettled.status === 'fulfilled';
             const performanceOk = performanceSettled.status === 'fulfilled';
+            const securityOk = securitySettled.status === 'fulfilled';
 
             const contractResult = contractOk ? contractSettled.value : null;
             const performanceResult = performanceOk ? performanceSettled.value : null;
+            const securityResult = securityOk ? securitySettled.value : null;
 
-            if (contractOk && performanceOk) {
+            if (contractOk && performanceOk && securityOk) {
                 const contractScore = calculateContractScore(contractResult!);
                 const performanceScore = performanceResult!.score;
+                const securityScore = calculateSecurityScore(securityResult!);
 
                 const w = this.resolveWeights(weights);
                 const finalScore = Math.round(
-                    ((contractScore * w.contract) + (performanceScore * w.performance)) * 100
+                    ((contractScore * w.contract) + (performanceScore * w.performance) + (securityScore * w.security)) * 100
                 ) / 100;
 
                 await this.lifecycle.complete(evaluationId, {
                     spectralResult: contractResult,
                     autocannonResult: performanceResult,
+                    securityResult: securityResult,
                     finalScore,
                 });
                 return;
@@ -89,10 +106,19 @@ export class FullEvaluationWorker {
                 });
             }
 
-            if (contractOk || performanceOk) {
+            if (!securityOk) {
+                const reason = securitySettled as PromiseRejectedResult;
+                failedPillars.push({
+                    pillar: 'security',
+                    error: reason.reason?.message || String(reason.reason),
+                });
+            }
+
+            if (contractOk || performanceOk || securityOk) {
                 await this.lifecycle.partial(evaluationId, {
                     spectralResult: contractResult,
                     autocannonResult: performanceResult,
+                    securityResult: securityResult,
                     finalScore: null,
                     failedPillars,
                 });
@@ -115,12 +141,13 @@ export class FullEvaluationWorker {
         }
     }
 
-    private resolveWeights(weights?: { contract?: number; performance?: number }) {
+    private resolveWeights(weights?: { contract?: number; performance?: number; security?: number }) {
         if (!weights) return DEFAULT_WEIGHTS;
 
         return {
             contract: weights.contract ?? DEFAULT_WEIGHTS.contract,
             performance: weights.performance ?? DEFAULT_WEIGHTS.performance,
+            security: weights.security ?? DEFAULT_WEIGHTS.security,
         };
     }
 }
