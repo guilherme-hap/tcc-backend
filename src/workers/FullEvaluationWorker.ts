@@ -34,6 +34,7 @@ export class FullEvaluationWorker {
             rulesConfig,
             loadTestOptions,
             weights,
+            severityWeights,
         } = params as IFullEvaluationRequest;
 
         try {
@@ -70,7 +71,7 @@ export class FullEvaluationWorker {
             const securityResult = securityOk ? securitySettled.value : null;
 
             if (contractOk && performanceOk && securityOk) {
-                const contractScore = calculateContractScore(contractResult!);
+                const contractScore = calculateContractScore(contractResult!, severityWeights);
                 const performanceScore = performanceResult!.score;
                 const securityScore = calculateSecurityScore(securityResult!);
 
@@ -84,6 +85,7 @@ export class FullEvaluationWorker {
                     autocannonResult: performanceResult,
                     securityResult: securityResult,
                     finalScore,
+                    appliedWeights: w,
                 });
                 return;
             }
@@ -121,6 +123,7 @@ export class FullEvaluationWorker {
                     securityResult: securityResult,
                     finalScore: null,
                     failedPillars,
+                    appliedWeights: this.resolveWeights(weights),
                 });
                 return;
             }

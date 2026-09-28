@@ -48,6 +48,9 @@ export class Evaluation {
     @Column({ name: 'failed_pillars', type: 'jsonb', nullable: true })
     failedPillars!: IFailedPillar[] | null;
 
+    @Column({ name: 'applied_weights', type: 'jsonb', nullable: true })
+    appliedWeights!: { contract: number; performance: number; security: number } | null;
+
     @Column({ name: 'error_message', type: 'varchar', nullable: true })
     errorMessage!: string | null;
 

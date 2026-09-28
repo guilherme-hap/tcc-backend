@@ -8,9 +8,13 @@ export const SEVERITY_PENALTY: Record<SpectralSeverity, number> = {
     'Unknown': 0,
 };
 
-export function calculateContractScore(issues: SpectralResponseDto[]): number {
+export function calculateContractScore(
+    issues: SpectralResponseDto[],
+    severityWeights?: Partial<Record<SpectralSeverity, number>>,
+): number {
+    const penalties = { ...SEVERITY_PENALTY, ...severityWeights };
     const totalPenalty = issues.reduce((sum, issue) => {
-        return sum + (SEVERITY_PENALTY[issue.severity] ?? 0);
+        return sum + (penalties[issue.severity] ?? 0);
     }, 0);
     return Math.max(0, Math.min(100, 100 - totalPenalty));
 }

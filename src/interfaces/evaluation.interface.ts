@@ -1,4 +1,4 @@
-import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
+import { SpectralResponseDto, SpectralSeverity } from '../dtos/SpectralResponseDto.js';
 import { IAutocannonResult } from '../services/AutocannonService.js';
 import { ISecurityCheckResult } from '../services/SecurityService.js';
 
@@ -20,6 +20,7 @@ export interface ILoadTestOptions {
 export interface IContractRequest {
     openApiUrl: string;
     rulesConfig?: Record<string, boolean>;
+    severityWeights?: Partial<Record<SpectralSeverity, number>>;
 }
 
 export interface IPerformanceRequest {
@@ -49,6 +50,7 @@ export interface IFullEvaluationRequest {
         performance?: number;
         security?: number;
     };
+    severityWeights?: Partial<Record<SpectralSeverity, number>>;
 }
 
 export interface IFailedPillar {

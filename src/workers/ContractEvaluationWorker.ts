@@ -15,13 +15,13 @@ export class ContractEvaluationWorker {
 
     async handle(job: EvaluationJob): Promise<void> {
         const { evaluationId, params } = job;
-        const { openApiUrl, rulesConfig } = params as IContractRequest;
+        const { openApiUrl, rulesConfig, severityWeights } = params as IContractRequest;
 
         try {
             await this.lifecycle.start(evaluationId);
 
             const issues = await this.spectralService.analyze(openApiUrl, rulesConfig || {});
-            const score = calculateContractScore(issues);
+            const score = calculateContractScore(issues, severityWeights);
 
             await this.lifecycle.complete(evaluationId, {
                 spectralResult: issues,
