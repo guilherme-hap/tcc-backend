@@ -272,8 +272,11 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/{id}:
  *   get:
  *     summary: "Consulta o status e o resultado detalhado de uma avaliação"
- *     description: "Retorna o estado atual e os resultados consolidados da auditoria. Quando concluída (COMPLETED), exibe os relatórios de Spectral, Autocannon, Segurança e nota calculada."
+ *     description: "Retorna o estado atual e os resultados consolidados da auditoria. Quando concluída (COMPLETED), exibe os relatórios de Spectral, Autocannon, Segurança e nota calculada. Avaliações vinculadas a um usuário autenticado só podem ser acessadas pelo próprio dono."
  *     tags: [Evaluation]
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
  *     parameters:
  *       - in: path
  *         name: id
@@ -314,6 +317,17 @@ const evaluationController = new EvaluationController();
  *                   type: number
  *                   nullable: true
  *                   description: "Nota final ponderada (0-100)."
+ *                 appliedWeights:
+ *                   type: object
+ *                   nullable: true
+ *                   description: "Pesos aplicados no cálculo da nota final. Populado apenas em avaliações do tipo 'full'. Quando omitido na requisição, reflete o default (1/3 para cada pilar)."
+ *                   properties:
+ *                     contract:
+ *                       type: number
+ *                     performance:
+ *                       type: number
+ *                     security:
+ *                       type: number
  *                 spectralResult:
  *                   type: array
  *                   nullable: true
@@ -354,12 +368,12 @@ const evaluationController = new EvaluationController();
  *                   nullable: true
  *                   description: "Motivo do erro quando o status for FAILED."
  *       404:
- *         description: "Avaliação não encontrada."
+ *         description: "Avaliação não encontrada ou pertence a outro usuário."
  */
 router.post('/contract', optionalAuth, evaluationController.evaluateContract);
 router.post('/performance', optionalAuth, evaluationController.evaluatePerformance);
 router.post('/security', optionalAuth, evaluationController.evaluateSecurity);
 router.post('/full', optionalAuth, evaluationController.evaluateFull);
-router.get('/:id', evaluationController.getEvaluation);
+router.get('/:id', optionalAuth, evaluationController.getEvaluation);
 
 export default router;

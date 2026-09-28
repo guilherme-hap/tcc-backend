@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { ContractEvaluationUsecase } from '../usecases/ContractEvaluationUsecase.js';
 import { PerformanceEvaluationUsecase } from '../usecases/PerformanceEvaluationUsecase.js';
 import { SecurityEvaluationUsecase } from '../usecases/SecurityEvaluationUsecase.js';
@@ -48,9 +48,12 @@ export class EvaluationController {
         res.status(202).json(result);
     };
 
-    public getEvaluation = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    public getEvaluation = async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
         const evaluation = await this.lifecycle.findById(req.params.id);
         if (!evaluation) {
+            throw new AppError('Avaliação não encontrada', 404);
+        }
+        if (evaluation.userId && evaluation.userId !== req.userId) {
             throw new AppError('Avaliação não encontrada', 404);
         }
         res.status(200).json(evaluation);
