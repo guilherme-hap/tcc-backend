@@ -47,7 +47,7 @@ export function parseOpenApiContent(content: unknown): ParsedOpenApiContent {
 
         let parsedYaml: unknown;
         try {
-            parsedYaml = yaml.load(content);
+            parsedYaml = yaml.load(content, { schema: yaml.JSON_SCHEMA });
         } catch (yamlErr: any) {
             const yamlMessage = yamlErr instanceof Error ? yamlErr.message : String(yamlErr);
             throw new AppError(
