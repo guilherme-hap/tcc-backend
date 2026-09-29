@@ -3,8 +3,8 @@ import { IFullEvaluationRequest } from '../interfaces/evaluation.interface.js';
 import { validateLoadTestMethod } from '../utils/httpMethodUtils.js';
 import { loadTestOptionsSchema } from '../schemas/loadTestOptions.schema.js';
 import { enqueueOrFail } from '../utils/enqueueOrFail.js';
+import { AppError } from '../errors/AppError.js';
 
-export { DEFAULT_WEIGHTS } from '../utils/weights.js';
 
 export class FullEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -15,7 +15,11 @@ export class FullEvaluationUsecase {
 
     async execute(data: IFullEvaluationRequest, userId?: string | null) {
         if (data.loadTestOptions) {
-            data.loadTestOptions = loadTestOptionsSchema.parse(data.loadTestOptions);
+            const result = loadTestOptionsSchema.safeParse(data.loadTestOptions);
+            if (!result.success) {
+                throw new AppError(result.error.issues.map((i) => i.message).join('; '), 400);
+            }
+            data.loadTestOptions = result.data;
         }
 
         validateLoadTestMethod({
