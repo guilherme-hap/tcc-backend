@@ -57,6 +57,13 @@ export class AutocannonService {
             }
         }
 
+        if (options.allowHighLoad) {
+            const highLoadMsg =
+                'High-load opt-in enabled: this test may generate significant load against the target. ' +
+                'Ensure you have authorization to load-test this API.';
+            warning = warning ? `${warning} ${highLoadMsg}` : highLoadMsg;
+        }
+
         const result = await new Promise<autocannon.Result>((resolve, reject) => {
             if (payloadFactory) {
                 const parsedUrl = new URL(targetUrl);

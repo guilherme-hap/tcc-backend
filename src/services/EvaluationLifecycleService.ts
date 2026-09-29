@@ -35,14 +35,14 @@ export class EvaluationLifecycleService {
         await this.repository.update(evaluationId, {
             ...results,
             status: 'COMPLETED',
-        });
+        } as any);
     }
 
     async partial(evaluationId: string, results: Partial<Evaluation>): Promise<void> {
         await this.repository.update(evaluationId, {
             ...results,
             status: 'PARTIAL',
-        });
+        } as any);
     }
 
     async fail(evaluationId: string, error: string | Error): Promise<void> {

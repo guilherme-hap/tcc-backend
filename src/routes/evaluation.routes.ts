@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { EvaluationController } from '../controllers/EvaluationController.js';
 import { optionalAuth } from '../middlewares/optionalAuth.js';
+import { validate } from '../middlewares/validate.js';
+import { performanceRequestSchema, fullEvaluationRequestSchema } from '../schemas/evaluation.schema.js';
 
 const router = Router();
 const evaluationController = new EvaluationController();
@@ -94,15 +96,15 @@ const evaluationController = new EvaluationController();
  *                 example: { "status": "available" }
  *               loadTestOptions:
  *                 type: object
- *                 description: "Opções adicionais e avançadas de configuração do Autocannon."
+ *                 description: "Opções adicionais e avançadas de configuração do Autocannon. Limites padrão (default): duration ≤ 60s, connections ≤ 50, maxRequests ≤ 100.000, requestsPerSecond ≤ 1.000. Com allowHighLoad=true: duration ≤ 300s, connections ≤ 500, maxRequests ≤ 1.000.000, requestsPerSecond ≤ 10.000."
  *                 properties:
  *                   duration:
  *                     type: number
- *                     description: "Duração do teste em segundos."
+ *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300)."
  *                     example: 10
  *                   connections:
  *                     type: number
- *                     description: "Número de conexões concorrentes simultâneas."
+ *                     description: "Número de conexões concorrentes simultâneas (padrão máx. 50; com allowHighLoad máx. 500)."
  *                     example: 10
  *                   targetLatency:
  *                     type: number
@@ -110,12 +112,20 @@ const evaluationController = new EvaluationController();
  *                     example: 300
  *                   maxRequests:
  *                     type: number
- *                     description: "Quantidade máxima de requisições a disparar."
+ *                     description: "Quantidade máxima de requisições a disparar (padrão máx. 100.000; com allowHighLoad máx. 1.000.000)."
  *                     example: 1000
  *                   requestsPerSecond:
  *                     type: number
- *                     description: "Taxa máxima de requisições por segundo."
+ *                     description: "Taxa máxima de requisições por segundo (padrão máx. 1.000; com allowHighLoad máx. 10.000)."
  *                     example: 100
+ *                   allowMutatingMethods:
+ *                     type: boolean
+ *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga. Obrigatório quando targetMethod for um método mutante."
+ *                     default: false
+ *                   allowHighLoad:
+ *                     type: boolean
+ *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros que você não controla."
+ *                     default: false
  *     responses:
  *       202:
  *         description: "Avaliação enfileirada com sucesso."
@@ -178,23 +188,36 @@ const evaluationController = new EvaluationController();
  *                 example: { "operation-tags": true }
  *               loadTestOptions:
  *                 type: object
- *                 description: "Opções adicionais de teste do Autocannon."
+ *                 description: "Opções adicionais de teste do Autocannon. Limites padrão (default): duration ≤ 60s, connections ≤ 50, maxRequests ≤ 100.000, requestsPerSecond ≤ 1.000. Com allowHighLoad=true: duration ≤ 300s, connections ≤ 500, maxRequests ≤ 1.000.000, requestsPerSecond ≤ 10.000."
  *                 properties:
  *                   duration:
  *                     type: number
+ *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300)."
  *                     example: 10
  *                   connections:
  *                     type: number
+ *                     description: "Número de conexões concorrentes simultâneas (padrão máx. 50; com allowHighLoad máx. 500)."
  *                     example: 10
  *                   targetLatency:
  *                     type: number
+ *                     description: "Limite de latência alvo em milissegundos para cálculo do índice Apdex."
  *                     example: 300
  *                   maxRequests:
  *                     type: number
+ *                     description: "Quantidade máxima de requisições a disparar (padrão máx. 100.000; com allowHighLoad máx. 1.000.000)."
  *                     example: 1000
  *                   requestsPerSecond:
  *                     type: number
+ *                     description: "Taxa máxima de requisições por segundo (padrão máx. 1.000; com allowHighLoad máx. 10.000)."
  *                     example: 100
+ *                   allowMutatingMethods:
+ *                     type: boolean
+ *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga."
+ *                     default: false
+ *                   allowHighLoad:
+ *                     type: boolean
+ *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros."
+ *                     default: false
  *               weights:
  *                 type: object
  *                 description: "Pesos opcionais para o cálculo da nota final. A soma dos 3 pilares deve ser igual a 1. Valores omitidos assumem automaticamente o default de 1/3 (0.333...) e contam para a soma. Padrão 1/3 para cada pilar."
@@ -371,9 +394,9 @@ const evaluationController = new EvaluationController();
  *         description: "Avaliação não encontrada ou pertence a outro usuário."
  */
 router.post('/contract', optionalAuth, evaluationController.evaluateContract);
-router.post('/performance', optionalAuth, evaluationController.evaluatePerformance);
+router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluatePerformance);
 router.post('/security', optionalAuth, evaluationController.evaluateSecurity);
-router.post('/full', optionalAuth, evaluationController.evaluateFull);
+router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluateFull);
 router.get('/:id', optionalAuth, evaluationController.getEvaluation);
 
 export default router;
