@@ -10,6 +10,8 @@ export interface ParsedOpenApiContent {
     rawString: string;
 }
 
+const FETCH_TIMEOUT_MS = Number(process.env.OPENAPI_FETCH_TIMEOUT_MS) || 15_000;
+
 function isRecord(value: unknown): value is Record<string, any> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -70,7 +72,7 @@ export async function fetchOpenApiContent(openApiUrl: string): Promise<ParsedOpe
     let response;
     try {
         response = await axios.get<string>(openApiUrl, {
-            timeout: 10_000,
+            timeout: FETCH_TIMEOUT_MS,
             maxContentLength: 5 * 1024 * 1024,
             maxRedirects: 3,
             responseType: 'text',

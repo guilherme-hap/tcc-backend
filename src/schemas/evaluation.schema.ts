@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { loadTestOptionsSchema } from './loadTestOptions.schema.js';
 import { httpMethodSchema } from './shared.js';
 
@@ -15,7 +16,6 @@ export const performanceRequestSchema = z.object({
 
 export type PerformanceRequestInput = z.infer<typeof performanceRequestSchema>;
 
-import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 
 export const fullEvaluationRequestSchema = z.object({
     openApiUrl: httpUrl,
