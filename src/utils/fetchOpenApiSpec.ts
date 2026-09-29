@@ -22,65 +22,70 @@ function throwInvalidRootError(value: unknown): never {
     );
 }
 
-export function parseOpenApiContent(content: unknown): ParsedOpenApiContent {
-    if (typeof content === 'string') {
-        let parsedJson: unknown;
-        let isJsonSyntaxValid = false;
+export function parseOpenApiContent(content: string): ParsedOpenApiContent {
+    let parsedJson: unknown;
+    let isJsonSyntaxValid = false;
 
-        try {
-            parsedJson = JSON.parse(content);
-            isJsonSyntaxValid = true;
-        } catch {
-            isJsonSyntaxValid = false;
+    try {
+        parsedJson = JSON.parse(content);
+        isJsonSyntaxValid = true;
+    } catch {
+        isJsonSyntaxValid = false;
+    }
+
+    if (isJsonSyntaxValid) {
+        if (!isRecord(parsedJson)) {
+            throwInvalidRootError(parsedJson);
         }
-
-        if (isJsonSyntaxValid) {
-            if (!isRecord(parsedJson)) {
-                throwInvalidRootError(parsedJson);
-            }
-            return {
-                data: parsedJson,
-                format: 'json',
-                rawString: content,
-            };
-        }
-
-        let parsedYaml: unknown;
-        try {
-            parsedYaml = yaml.load(content, { schema: yaml.JSON_SCHEMA });
-        } catch (yamlErr: any) {
-            const yamlMessage = yamlErr instanceof Error ? yamlErr.message : String(yamlErr);
-            throw new AppError(
-                `The OpenAPI specification is neither valid JSON nor valid YAML (YAML: ${yamlMessage})`,
-                400
-            );
-        }
-
-        if (!isRecord(parsedYaml)) {
-            throwInvalidRootError(parsedYaml);
-        }
-
         return {
-            data: parsedYaml,
-            format: 'yaml',
+            data: parsedJson,
+            format: 'json',
             rawString: content,
         };
     }
 
-    if (!isRecord(content)) {
-        throwInvalidRootError(content);
+    let parsedYaml: unknown;
+    try {
+        parsedYaml = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+    } catch (yamlErr: any) {
+        const yamlMessage = yamlErr instanceof Error ? yamlErr.message : String(yamlErr);
+        throw new AppError(
+            `The OpenAPI specification is neither valid JSON nor valid YAML (YAML: ${yamlMessage})`,
+            400
+        );
+    }
+
+    if (!isRecord(parsedYaml)) {
+        throwInvalidRootError(parsedYaml);
     }
 
     return {
-        data: content,
-        format: 'json',
-        rawString: JSON.stringify(content),
+        data: parsedYaml,
+        format: 'yaml',
+        rawString: content,
     };
 }
 
+export async function fetchOpenApiContent(openApiUrl: string): Promise<ParsedOpenApiContent> {
+    let response;
+    try {
+        response = await axios.get<string>(openApiUrl, {
+            timeout: 10_000,
+            maxContentLength: 5 * 1024 * 1024,
+            maxRedirects: 3,
+            responseType: 'text',
+            transformResponse: (r) => r,
+        });
+    } catch (err: any) {
+        const reason = err?.response?.status
+            ? `HTTP ${err.response.status}`
+            : (err?.code ?? err?.message ?? 'unknown error');
+        throw new AppError(`Could not fetch the OpenAPI specification (${reason})`, 400);
+    }
+    return parseOpenApiContent(response.data);
+}
+
 export async function fetchOpenApiSpec(openApiUrl: string): Promise<any> {
-    const response = await axios.get(openApiUrl);
-    const { data } = parseOpenApiContent(response.data);
-    return data;
+    return (await fetchOpenApiContent(openApiUrl)).data;
 }
 

@@ -2,10 +2,12 @@ import { z } from 'zod';
 import { loadTestOptionsSchema } from './loadTestOptions.schema.js';
 import { httpMethodSchema } from './shared.js';
 
+const httpUrl = z.url({ protocol: /^https?$/ });
+
 export const performanceRequestSchema = z.object({
-    openApiUrl: z.url('openApiUrl must be a valid URL'),
+    openApiUrl: httpUrl,
     targetPath: z.string().trim().min(1, 'targetPath is required'),
-    apiBaseUrl: z.url().trim().optional(),
+    apiBaseUrl: httpUrl.trim().optional(),
     targetMethod: httpMethodSchema.optional(),
     payload: z.any().optional(),
     loadTestOptions: loadTestOptionsSchema.optional(),
@@ -16,9 +18,9 @@ export type PerformanceRequestInput = z.infer<typeof performanceRequestSchema>;
 const DEFAULT_WEIGHT = 1 / 3;
 
 export const fullEvaluationRequestSchema = z.object({
-    openApiUrl: z.url('openApiUrl must be a valid URL'),
+    openApiUrl: httpUrl,
     targetPath: z.string().trim().min(1, 'targetPath is required'),
-    apiBaseUrl: z.url().trim().optional(),
+    apiBaseUrl: httpUrl.trim().optional(),
     targetMethod: httpMethodSchema.optional(),
     payload: z.any().optional(),
     rulesConfig: z.record(z.string(), z.boolean()).optional(),

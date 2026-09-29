@@ -1,17 +1,15 @@
 import pkgSpectralCore from '@stoplight/spectral-core';
 import pkgSpectralParsers from '@stoplight/spectral-parsers';
 import { oas } from '@stoplight/spectral-rulesets';
-import axios from 'axios';
 import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
-import { parseOpenApiContent } from '../utils/fetchOpenApiSpec.js';
+import { fetchOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 
 const { Spectral, Document } = pkgSpectralCore;
 const { Json, Yaml } = pkgSpectralParsers;
 
 export class SpectralService {
     public async analyze(openApiUrl: string, rulesConfig: Record<string, boolean> = {}): Promise<SpectralResponseDto[]> {
-        const response = await axios.get(openApiUrl);
-        const { format, rawString } = parseOpenApiContent(response.data);
+        const { format, rawString } = await fetchOpenApiContent(openApiUrl);
         const parser = format === 'yaml' ? Yaml : Json;
 
         const customRules: Record<string, any> = {};
