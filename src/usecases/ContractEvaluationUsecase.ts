@@ -21,11 +21,19 @@ export class ContractEvaluationUsecase {
             userId: userId ?? null,
         });
 
-        evaluationQueue.enqueue({
-            evaluationId: evaluation.id,
-            type: 'contract',
-            params: data,
-        });
+        try {
+            await evaluationQueue.enqueue({
+                evaluationId: evaluation.id,
+                type: 'contract',
+                params: data,
+            });
+        } catch (err) {
+            await this.lifecycle.fail(evaluation.id, err instanceof Error ? err : String(err));
+            throw new AppError(
+                `Failed to enqueue contract evaluation: ${err instanceof Error ? err.message : String(err)}`,
+                500,
+            );
+        }
 
         return {
             evaluationId: evaluation.id,
