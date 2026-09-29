@@ -22,12 +22,14 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "js-yaml": "^5.4.2",
     "jsonwebtoken": "^9.0.3",
     "openapi-sampler": "^1.7.5",
     "pg": "^8.23.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^1.1.0"
+    "typeorm": "^1.1.0",
+    "zod": "^4.6.5"
   },
   "overrides": {
     "uuid": "^11.1.1"
@@ -37,6 +39,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/js-yaml": "^4.0.9",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.23.1",
