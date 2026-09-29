@@ -1,14 +1,10 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
-import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { IFullEvaluationRequest } from '../interfaces/evaluation.interface.js';
-import { AppError } from '../errors/AppError.js';
 import { validateLoadTestMethod } from '../utils/httpMethodUtils.js';
+import { loadTestOptionsSchema } from '../schemas/loadTestOptions.schema.js';
+import { enqueueOrFail } from '../utils/enqueueOrFail.js';
 
-export const DEFAULT_WEIGHTS = {
-    contract: 1 / 3,
-    performance: 1 / 3,
-    security: 1 / 3,
-};
+export { DEFAULT_WEIGHTS } from '../utils/weights.js';
 
 export class FullEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -18,6 +14,10 @@ export class FullEvaluationUsecase {
     }
 
     async execute(data: IFullEvaluationRequest, userId?: string | null) {
+        if (data.loadTestOptions) {
+            data.loadTestOptions = loadTestOptionsSchema.parse(data.loadTestOptions);
+        }
+
         validateLoadTestMethod({
             targetMethod: data.targetMethod,
             targetPath: data.targetPath,
@@ -34,19 +34,11 @@ export class FullEvaluationUsecase {
             userId: userId ?? null,
         });
 
-        try {
-            await evaluationQueue.enqueue({
-                evaluationId: evaluation.id,
-                type: 'full',
-                params: data,
-            });
-        } catch (err) {
-            await this.lifecycle.fail(evaluation.id, err instanceof Error ? err : String(err));
-            throw new AppError(
-                `Failed to enqueue full evaluation: ${err instanceof Error ? err.message : String(err)}`,
-                500,
-            );
-        }
+        await enqueueOrFail(this.lifecycle, {
+            evaluationId: evaluation.id,
+            type: 'full',
+            params: data,
+        });
 
         return {
             evaluationId: evaluation.id,

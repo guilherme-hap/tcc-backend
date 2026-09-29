@@ -15,7 +15,7 @@ export const performanceRequestSchema = z.object({
 
 export type PerformanceRequestInput = z.infer<typeof performanceRequestSchema>;
 
-const DEFAULT_WEIGHT = 1 / 3;
+import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 
 export const fullEvaluationRequestSchema = z.object({
     openApiUrl: httpUrl,
@@ -47,9 +47,9 @@ export const fullEvaluationRequestSchema = z.object({
 
             if (!hasContract && !hasPerformance && !hasSecurity) return;
 
-            const contractWeight = weights.contract ?? DEFAULT_WEIGHT;
-            const performanceWeight = weights.performance ?? DEFAULT_WEIGHT;
-            const securityWeight = weights.security ?? DEFAULT_WEIGHT;
+            const contractWeight = weights.contract ?? DEFAULT_WEIGHTS.contract;
+            const performanceWeight = weights.performance ?? DEFAULT_WEIGHTS.performance;
+            const securityWeight = weights.security ?? DEFAULT_WEIGHTS.security;
 
             const sum = contractWeight + performanceWeight + securityWeight;
             if (Math.abs(sum - 1) > 0.001) {

@@ -6,7 +6,7 @@ import { resolveTargetUrlWithSpec, prepareLoadTestOptions } from '../utils/resol
 import { resolveBaseUrlFromSpec } from '../utils/resolveBaseUrl.js';
 import { calculateContractScore } from '../utils/calculateContractScore.js';
 import { calculateSecurityScore } from '../utils/calculateSecurityScore.js';
-import { DEFAULT_WEIGHTS } from '../usecases/FullEvaluationUsecase.js';
+import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { IFullEvaluationRequest, IFailedPillar } from '../interfaces/evaluation.interface.js';
 

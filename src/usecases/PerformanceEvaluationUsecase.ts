@@ -1,8 +1,8 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
-import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { IPerformanceRequest } from '../interfaces/evaluation.interface.js';
-import { AppError } from '../errors/AppError.js';
 import { validateLoadTestMethod } from '../utils/httpMethodUtils.js';
+import { loadTestOptionsSchema } from '../schemas/loadTestOptions.schema.js';
+import { enqueueOrFail } from '../utils/enqueueOrFail.js';
 
 export class PerformanceEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -12,6 +12,10 @@ export class PerformanceEvaluationUsecase {
     }
 
     async execute(data: IPerformanceRequest, userId?: string | null) {
+        if (data.loadTestOptions) {
+            data.loadTestOptions = loadTestOptionsSchema.parse(data.loadTestOptions);
+        }
+
         validateLoadTestMethod({
             targetMethod: data.targetMethod,
             targetPath: data.targetPath,
@@ -28,19 +32,11 @@ export class PerformanceEvaluationUsecase {
             userId: userId ?? null,
         });
 
-        try {
-            await evaluationQueue.enqueue({
-                evaluationId: evaluation.id,
-                type: 'performance',
-                params: data,
-            });
-        } catch (err) {
-            await this.lifecycle.fail(evaluation.id, err instanceof Error ? err : String(err));
-            throw new AppError(
-                `Failed to enqueue performance evaluation: ${err instanceof Error ? err.message : String(err)}`,
-                500,
-            );
-        }
+        await enqueueOrFail(this.lifecycle, {
+            evaluationId: evaluation.id,
+            type: 'performance',
+            params: data,
+        });
 
         return {
             evaluationId: evaluation.id,

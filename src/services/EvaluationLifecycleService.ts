@@ -1,3 +1,4 @@
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
 import { EvaluationType } from '../interfaces/evaluation.interface.js';
@@ -35,14 +36,14 @@ export class EvaluationLifecycleService {
         await this.repository.update(evaluationId, {
             ...results,
             status: 'COMPLETED',
-        } as any);
+        } as QueryDeepPartialEntity<Evaluation>);
     }
 
     async partial(evaluationId: string, results: Partial<Evaluation>): Promise<void> {
         await this.repository.update(evaluationId, {
             ...results,
             status: 'PARTIAL',
-        } as any);
+        } as QueryDeepPartialEntity<Evaluation>);
     }
 
     async fail(evaluationId: string, error: string | Error): Promise<void> {
