@@ -23,9 +23,9 @@ export const fullEvaluationRequestSchema = z.object({
     payload: z.any().optional(),
     rulesConfig: z.record(z.string(), z.boolean()).optional(),
     severityWeights: z
-        .record(
+        .partialRecord(
             z.enum(['Error', 'Warning', 'Info', 'Hint', 'Unknown']),
-            z.number(),
+            z.number().min(0),
         )
         .optional(),
     loadTestOptions: loadTestOptionsSchema.optional(),
