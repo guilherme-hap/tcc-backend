@@ -58,8 +58,8 @@ const evaluationController = new EvaluationController();
  *
  * /api/evaluations/performance:
  *   post:
- *     summary: "Executa teste de carga/performance em um endpoint alvo"
- *     description: "Realiza teste de estresse utilizando o Autocannon exclusivamente na rota informada em targetPath. Caso apiBaseUrl não seja fornecida, a URL base será resolvida automaticamente a partir da especificação OpenAPI informada em openApiUrl."
+ *     summary: "Executa teste de carga/performance em endpoints alvos"
+ *     description: "Realiza teste de estresse utilizando o Autocannon sequencialmente nos endpoints informados em targets. Caso apiBaseUrl não seja fornecida, a URL base será resolvida automaticamente a partir da especificação OpenAPI informada em openApiUrl."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -72,28 +72,44 @@ const evaluationController = new EvaluationController();
  *             type: object
  *             required:
  *               - openApiUrl
- *               - targetPath
+ *               - targets
  *             properties:
  *               openApiUrl:
  *                 type: string
  *                 description: "URL direta para o arquivo JSON ou YAML da especificação OpenAPI/Swagger (não utilize o link da interface HTML do Swagger UI)."
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
- *               targetPath:
- *                 type: string
- *                 description: "Rota específica da API a ser testada pelo Autocannon (exemplo: /orders ou /pet/findByStatus)."
- *                 example: "/pet/findByStatus"
  *               apiBaseUrl:
  *                 type: string
  *                 description: "URL raiz opcional para sobrescrever o servidor da API. Caso omitida, será resolvida automaticamente do contrato OpenAPI."
  *                 example: "https://petstore.swagger.io/v2"
- *               targetMethod:
- *                 type: string
- *                 description: "Método HTTP a ser utilizado pelo teste de carga."
- *                 enum: [GET, POST, PUT, DELETE, PATCH]
- *                 example: "GET"
- *               payload:
- *                 description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
- *                 example: { "status": "available" }
+ *               targets:
+ *                 type: array
+ *                 description: "Lista de endpoints alvos a serem testados sequencialmente pelo Autocannon (mínimo 1, máximo 20). A soma das durações dos testes (targets.length * duration) não pode exceder 600 segundos."
+ *                 minItems: 1
+ *                 maxItems: 20
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - path
+ *                   properties:
+ *                     path:
+ *                       type: string
+ *                       description: "Rota específica da API a ser testada pelo Autocannon."
+ *                       example: "/pet/findByStatus"
+ *                     method:
+ *                       type: string
+ *                       description: "Método HTTP a ser utilizado pelo teste de carga."
+ *                       enum: [GET, POST, PUT, DELETE, PATCH]
+ *                       example: "GET"
+ *                     payload:
+ *                       description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
+ *                       example: { "status": "available" }
+ *                 example:
+ *                   - path: "/pet/findByStatus"
+ *                     method: "GET"
+ *                   - path: "/pet"
+ *                     method: "POST"
+ *                     payload: { "name": "doggie", "photoUrls": [] }
  *               loadTestOptions:
  *                 type: object
  *                 description: "Opções adicionais e avançadas de configuração do Autocannon. Limites padrão (default): duration ≤ 60s, connections ≤ 50, maxRequests ≤ 100.000, requestsPerSecond ≤ 1.000. Com allowHighLoad=true: duration ≤ 300s, connections ≤ 500, maxRequests ≤ 1.000.000, requestsPerSecond ≤ 10.000."
@@ -118,10 +134,24 @@ const evaluationController = new EvaluationController();
  *                     type: number
  *                     description: "Taxa máxima de requisições por segundo (padrão máx. 1.000; com allowHighLoad máx. 10.000)."
  *                     example: 100
+ *                   method:
+ *                     type: string
+ *                     description: "Método HTTP padrão global para o teste de carga. É sobrescrito pelo method definido individualmente no alvo (target.method tem precedência)."
+ *                     enum: [GET, POST, PUT, DELETE, PATCH]
+ *                     example: "GET"
+ *                   headers:
+ *                     type: object
+ *                     additionalProperties:
+ *                       type: string
+ *                     description: "Headers HTTP customizados a serem enviados em todas as requisições do teste de carga."
+ *                     example: { "Authorization": "Bearer token", "X-Custom-Header": "value" }
  *                   allowMutatingMethods:
  *                     type: boolean
- *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga. Obrigatório quando targetMethod for um método mutante."
+ *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga. Obrigatório quando o método for mutante."
  *                     default: false
+ *                   body:
+ *                     type: string
+ *                     description: "Corpo padrão global em formato string/JSON. Aplicado exclusivamente a alvos com métodos mutantes (POST, PUT, PATCH) que não possuam payload próprio; ignorado em métodos não mutantes (GET, DELETE)."
  *                   allowHighLoad:
  *                     type: boolean
  *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros que você não controla."
@@ -142,12 +172,12 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targetPath ausentes)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targets ausentes, path vazio, método inválido ou limite de duração total excedido)."
  *
  * /api/evaluations/full:
  *   post:
  *     summary: "Executa avaliação completa (Contrato global + Performance pontual + Segurança dos headers)"
- *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon pontualmente na rota indicada em targetPath e a auditoria de segurança dos headers HTTP do servidor. Ao final, pondera as notas individuais dos 3 pilares calculando o score global."
+ *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Ao final, pondera as notas individuais dos 3 pilares calculando o score global."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -160,28 +190,44 @@ const evaluationController = new EvaluationController();
  *             type: object
  *             required:
  *               - openApiUrl
- *               - targetPath
+ *               - targets
  *             properties:
  *               openApiUrl:
  *                 type: string
  *                 description: "URL direta para o arquivo JSON ou YAML da especificação OpenAPI/Swagger (não utilize o link da interface HTML do Swagger UI)."
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
- *               targetPath:
- *                 type: string
- *                 description: "Rota específica da API a ser testada pelo Autocannon (exemplo: /orders ou /pet/findByStatus)."
- *                 example: "/pet/findByStatus"
  *               apiBaseUrl:
  *                 type: string
  *                 description: "URL raiz opcional para sobrescrever o servidor da API. Caso omitida, será resolvida automaticamente do contrato OpenAPI."
  *                 example: "https://petstore.swagger.io/v2"
- *               targetMethod:
- *                 type: string
- *                 description: "Método HTTP para o teste de carga."
- *                 enum: [GET, POST, PUT, DELETE, PATCH]
- *                 example: "GET"
- *               payload:
- *                 description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
- *                 example: { "status": "available" }
+ *               targets:
+ *                 type: array
+ *                 description: "Lista de endpoints alvos a serem testados pelo Autocannon (mínimo 1, máximo 20). A soma das durações dos testes (targets.length * duration) não pode exceder 600 segundos."
+ *                 minItems: 1
+ *                 maxItems: 20
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - path
+ *                   properties:
+ *                     path:
+ *                       type: string
+ *                       description: "Rota específica da API a ser testada pelo Autocannon."
+ *                       example: "/pet/findByStatus"
+ *                     method:
+ *                       type: string
+ *                       description: "Método HTTP para o teste de carga."
+ *                       enum: [GET, POST, PUT, DELETE, PATCH]
+ *                       example: "GET"
+ *                     payload:
+ *                       description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
+ *                       example: { "status": "available" }
+ *                 example:
+ *                   - path: "/pet/findByStatus"
+ *                     method: "GET"
+ *                   - path: "/pet"
+ *                     method: "POST"
+ *                     payload: { "name": "doggie", "photoUrls": [] }
  *               rulesConfig:
  *                 type: object
  *                 description: "Configuração opcional de regras customizadas para o Spectral."
@@ -210,10 +256,24 @@ const evaluationController = new EvaluationController();
  *                     type: number
  *                     description: "Taxa máxima de requisições por segundo (padrão máx. 1.000; com allowHighLoad máx. 10.000)."
  *                     example: 100
+ *                   method:
+ *                     type: string
+ *                     description: "Método HTTP padrão global para o teste de carga. É sobrescrito pelo method definido individualmente no alvo (target.method tem precedência)."
+ *                     enum: [GET, POST, PUT, DELETE, PATCH]
+ *                     example: "GET"
+ *                   headers:
+ *                     type: object
+ *                     additionalProperties:
+ *                       type: string
+ *                     description: "Headers HTTP customizados a serem enviados em todas as requisições do teste de carga."
+ *                     example: { "Authorization": "Bearer token", "X-Custom-Header": "value" }
  *                   allowMutatingMethods:
  *                     type: boolean
  *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga."
  *                     default: false
+ *                   body:
+ *                     type: string
+ *                     description: "Corpo padrão global em formato string/JSON. Aplicado exclusivamente a alvos com métodos mutantes (POST, PUT, PATCH) que não possuam payload próprio; ignorado em métodos não mutantes (GET, DELETE)."
  *                   allowHighLoad:
  *                     type: boolean
  *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros."
@@ -247,7 +307,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl/targetPath ausentes ou pesos inválidos)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos ou limite de duração total excedido)."
  *
  * /api/evaluations/security:
  *   post:
@@ -295,7 +355,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/{id}:
  *   get:
  *     summary: "Consulta o status e o resultado detalhado de uma avaliação"
- *     description: "Retorna o estado atual e os resultados consolidados da auditoria. Quando concluída (COMPLETED), exibe os relatórios de Spectral, Autocannon, Segurança e nota calculada. Avaliações vinculadas a um usuário autenticado só podem ser acessadas pelo próprio dono."
+ *     description: "Retorna o estado atual e os resultados consolidados da auditoria. Quando concluída (COMPLETED), exibe os relatórios de Spectral, Performance, Segurança e nota calculada. Avaliações vinculadas a um usuário autenticado só podem ser acessadas pelo próprio dono."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -324,12 +384,19 @@ const evaluationController = new EvaluationController();
  *                 apiBaseUrl:
  *                   type: string
  *                   nullable: true
- *                 targetPath:
- *                   type: string
+ *                 targets:
+ *                   type: array
  *                   nullable: true
- *                 targetMethod:
- *                   type: string
- *                   nullable: true
+ *                   description: "Lista de alvos configurados para o teste de performance."
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       path:
+ *                         type: string
+ *                       method:
+ *                         type: string
+ *                       payload:
+ *                         nullable: true
  *                 evaluationType:
  *                   type: string
  *                   enum: [contract, performance, security, full]
@@ -354,9 +421,41 @@ const evaluationController = new EvaluationController();
  *                 spectralResult:
  *                   type: array
  *                   nullable: true
- *                 autocannonResult:
- *                   type: object
+ *                 performanceResults:
+ *                   type: array
  *                   nullable: true
+ *                   description: "Resultados consolidados dos testes de carga para cada endpoint alvo. Disponível em avaliações com status COMPLETED, PARTIAL e também em FAILED quando o teste de performance tiver executado alvos (preservando o detalhe do erro por alvo)."
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       path:
+ *                         type: string
+ *                         example: "/pet/findByStatus"
+ *                       method:
+ *                         type: string
+ *                         example: "GET"
+ *                       result:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           score:
+ *                             type: number
+ *                           averageLatency:
+ *                             type: number
+ *                           totalRequests:
+ *                             type: number
+ *                           errors:
+ *                             type: number
+ *                           timeouts:
+ *                             type: number
+ *                           nonSuccessResponses:
+ *                             type: number
+ *                           warning:
+ *                             type: string
+ *                       error:
+ *                         type: string
+ *                         nullable: true
+ *                         description: "Mensagem de erro caso a execução do teste de carga tenha falhado para este alvo."
  *                 securityResult:
  *                   type: array
  *                   nullable: true
@@ -389,7 +488,7 @@ const evaluationController = new EvaluationController();
  *                 errorMessage:
  *                   type: string
  *                   nullable: true
- *                   description: "Motivo do erro quando o status for FAILED."
+ *                   description: "Motivo do erro quando o status for FAILED. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
  *       404:
  *         description: "Avaliação não encontrada ou pertence a outro usuário."
  */
