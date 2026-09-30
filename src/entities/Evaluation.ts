@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import type { EvaluationStatus, EvaluationType } from '../interfaces/evaluation.interface.js';
+import type { EvaluationStatus, EvaluationType, IPerformanceTarget, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { IFailedPillar } from '../interfaces/evaluation.interface.js';
 import { User } from './User.js';
 
@@ -21,11 +21,11 @@ export class Evaluation {
     @Column({ name: 'api_base_url', type: 'varchar', nullable: true })
     apiBaseUrl!: string | null;
 
-    @Column({ name: 'target_path', type: 'varchar', nullable: true })
-    targetPath!: string | null;
+    @Column({ name: 'targets', type: 'jsonb', nullable: true })
+    targets!: IPerformanceTarget[] | null;
 
-    @Column({ name: 'target_method', type: 'varchar', nullable: true })
-    targetMethod!: string | null;
+    @Column({ name: 'performance_results', type: 'jsonb', nullable: true })
+    performanceResults!: IPerformanceTargetResult[] | null;
 
     @Column({ name: 'evaluation_type', type: 'varchar' })
     evaluationType!: EvaluationType;
