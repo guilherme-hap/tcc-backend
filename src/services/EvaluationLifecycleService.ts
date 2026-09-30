@@ -1,7 +1,7 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
-import { EvaluationType } from '../interfaces/evaluation.interface.js';
+import { EvaluationType, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
 
 export class EvaluationLifecycleService {
     private get repository() {
@@ -11,16 +11,14 @@ export class EvaluationLifecycleService {
     async create(data: {
         openApiUrl: string;
         apiBaseUrl?: string | null;
-        targetPath?: string | null;
-        targetMethod?: string | null;
+        targets?: IPerformanceTarget[] | null;
         evaluationType: EvaluationType;
         userId?: string | null;
     }): Promise<Evaluation> {
         const evaluation = this.repository.create({
             openApiUrl: data.openApiUrl,
             apiBaseUrl: data.apiBaseUrl || null,
-            targetPath: data.targetPath || null,
-            targetMethod: data.targetMethod || null,
+            targets: data.targets || null,
             evaluationType: data.evaluationType,
             userId: data.userId ?? null,
             status: 'PENDING',
@@ -46,12 +44,17 @@ export class EvaluationLifecycleService {
         } as QueryDeepPartialEntity<Evaluation>);
     }
 
-    async fail(evaluationId: string, error: string | Error): Promise<void> {
+    async fail(
+        evaluationId: string,
+        error: string | Error,
+        extraResults?: Partial<Pick<Evaluation, 'performanceResults' | 'spectralResult' | 'securityResult'>>,
+    ): Promise<void> {
         const errorMessage = error instanceof Error ? error.message : error;
         await this.repository.update(evaluationId, {
+            ...(extraResults ?? {}),
             status: 'FAILED',
             errorMessage,
-        });
+        } as QueryDeepPartialEntity<Evaluation>);
     }
 
     async findById(evaluationId: string): Promise<Evaluation | null> {
