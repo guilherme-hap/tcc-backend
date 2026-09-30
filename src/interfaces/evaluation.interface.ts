@@ -4,6 +4,19 @@ import { ISecurityCheckResult } from '../services/SecurityService.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 import type { PerformanceRequestInput, FullEvaluationRequestInput } from '../schemas/evaluation.schema.js';
 
+export interface IPerformanceTarget {
+    path: string;
+    method?: HttpMethod | string;
+    payload?: any;
+}
+
+export interface IPerformanceTargetResult {
+    path: string;
+    method: string;
+    result: IAutocannonResult | null;
+    error?: string;
+}
+
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 export type ILoadTestOptions = LoadTestOptionsInput & {
@@ -33,7 +46,7 @@ export interface IFailedPillar {
 export interface IFullEvaluationResult {
     finalScore: number | null;
     contractResult: SpectralResponseDto[] | null;
-    performanceResult: IAutocannonResult | null;
+    performanceResults: IPerformanceTargetResult[] | null;
     securityResult: ISecurityCheckResult[] | null;
     failedPillars: IFailedPillar[];
     status: EvaluationStatus;

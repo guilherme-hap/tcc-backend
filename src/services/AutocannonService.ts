@@ -2,6 +2,7 @@ import autocannon from 'autocannon';
 import { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { isMutatingMethod } from '../utils/httpMethodUtils.js';
+import { DEFAULT_DURATION_SECONDS } from '../utils/loadTestLimits.js';
 
 export interface IAutocannonResult {
     score: number;
@@ -26,7 +27,7 @@ export class AutocannonService {
             );
         }
 
-        const duration = options.duration ?? (isMutating ? 5 : 10);
+        const duration = options.duration ?? (isMutating ? 5 : DEFAULT_DURATION_SECONDS);
         const connections = options.connections ?? (isMutating ? 2 : 10);
         const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
         const { targetLatency = 300, requestsPerSecond, body, payloadFactory } = options;

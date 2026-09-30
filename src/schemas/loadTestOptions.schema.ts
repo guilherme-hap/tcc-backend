@@ -1,19 +1,21 @@
 import { z } from 'zod';
 import { httpMethodSchema } from './shared.js';
 
-export const DEFAULT_LOAD_LIMITS = {
-    MAX_DURATION_SECONDS: 60,
-    MAX_CONNECTIONS: 50,
-    MAX_REQUESTS: 100_000,
-    MAX_REQUESTS_PER_SECOND: 1_000,
-} as const;
+import {
+    DEFAULT_LOAD_LIMITS,
+    ELEVATED_LOAD_LIMITS,
+    MAX_TARGETS,
+    MAX_TOTAL_DURATION_SECONDS,
+    DEFAULT_DURATION_SECONDS,
+} from '../utils/loadTestLimits.js';
 
-export const ELEVATED_LOAD_LIMITS = {
-    MAX_DURATION_SECONDS: 300,
-    MAX_CONNECTIONS: 500,
-    MAX_REQUESTS: 1_000_000,
-    MAX_REQUESTS_PER_SECOND: 10_000,
-} as const;
+export {
+    DEFAULT_LOAD_LIMITS,
+    ELEVATED_LOAD_LIMITS,
+    MAX_TARGETS,
+    MAX_TOTAL_DURATION_SECONDS,
+    DEFAULT_DURATION_SECONDS,
+};
 
 export const loadTestOptionsShape = {
     duration: z.number().positive().optional(),
