@@ -2,13 +2,27 @@ import { EvaluationLifecycleService } from '../services/EvaluationLifecycleServi
 import { SpectralService } from '../services/SpectralService.js';
 import { AutocannonService } from '../services/AutocannonService.js';
 import { SecurityService } from '../services/SecurityService.js';
-import { resolveTargetUrlWithSpec, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
+import { fetchOpenApiContent } from '../utils/fetchOpenApiSpec.js';
+import { runPerformanceTargets, PerformancePillarError, RunPerformanceTargetsOutput } from '../utils/runPerformanceTargets.js';
 import { resolveBaseUrlFromSpec } from '../utils/resolveBaseUrl.js';
 import { calculateContractScore } from '../utils/calculateContractScore.js';
 import { calculateSecurityScore } from '../utils/calculateSecurityScore.js';
 import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
-import { IFullEvaluationRequest, IFailedPillar } from '../interfaces/evaluation.interface.js';
+import { IFullEvaluationRequest, IFailedPillar, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
+
+function getPerformanceResults(
+    settled: PromiseSettledResult<RunPerformanceTargetsOutput>,
+): IPerformanceTargetResult[] | null {
+    if (settled.status === 'fulfilled') {
+        return settled.value.performanceResults;
+    }
+    const reason = settled.reason;
+    if (reason instanceof PerformancePillarError) {
+        return reason.performanceResults;
+    }
+    return null;
+}
 
 export class FullEvaluationWorker {
     private lifecycle: EvaluationLifecycleService;
@@ -28,9 +42,7 @@ export class FullEvaluationWorker {
         const {
             openApiUrl,
             apiBaseUrl,
-            targetPath,
-            targetMethod,
-            payload,
+            targets,
             rulesConfig,
             loadTestOptions,
             weights,
@@ -40,14 +52,8 @@ export class FullEvaluationWorker {
         try {
             await this.lifecycle.start(evaluationId);
 
-            const effectiveMethod = (targetMethod || loadTestOptions?.method)?.toUpperCase();
-            const { targetUrl, spec } = await resolveTargetUrlWithSpec(
-                openApiUrl,
-                targetPath,
-                apiBaseUrl,
-                effectiveMethod,
-            );
-            const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions, spec, targetPath });
+            const openApiContent = await fetchOpenApiContent(openApiUrl);
+            const spec = openApiContent.data;
 
             const runSecurityPillar = async () => {
                 const securityTargetUrl = apiBaseUrl?.trim()
@@ -57,8 +63,15 @@ export class FullEvaluationWorker {
             };
 
             const [contractSettled, performanceSettled, securitySettled] = await Promise.allSettled([
-                this.spectralService.analyze(openApiUrl, rulesConfig || {}),
-                this.autocannonService.runLoadTest(targetUrl, options),
+                this.spectralService.analyze(openApiUrl, rulesConfig || {}, openApiContent),
+                runPerformanceTargets({
+                    openApiUrl,
+                    apiBaseUrl,
+                    targets,
+                    loadTestOptions,
+                    spec,
+                    autocannonService: this.autocannonService,
+                }),
                 runSecurityPillar(),
             ]);
 
@@ -67,12 +80,14 @@ export class FullEvaluationWorker {
             const securityOk = securitySettled.status === 'fulfilled';
 
             const contractResult = contractOk ? contractSettled.value : null;
-            const performanceResult = performanceOk ? performanceSettled.value : null;
+            const performanceData = performanceOk ? performanceSettled.value : null;
             const securityResult = securityOk ? securitySettled.value : null;
+
+            const performanceResults = getPerformanceResults(performanceSettled);
 
             if (contractOk && performanceOk && securityOk) {
                 const contractScore = calculateContractScore(contractResult!, severityWeights);
-                const performanceScore = performanceResult!.score;
+                const performanceScore = performanceData!.score;
                 const securityScore = calculateSecurityScore(securityResult!);
 
                 const w = this.resolveWeights(weights);
@@ -82,7 +97,7 @@ export class FullEvaluationWorker {
 
                 await this.lifecycle.complete(evaluationId, {
                     spectralResult: contractResult,
-                    autocannonResult: performanceResult,
+                    performanceResults,
                     securityResult: securityResult,
                     finalScore,
                     appliedWeights: w,
@@ -119,7 +134,7 @@ export class FullEvaluationWorker {
             if (contractOk || performanceOk || securityOk) {
                 await this.lifecycle.partial(evaluationId, {
                     spectralResult: contractResult,
-                    autocannonResult: performanceResult,
+                    performanceResults,
                     securityResult: securityResult,
                     finalScore: null,
                     failedPillars,
@@ -131,7 +146,7 @@ export class FullEvaluationWorker {
             const aggregatedError = failedPillars
                 .map(fp => `${fp.pillar}: ${fp.error}`)
                 .join('; ');
-            await this.lifecycle.fail(evaluationId, aggregatedError);
+            await this.lifecycle.fail(evaluationId, aggregatedError, { performanceResults });
 
         } catch (error: any) {
             console.error(`[FullWorker] Error processing evaluation ${evaluationId}:`, error);

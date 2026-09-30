@@ -1,6 +1,6 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { AutocannonService } from '../services/AutocannonService.js';
-import { resolveTargetUrlWithSpec, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
+import { runPerformanceTargets, PerformancePillarError } from '../utils/runPerformanceTargets.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { IPerformanceRequest } from '../interfaces/evaluation.interface.js';
 
@@ -18,35 +18,33 @@ export class PerformanceEvaluationWorker {
         const {
             openApiUrl,
             apiBaseUrl,
-            targetPath,
-            targetMethod,
-            payload,
+            targets,
             loadTestOptions,
         } = params as IPerformanceRequest;
 
         try {
             await this.lifecycle.start(evaluationId);
 
-            const effectiveMethod = (targetMethod || loadTestOptions?.method)?.toUpperCase();
-            const { targetUrl, spec } = await resolveTargetUrlWithSpec(
+            const { score, performanceResults } = await runPerformanceTargets({
                 openApiUrl,
-                targetPath,
                 apiBaseUrl,
-                effectiveMethod,
-            );
-            const options = prepareLoadTestOptions({ targetMethod, payload, loadTestOptions, spec, targetPath });
-
-            const result = await this.autocannonService.runLoadTest(targetUrl, options);
+                targets,
+                loadTestOptions,
+                autocannonService: this.autocannonService,
+            });
 
             await this.lifecycle.complete(evaluationId, {
-                autocannonResult: result,
-                finalScore: result.score,
+                performanceResults,
+                finalScore: score,
             });
         } catch (error: any) {
             console.error(`[PerformanceWorker] Error processing evaluation ${evaluationId}:`, error);
             try {
                 const message = error instanceof Error ? error.message : String(error);
-                await this.lifecycle.fail(evaluationId, message);
+                const extra = error instanceof PerformancePillarError
+                    ? { performanceResults: error.performanceResults }
+                    : undefined;
+                await this.lifecycle.fail(evaluationId, message, extra);
             } catch (persistError) {
                 console.error(`[PerformanceWorker] Failed to persist FAILED status for ${evaluationId}:`, persistError);
             }

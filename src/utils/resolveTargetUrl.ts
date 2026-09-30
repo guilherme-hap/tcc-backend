@@ -1,19 +1,17 @@
 import { resolveBaseUrlFromSpec, buildTargetUrl } from './resolveBaseUrl.js';
-import { fetchOpenApiSpec } from './fetchOpenApiSpec.js';
 import { resolvePathParameters } from './resolvePathParameters.js';
 import { findRequestBodySchema } from './findOperationSchema.js';
 import { generateSyntheticPayload } from './generateSyntheticPayload.js';
 import { isMutatingMethod } from './httpMethodUtils.js';
 import { ILoadTestOptions, HttpMethod } from '../interfaces/evaluation.interface.js';
 
-export async function resolveTargetUrlWithSpec(
+export function resolveTargetUrl(
+    spec: any,
     openApiUrl: string,
     targetPath: string,
     apiBaseUrl?: string | null,
     method?: string,
-): Promise<{ targetUrl: string; spec: any }> {
-    const spec = await fetchOpenApiSpec(openApiUrl);
-
+): string {
     const effectiveBaseUrl = apiBaseUrl?.trim()
         ? apiBaseUrl.trim()
         : resolveBaseUrlFromSpec(spec, openApiUrl);
@@ -24,9 +22,7 @@ export async function resolveTargetUrlWithSpec(
         resolvedPath = resolvePathParameters(targetPath, spec, effectiveMethod);
     }
 
-    const targetUrl = buildTargetUrl(effectiveBaseUrl, resolvedPath);
-
-    return { targetUrl, spec };
+    return buildTargetUrl(effectiveBaseUrl, resolvedPath);
 }
 
 export function prepareLoadTestOptions(params: {
@@ -37,17 +33,20 @@ export function prepareLoadTestOptions(params: {
     targetPath?: string;
 }): ILoadTestOptions {
     const { targetMethod, payload, loadTestOptions, spec, targetPath } = params;
+    const { body: globalBody, ...restOptions } = loadTestOptions || {};
 
     const method = (targetMethod || loadTestOptions?.method) as HttpMethod | undefined;
     const effectiveMethod = method?.toUpperCase();
+    const isMutating = isMutatingMethod(effectiveMethod);
+    const canHaveBody = isMutating && effectiveMethod !== 'DELETE';
     const hasExplicitPayload = payload !== undefined && payload !== null;
-    const hasExplicitBody = hasExplicitPayload || (loadTestOptions?.body !== undefined);
+    const hasExplicitBody = hasExplicitPayload || (canHaveBody && globalBody !== undefined);
 
     let serializedBody: string | undefined;
     if (hasExplicitPayload) {
         serializedBody = typeof payload === 'object' ? JSON.stringify(payload) : String(payload);
-    } else if (loadTestOptions?.body !== undefined) {
-        serializedBody = loadTestOptions.body;
+    } else if (canHaveBody && globalBody !== undefined) {
+        serializedBody = globalBody;
     }
 
     let payloadFactory: (() => string | undefined) | undefined;
@@ -56,8 +55,7 @@ export function prepareLoadTestOptions(params: {
         spec &&
         targetPath &&
         effectiveMethod &&
-        isMutatingMethod(effectiveMethod) &&
-        effectiveMethod !== 'DELETE'
+        canHaveBody
     ) {
         const schema = findRequestBodySchema(spec, targetPath, effectiveMethod);
         if (schema) {
@@ -69,7 +67,7 @@ export function prepareLoadTestOptions(params: {
     }
 
     return {
-        ...loadTestOptions,
+        ...restOptions,
         ...(method && { method }),
         headers: {
             ...(loadTestOptions?.headers || {}),
