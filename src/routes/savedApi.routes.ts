@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { SavedApiController } from '../controllers/SavedApiController.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { validate } from '../middlewares/validate.js';
+import { createSavedApiSchema, updateSavedApiSchema } from '../schemas/savedApi.schema.js';
 
 const router = Router();
 const controller = new SavedApiController();
@@ -67,7 +69,7 @@ const controller = new SavedApiController();
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
  *       400:
- *         description: "Erro de validação (campos obrigatórios ausentes)."
+ *         description: "Erro de validação (campos obrigatórios ausentes, URL sem http/https, rulesConfig não booleano ou loadTestOptions fora dos limites de carga)."
  *       401:
  *         description: "Autenticação obrigatória."
  *
@@ -130,7 +132,7 @@ const controller = new SavedApiController();
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
  *       400:
- *         description: "Corpo da requisição vazio."
+ *         description: "Corpo da requisição vazio ou inválido (mesmas regras da criação)."
  *       401:
  *         description: "Autenticação obrigatória."
  *       404:
@@ -193,9 +195,9 @@ const controller = new SavedApiController();
  *           type: string
  *           format: date-time
  */
-router.post('/', requireAuth, controller.create);
+router.post('/', requireAuth, validate(createSavedApiSchema), controller.create);
 router.get('/', requireAuth, controller.list);
-router.put('/:id', requireAuth, controller.update);
+router.put('/:id', requireAuth, validate(updateSavedApiSchema), controller.update);
 router.delete('/:id', requireAuth, controller.delete);
 
 export default router;

@@ -1,21 +1,14 @@
 import { AppDataSource } from '../config/data-source.js';
 import { SavedApi } from '../entities/SavedApi.js';
 import { AppError } from '../errors/AppError.js';
+import type { CreateSavedApiInput, UpdateSavedApiInput } from '../schemas/savedApi.schema.js';
 
 export class SavedApiService {
     private get repository() {
         return AppDataSource.getRepository(SavedApi);
     }
 
-    async create(
-        userId: string,
-        data: {
-            name: string;
-            openApiUrl: string;
-            apiBaseUrl?: string;
-            defaultSettings?: SavedApi['defaultSettings'];
-        },
-    ): Promise<SavedApi> {
+    async create(userId: string, data: CreateSavedApiInput): Promise<SavedApi> {
         const savedApi = this.repository.create({
             userId,
             name: data.name,
@@ -41,16 +34,7 @@ export class SavedApiService {
         return savedApi;
     }
 
-    async update(
-        id: string,
-        userId: string,
-        data: Partial<{
-            name: string;
-            openApiUrl: string;
-            apiBaseUrl: string | null;
-            defaultSettings: SavedApi['defaultSettings'];
-        }>,
-    ): Promise<SavedApi> {
+    async update(id: string, userId: string, data: UpdateSavedApiInput): Promise<SavedApi> {
         const savedApi = await this.findByIdAndUser(id, userId);
 
         if (data.name !== undefined) savedApi.name = data.name;

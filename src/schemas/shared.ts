@@ -8,3 +8,7 @@ export const httpMethodSchema = z
     .pipe(httpMethodEnum);
 
 export type HttpMethodInput = z.infer<typeof httpMethodSchema>;
+
+export const httpUrl = z.url({ protocol: /^https?$/ });
+
+export const rulesConfigSchema = z.record(z.string(), z.boolean());

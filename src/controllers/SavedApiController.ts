@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { SavedApiService } from '../services/SavedApiService.js';
-import { AppError } from '../errors/AppError.js';
+import type { CreateSavedApiInput, UpdateSavedApiInput } from '../schemas/savedApi.schema.js';
 import type { AuthenticatedRequest } from '../middlewares/optionalAuth.js';
 
 export class SavedApiController {
@@ -11,18 +11,7 @@ export class SavedApiController {
     }
 
     public create = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-        const { name, openApiUrl, apiBaseUrl, defaultSettings } = req.body;
-
-        if (!name || !openApiUrl) {
-            throw new AppError('Fields "name" and "openApiUrl" are required', 400);
-        }
-
-        const savedApi = await this.service.create(req.userId!, {
-            name,
-            openApiUrl,
-            apiBaseUrl,
-            defaultSettings,
-        });
+        const savedApi = await this.service.create(req.userId!, req.body as CreateSavedApiInput);
 
         res.status(201).json(savedApi);
     };
@@ -33,24 +22,7 @@ export class SavedApiController {
     };
 
     public update = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-        const { name, openApiUrl, apiBaseUrl, defaultSettings } = req.body;
-
-        if (
-            name === undefined &&
-            openApiUrl === undefined &&
-            apiBaseUrl === undefined &&
-            defaultSettings === undefined
-        ) {
-            throw new AppError('At least one field must be provided for update', 400);
-        }
-
-        const data: Record<string, unknown> = {};
-        if (name !== undefined) data.name = name;
-        if (openApiUrl !== undefined) data.openApiUrl = openApiUrl;
-        if (apiBaseUrl !== undefined) data.apiBaseUrl = apiBaseUrl;
-        if (defaultSettings !== undefined) data.defaultSettings = defaultSettings;
-
-        const savedApi = await this.service.update(req.params.id as string, req.userId!, data);
+        const savedApi = await this.service.update(req.params.id as string, req.userId!, req.body as UpdateSavedApiInput);
         res.status(200).json(savedApi);
     };
 

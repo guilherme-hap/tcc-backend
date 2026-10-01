@@ -2,13 +2,9 @@ import { z } from 'zod';
 import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { MAX_TARGETS, validateTotalDuration } from '../utils/loadTestLimits.js';
 import { loadTestOptionsSchema } from './loadTestOptions.schema.js';
-import { httpMethodSchema } from './shared.js';
+import { httpMethodSchema, httpUrl, rulesConfigSchema } from './shared.js';
 
 export { validateTotalDuration };
-
-const httpUrl = z.url({ protocol: /^https?$/ });
-
-const rulesConfigSchema = z.record(z.string(), z.boolean());
 
 const severityWeightsSchema = z.partialRecord(
     z.enum(['Error', 'Warning', 'Info', 'Hint', 'Unknown']),
