@@ -27,8 +27,12 @@ export class EvaluationLifecycleService {
         return this.repository.save(evaluation);
     }
 
-    async start(evaluationId: string): Promise<void> {
-        await this.repository.update(evaluationId, { status: 'RUNNING' });
+    async start(evaluationId: string): Promise<boolean> {
+        const result = await this.repository.update(
+            { id: evaluationId, status: In(['PENDING', 'RUNNING']) },
+            { status: 'RUNNING' },
+        );
+        return (result.affected ?? 0) > 0;
     }
 
     async complete(evaluationId: string, results: Partial<Evaluation>): Promise<void> {

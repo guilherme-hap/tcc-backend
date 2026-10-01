@@ -50,8 +50,6 @@ export class FullEvaluationWorker {
         } = params as IFullEvaluationRequest;
 
         try {
-            await this.lifecycle.start(evaluationId);
-
             const openApiContent = await fetchOpenApiContent(openApiUrl);
             const spec = openApiContent.data;
 

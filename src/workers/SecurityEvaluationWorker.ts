@@ -20,8 +20,6 @@ export class SecurityEvaluationWorker {
         const { openApiUrl, apiBaseUrl } = params as ISecurityRequest;
 
         try {
-            await this.lifecycle.start(evaluationId);
-
             let targetUrl: string;
             if (apiBaseUrl?.trim()) {
                 targetUrl = apiBaseUrl.trim();

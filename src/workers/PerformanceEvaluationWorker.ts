@@ -23,8 +23,6 @@ export class PerformanceEvaluationWorker {
         } = params as IPerformanceRequest;
 
         try {
-            await this.lifecycle.start(evaluationId);
-
             const { score, performanceResults } = await runPerformanceTargets({
                 openApiUrl,
                 apiBaseUrl,

@@ -4,11 +4,23 @@ import { ContractEvaluationWorker } from './ContractEvaluationWorker.js';
 import { PerformanceEvaluationWorker } from './PerformanceEvaluationWorker.js';
 import { SecurityEvaluationWorker } from './SecurityEvaluationWorker.js';
 import { FullEvaluationWorker } from './FullEvaluationWorker.js';
+import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 
 const contractWorker = new ContractEvaluationWorker();
 const performanceWorker = new PerformanceEvaluationWorker();
 const securityWorker = new SecurityEvaluationWorker();
 const fullWorker = new FullEvaluationWorker();
+const lifecycle = new EvaluationLifecycleService();
+
+function startThen(handler: (job: EvaluationJob) => Promise<void>): (job: EvaluationJob) => Promise<void> {
+    return async (job) => {
+        if (!(await lifecycle.start(job.evaluationId))) {
+            console.log(`[Worker] Skipping job for evaluation ${job.evaluationId}: already finished`);
+            return;
+        }
+        await handler(job);
+    };
+}
 
 function buildHandler(type: string): (job: EvaluationJob) => Promise<void> {
     switch (type) {
@@ -33,6 +45,6 @@ export async function registerWorkers(): Promise<void> {
     for (const type of types) {
         const envKey = `${type.toUpperCase()}_WORKER_CONCURRENCY`;
         const concurrency = Number(process.env[envKey]) || (['contract', 'security'].includes(type) ? 10 : 2);
-        await evaluationQueue.listen(type, concurrency, buildHandler(type));
+        await evaluationQueue.listen(type, concurrency, startThen(buildHandler(type)));
     }
 }

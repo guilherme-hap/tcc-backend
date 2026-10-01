@@ -18,8 +18,6 @@ export class ContractEvaluationWorker {
         const { openApiUrl, rulesConfig, severityWeights } = params as IContractRequest;
 
         try {
-            await this.lifecycle.start(evaluationId);
-
             const issues = await this.spectralService.analyze(openApiUrl, rulesConfig || {});
             const score = calculateContractScore(issues, severityWeights);
 
