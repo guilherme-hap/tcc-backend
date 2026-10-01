@@ -7,6 +7,8 @@ export interface ISecurityCheckResult extends IAuditMessage {
     status: 'pass' | 'warning' | 'missing' | 'error';
 }
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
 export class SecurityService {
     public async analyze(targetUrl: string): Promise<ISecurityCheckResult[]> {
         const response = await this.fetchHeaders(targetUrl);
@@ -24,13 +26,13 @@ export class SecurityService {
 
     private async fetchHeaders(targetUrl: string): Promise<AxiosResponse> {
         try {
-            const headResponse = await axios.head(targetUrl, { validateStatus: () => true });
+            const headResponse = await axios.head(targetUrl, { timeout: REQUEST_TIMEOUT_MS, validateStatus: () => true });
             if (headResponse.status !== 405) {
                 return headResponse;
             }
         } catch {
         }
-        return await axios.get(targetUrl, { validateStatus: () => true });
+        return await axios.get(targetUrl, { timeout: REQUEST_TIMEOUT_MS, validateStatus: () => true });
     }
 
     private checkStrictTransportSecurity(headers: Record<string, string | undefined>): ISecurityCheckResult {

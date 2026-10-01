@@ -1,3 +1,4 @@
+import { In } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
@@ -31,14 +32,14 @@ export class EvaluationLifecycleService {
     }
 
     async complete(evaluationId: string, results: Partial<Evaluation>): Promise<void> {
-        await this.repository.update(evaluationId, {
+        await this.repository.update({ id: evaluationId, status: 'RUNNING' }, {
             ...results,
             status: 'COMPLETED',
         } as QueryDeepPartialEntity<Evaluation>);
     }
 
     async partial(evaluationId: string, results: Partial<Evaluation>): Promise<void> {
-        await this.repository.update(evaluationId, {
+        await this.repository.update({ id: evaluationId, status: 'RUNNING' }, {
             ...results,
             status: 'PARTIAL',
         } as QueryDeepPartialEntity<Evaluation>);
@@ -50,7 +51,7 @@ export class EvaluationLifecycleService {
         extraResults?: Partial<Pick<Evaluation, 'performanceResults' | 'spectralResult' | 'securityResult'>>,
     ): Promise<void> {
         const errorMessage = error instanceof Error ? error.message : error;
-        await this.repository.update(evaluationId, {
+        await this.repository.update({ id: evaluationId, status: In(['PENDING', 'RUNNING']) }, {
             ...(extraResults ?? {}),
             status: 'FAILED',
             errorMessage,
