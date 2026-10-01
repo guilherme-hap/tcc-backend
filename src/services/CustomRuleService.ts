@@ -1,20 +1,14 @@
 import { AppDataSource } from '../config/data-source.js';
 import { CustomRule } from '../entities/CustomRule.js';
 import { AppError } from '../errors/AppError.js';
+import type { CreateCustomRuleInput, UpdateCustomRuleInput } from '../schemas/customRule.schema.js';
 
 export class CustomRuleService {
     private get repository() {
         return AppDataSource.getRepository(CustomRule);
     }
 
-    async create(
-        userId: string,
-        data: {
-            name: string;
-            rulesConfig: Record<string, boolean>;
-            severityWeights?: Record<string, number>;
-        },
-    ): Promise<CustomRule> {
+    async create(userId: string, data: CreateCustomRuleInput): Promise<CustomRule> {
         const customRule = this.repository.create({
             userId,
             name: data.name,
@@ -39,15 +33,7 @@ export class CustomRuleService {
         return customRule;
     }
 
-    async update(
-        id: string,
-        userId: string,
-        data: Partial<{
-            name: string;
-            rulesConfig: Record<string, boolean>;
-            severityWeights: Record<string, number> | null;
-        }>,
-    ): Promise<CustomRule> {
+    async update(id: string, userId: string, data: UpdateCustomRuleInput): Promise<CustomRule> {
         const customRule = await this.findByIdAndUser(id, userId);
 
         if (data.name !== undefined) customRule.name = data.name;

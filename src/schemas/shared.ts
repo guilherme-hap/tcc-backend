@@ -12,3 +12,8 @@ export type HttpMethodInput = z.infer<typeof httpMethodSchema>;
 export const httpUrl = z.url({ protocol: /^https?$/ });
 
 export const rulesConfigSchema = z.record(z.string(), z.boolean());
+
+export const severityWeightsSchema = z.partialRecord(
+    z.enum(['Error', 'Warning', 'Info', 'Hint', 'Unknown']),
+    z.number().min(0),
+);

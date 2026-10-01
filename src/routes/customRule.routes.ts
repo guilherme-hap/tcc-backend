@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { CustomRuleController } from '../controllers/CustomRuleController.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { validate } from '../middlewares/validate.js';
+import { createCustomRuleSchema, updateCustomRuleSchema } from '../schemas/customRule.schema.js';
 
 const router = Router();
 const controller = new CustomRuleController();
@@ -176,9 +178,9 @@ const controller = new CustomRuleController();
  *           type: string
  *           format: date-time
  */
-router.post('/', requireAuth, controller.create);
+router.post('/', requireAuth, validate(createCustomRuleSchema), controller.create);
 router.get('/', requireAuth, controller.list);
-router.put('/:id', requireAuth, controller.update);
+router.put('/:id', requireAuth, validate(updateCustomRuleSchema), controller.update);
 router.delete('/:id', requireAuth, controller.delete);
 
 export default router;
