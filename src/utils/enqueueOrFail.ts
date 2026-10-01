@@ -10,7 +10,7 @@ export async function enqueueOrFail(
         await evaluationQueue.enqueue(job);
     } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
-        console.error(`[Enqueue] Failed for evaluation ${job.evaluationId}:`, err);
+        console.error(`[Enqueue] Failed for evaluation ${job.evaluationId}:`, detail);
         await lifecycle
             .fail(job.evaluationId, `Failed to enqueue ${job.type} evaluation: ${detail}`)
             .catch((e) => console.error(`[Enqueue] Failed to persist FAILED for ${job.evaluationId}:`, e));

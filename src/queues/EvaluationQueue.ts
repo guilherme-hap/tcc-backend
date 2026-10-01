@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { AppDataSource } from '../config/data-source.js';
-import { EvaluationJob as EvaluationJobEntity } from '../entities/EvaluationJob.js';
+import { EvaluationJob as EvaluationJobEntity, EvaluationJobStatus } from '../entities/EvaluationJob.js';
 import {
     EvaluationType,
     IContractRequest,
@@ -143,10 +143,10 @@ class PostgresEvaluationQueue {
                 if (job) {
                     try {
                         await handler(job);
-                        await this.markJobDone(job.id);
+                        await this.finishJob(job.id, 'DONE');
                     } catch (handlerErr: any) {
                         console.error(`${tag} Handler error for job ${job.id}:`, handlerErr.message);
-                        await this.markJobFailed(job.id);
+                        await this.finishJob(job.id, 'FAILED');
                     }
                     continue;
                 }
@@ -205,14 +205,15 @@ class PostgresEvaluationQueue {
         }
     }
 
-    private async markJobDone(jobId: string): Promise<void> {
-        await AppDataSource.getRepository(EvaluationJobEntity)
-            .update(jobId, { status: 'DONE' });
-    }
-
-    private async markJobFailed(jobId: string): Promise<void> {
-        await AppDataSource.getRepository(EvaluationJobEntity)
-            .update(jobId, { status: 'FAILED' });
+    private async finishJob(jobId: string, status: Extract<EvaluationJobStatus, 'DONE' | 'FAILED'>): Promise<void> {
+        await AppDataSource.query(
+            `UPDATE evaluation_jobs
+             SET status = $2,
+                 payload = payload #- '{loadTestOptions,headers}' #- '{loadTestOptions,body}',
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [jobId, status],
+        );
     }
 }
 
