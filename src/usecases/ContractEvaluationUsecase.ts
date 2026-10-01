@@ -2,6 +2,7 @@ import { EvaluationLifecycleService } from '../services/EvaluationLifecycleServi
 import { IContractRequest } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { enqueueOrFail } from '../utils/enqueueOrFail.js';
+import { contractRequestSchema } from '../schemas/evaluation.schema.js';
 
 export class ContractEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -11,9 +12,11 @@ export class ContractEvaluationUsecase {
     }
 
     async execute(data: IContractRequest, userId?: string | null) {
-        if (!data?.openApiUrl || typeof data.openApiUrl !== 'string' || !data.openApiUrl.trim()) {
-            throw new AppError('openApiUrl is required', 400);
+        const parsed = contractRequestSchema.safeParse(data);
+        if (!parsed.success) {
+            throw new AppError(parsed.error.issues.map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message)).join('; '), 400);
         }
+        data = parsed.data;
 
         const evaluation = await this.lifecycle.create({
             openApiUrl: data.openApiUrl,

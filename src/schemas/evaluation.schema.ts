@@ -8,6 +8,28 @@ export { validateTotalDuration };
 
 const httpUrl = z.url({ protocol: /^https?$/ });
 
+const rulesConfigSchema = z.record(z.string(), z.boolean());
+
+const severityWeightsSchema = z.partialRecord(
+    z.enum(['Error', 'Warning', 'Info', 'Hint', 'Unknown']),
+    z.number().min(0),
+);
+
+export const contractRequestSchema = z.object({
+    openApiUrl: httpUrl,
+    rulesConfig: rulesConfigSchema.optional(),
+    severityWeights: severityWeightsSchema.optional(),
+});
+
+export type ContractRequestInput = z.infer<typeof contractRequestSchema>;
+
+export const securityRequestSchema = z.object({
+    openApiUrl: httpUrl,
+    apiBaseUrl: httpUrl.trim().optional(),
+});
+
+export type SecurityRequestInput = z.infer<typeof securityRequestSchema>;
+
 export const performanceTargetSchema = z.object({
     path: z.string().trim().min(1, 'path is required'),
     method: httpMethodSchema.optional(),
@@ -34,13 +56,8 @@ export const fullEvaluationRequestSchema = z
         openApiUrl: httpUrl,
         apiBaseUrl: httpUrl.trim().optional(),
         targets: z.array(performanceTargetSchema).min(1, 'At least one target is required').max(MAX_TARGETS, `Maximum of ${MAX_TARGETS} targets allowed`),
-        rulesConfig: z.record(z.string(), z.boolean()).optional(),
-        severityWeights: z
-            .partialRecord(
-                z.enum(['Error', 'Warning', 'Info', 'Hint', 'Unknown']),
-                z.number().min(0),
-            )
-            .optional(),
+        rulesConfig: rulesConfigSchema.optional(),
+        severityWeights: severityWeightsSchema.optional(),
         loadTestOptions: loadTestOptionsSchema.optional(),
         weights: z
             .object({

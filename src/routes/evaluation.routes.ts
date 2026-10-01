@@ -2,7 +2,12 @@ import { Router } from 'express';
 import { EvaluationController } from '../controllers/EvaluationController.js';
 import { optionalAuth } from '../middlewares/optionalAuth.js';
 import { validate } from '../middlewares/validate.js';
-import { performanceRequestSchema, fullEvaluationRequestSchema } from '../schemas/evaluation.schema.js';
+import {
+    contractRequestSchema,
+    performanceRequestSchema,
+    securityRequestSchema,
+    fullEvaluationRequestSchema,
+} from '../schemas/evaluation.schema.js';
 
 const router = Router();
 const evaluationController = new EvaluationController();
@@ -54,7 +59,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente ou sem protocolo http/https, rulesConfig com valor não booleano, severityWeights negativo)."
  *
  * /api/evaluations/performance:
  *   post:
@@ -350,7 +355,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente, openApiUrl ou apiBaseUrl sem protocolo http/https)."
  *
  * /api/evaluations/{id}:
  *   get:
@@ -492,9 +497,9 @@ const evaluationController = new EvaluationController();
  *       404:
  *         description: "Avaliação não encontrada ou pertence a outro usuário."
  */
-router.post('/contract', optionalAuth, evaluationController.evaluateContract);
+router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluateContract);
 router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluatePerformance);
-router.post('/security', optionalAuth, evaluationController.evaluateSecurity);
+router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluateSecurity);
 router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluateFull);
 router.get('/:id', optionalAuth, evaluationController.getEvaluation);
 

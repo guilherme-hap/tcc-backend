@@ -2,6 +2,7 @@ import { EvaluationLifecycleService } from '../services/EvaluationLifecycleServi
 import { ISecurityRequest } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { enqueueOrFail } from '../utils/enqueueOrFail.js';
+import { securityRequestSchema } from '../schemas/evaluation.schema.js';
 
 export class SecurityEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -11,9 +12,11 @@ export class SecurityEvaluationUsecase {
     }
 
     async execute(data: ISecurityRequest, userId?: string | null) {
-        if (!data?.openApiUrl || typeof data.openApiUrl !== 'string' || !data.openApiUrl.trim()) {
-            throw new AppError('openApiUrl is required', 400);
+        const parsed = securityRequestSchema.safeParse(data);
+        if (!parsed.success) {
+            throw new AppError(parsed.error.issues.map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message)).join('; '), 400);
         }
+        data = parsed.data;
 
         const evaluation = await this.lifecycle.create({
             openApiUrl: data.openApiUrl,

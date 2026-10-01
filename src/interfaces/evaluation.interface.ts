@@ -1,8 +1,13 @@
-import { SpectralResponseDto, SpectralSeverity } from '../dtos/SpectralResponseDto.js';
+import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
 import { IAutocannonResult } from '../services/AutocannonService.js';
 import { ISecurityCheckResult } from '../services/SecurityService.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
-import type { PerformanceRequestInput, FullEvaluationRequestInput } from '../schemas/evaluation.schema.js';
+import type {
+    ContractRequestInput,
+    PerformanceRequestInput,
+    SecurityRequestInput,
+    FullEvaluationRequestInput,
+} from '../schemas/evaluation.schema.js';
 
 export interface IPerformanceTarget {
     path: string;
@@ -23,18 +28,11 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
     payloadFactory?: () => string | undefined;
 };
 
-export interface IContractRequest {
-    openApiUrl: string;
-    rulesConfig?: Record<string, boolean>;
-    severityWeights?: Partial<Record<SpectralSeverity, number>>;
-}
+export type IContractRequest = ContractRequestInput;
 
 export type IPerformanceRequest = PerformanceRequestInput;
 
-export interface ISecurityRequest {
-    openApiUrl: string;
-    apiBaseUrl?: string;
-}
+export type ISecurityRequest = SecurityRequestInput;
 
 export type IFullEvaluationRequest = FullEvaluationRequestInput;
 
