@@ -3,6 +3,7 @@ import { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_DURATION_SECONDS } from '../utils/loadTestLimits.js';
+import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
 export interface IAutocannonResult {
     score: number;
@@ -11,7 +12,7 @@ export interface IAutocannonResult {
     errors: number;
     timeouts: number;
     nonSuccessResponses: number;
-    warning?: string;
+    warnings: IAuditMessage[];
 }
 
 export class AutocannonService {
@@ -38,31 +39,22 @@ export class AutocannonService {
             headers['content-type'] = 'application/json';
         }
 
-        let warning: string | undefined;
-        if (isMutating) {
-            warning =
-                `This load test used method ${method} against a live endpoint. ` +
-                `Ensure the target environment is disposable (staging/test), not production.`;
+        const warnings: IAuditMessage[] = [];
+        if (isMutating && method) {
+            warnings.push(auditMessage('PERF_MUTATING_METHOD', { method }));
             if (method === 'PUT' || method === 'PATCH') {
-                warning +=
-                    ` Note: synthetic path parameter IDs may have been used and likely ` +
-                    `do not exist on the target — high 404 rates are expected and do not ` +
-                    `reflect API quality.`;
+                warnings.push(auditMessage('PERF_SYNTHETIC_PATH_IDS'));
             }
             if (payloadFactory) {
-                warning +=
-                    ` Fields excluded from randomization (CNPJ, CPF, phone, zipcode) may cause` +
-                    ` uniqueness constraint failures on repeated requests if the target API` +
-                    ` enforces uniqueness on these fields — provide an explicit payload if` +
-                    ` this affects your test.`;
+                warnings.push(auditMessage('PERF_SYNTHETIC_UNIQUE_FIELDS'));
+            }
+            if (method !== 'DELETE' && !hasBody) {
+                warnings.push(auditMessage('PERF_MISSING_BODY'));
             }
         }
 
         if (options.allowHighLoad) {
-            const highLoadMsg =
-                'High-load opt-in enabled: this test may generate significant load against the target. ' +
-                'Ensure you have authorization to load-test this API.';
-            warning = warning ? `${warning} ${highLoadMsg}` : highLoadMsg;
+            warnings.push(auditMessage('PERF_HIGH_LOAD'));
         }
 
         const result = await new Promise<autocannon.Result>((resolve, reject) => {
@@ -132,7 +124,7 @@ export class AutocannonService {
             errors: result.errors ?? 0,
             timeouts: result.timeouts ?? 0,
             nonSuccessResponses: result.non2xx ?? 0,
-            ...(warning && { warning }),
+            warnings,
         };
     }
 

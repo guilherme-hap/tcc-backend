@@ -1,13 +1,10 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
-import type { Severity } from '../types/severity.js';
+import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
-export interface ISecurityCheckResult {
+export interface ISecurityCheckResult extends IAuditMessage {
     header: string;
     status: 'pass' | 'warning' | 'missing' | 'error';
-    severity: Severity;
-    message: string;
-    recommendation?: string;
 }
 
 export class SecurityService {
@@ -37,51 +34,30 @@ export class SecurityService {
     }
 
     private checkStrictTransportSecurity(headers: Record<string, string | undefined>): ISecurityCheckResult {
+        const header = 'Strict-Transport-Security';
         const value = this.getHeader(headers, 'strict-transport-security');
 
         if (!value) {
-            return {
-                header: 'Strict-Transport-Security',
-                status: 'missing',
-                severity: 'Warning',
-                message: 'O header Strict-Transport-Security (HSTS) não está presente.',
-                recommendation: 'Adicione o header com max-age de pelo menos 6 meses (15768000 segundos). Exemplo: Strict-Transport-Security: max-age=31536000; includeSubDomains.',
-            };
+            return { header, status: 'missing', ...auditMessage('SEC_HSTS_MISSING') };
         }
 
         const maxAgeMatch = value.match(/max-age\s*=\s*(\d+)/i);
         if (maxAgeMatch) {
             const maxAge = parseInt(maxAgeMatch[1], 10);
             if (maxAge < 15_768_000) {
-                return {
-                    header: 'Strict-Transport-Security',
-                    status: 'warning',
-                    severity: 'Info',
-                    message: `HSTS presente, mas max-age (${maxAge}s) é inferior a 6 meses (15768000s).`,
-                    recommendation: 'Aumente o max-age para pelo menos 15768000 (6 meses), idealmente 31536000 (1 ano).',
-                };
+                return { header, status: 'warning', ...auditMessage('SEC_HSTS_SHORT_MAX_AGE', { maxAge }) };
             }
         }
 
-        return {
-            header: 'Strict-Transport-Security',
-            status: 'pass',
-            severity: 'Info',
-            message: 'HSTS configurado corretamente.',
-        };
+        return { header, status: 'pass', ...auditMessage('SEC_HSTS_OK') };
     }
 
     private checkContentSecurityPolicy(headers: Record<string, string | undefined>): ISecurityCheckResult {
+        const header = 'Content-Security-Policy';
         const value = this.getHeader(headers, 'content-security-policy');
 
         if (!value) {
-            return {
-                header: 'Content-Security-Policy',
-                status: 'missing',
-                severity: 'Info',
-                message: 'O header Content-Security-Policy (CSP) não está presente.',
-                recommendation: 'Defina uma política CSP restritiva. Para APIs, ao menos: default-src \'none\'.',
-            };
+            return { header, status: 'missing', ...auditMessage('SEC_CSP_MISSING') };
         }
 
         const hasUnsafeInline = /unsafe-inline/i.test(value);
@@ -92,20 +68,13 @@ export class SecurityService {
             if (hasUnsafeInline) issues.push('unsafe-inline');
             if (hasWildcard) issues.push('* (wildcard)');
             return {
-                header: 'Content-Security-Policy',
+                header,
                 status: 'warning',
-                severity: 'Warning',
-                message: `CSP presente, mas contém diretivas fracas: ${issues.join(', ')}.`,
-                recommendation: 'Remova unsafe-inline e substitua * por origens explícitas.',
+                ...auditMessage('SEC_CSP_WEAK_DIRECTIVES', { directives: issues.join(', ') }),
             };
         }
 
-        return {
-            header: 'Content-Security-Policy',
-            status: 'pass',
-            severity: 'Info',
-            message: 'CSP configurado sem diretivas inseguras detectadas.',
-        };
+        return { header, status: 'pass', ...auditMessage('SEC_CSP_OK') };
     }
 
     private cspContainsWildcardDirective(cspValue: string): boolean {
@@ -120,75 +89,38 @@ export class SecurityService {
     }
 
     private checkXContentTypeOptions(headers: Record<string, string | undefined>): ISecurityCheckResult {
+        const header = 'X-Content-Type-Options';
         const value = this.getHeader(headers, 'x-content-type-options');
 
         if (!value) {
-            return {
-                header: 'X-Content-Type-Options',
-                status: 'missing',
-                severity: 'Warning',
-                message: 'O header X-Content-Type-Options não está presente.',
-                recommendation: 'Adicione o header com o valor "nosniff" para prevenir MIME-type sniffing.',
-            };
+            return { header, status: 'missing', ...auditMessage('SEC_XCTO_MISSING') };
         }
 
         if (value.trim().toLowerCase() !== 'nosniff') {
-            return {
-                header: 'X-Content-Type-Options',
-                status: 'warning',
-                severity: 'Warning',
-                message: `X-Content-Type-Options presente com valor inesperado: "${value}".`,
-                recommendation: 'O único valor válido é "nosniff". Corrija o header.',
-            };
+            return { header, status: 'warning', ...auditMessage('SEC_XCTO_INVALID', { value }) };
         }
 
-        return {
-            header: 'X-Content-Type-Options',
-            status: 'pass',
-            severity: 'Info',
-            message: 'X-Content-Type-Options configurado como "nosniff".',
-        };
+        return { header, status: 'pass', ...auditMessage('SEC_XCTO_OK') };
     }
 
     private checkAccessControlAllowOrigin(headers: Record<string, string | undefined>): ISecurityCheckResult {
+        const header = 'Access-Control-Allow-Origin';
         const value = this.getHeader(headers, 'access-control-allow-origin');
 
         if (!value) {
-            return {
-                header: 'Access-Control-Allow-Origin',
-                status: 'pass',
-                severity: 'Info',
-                message: 'Header Access-Control-Allow-Origin ausente (nenhum CORS configurado — seguro por padrão).',
-            };
+            return { header, status: 'pass', ...auditMessage('SEC_CORS_NOT_CONFIGURED') };
         }
 
         if (value.trim() === '*') {
             const credentials = this.getHeader(headers, 'access-control-allow-credentials');
             if (credentials && credentials.trim().toLowerCase() === 'true') {
-                return {
-                    header: 'Access-Control-Allow-Origin',
-                    status: 'error',
-                    severity: 'Error',
-                    message: 'CORS configurado com Access-Control-Allow-Origin: * e Access-Control-Allow-Credentials: true — combinação insegura e inválida pela especificação.',
-                    recommendation: 'Nunca use wildcard (*) com credentials. Especifique origens explícitas ao habilitar credentials.',
-                };
+                return { header, status: 'error', ...auditMessage('SEC_CORS_WILDCARD_WITH_CREDENTIALS') };
             }
 
-            return {
-                header: 'Access-Control-Allow-Origin',
-                status: 'warning',
-                severity: 'Warning',
-                message: 'CORS permite qualquer origem (Access-Control-Allow-Origin: *).',
-                recommendation: 'Restrinja a origens específicas confiáveis quando possível.',
-            };
+            return { header, status: 'warning', ...auditMessage('SEC_CORS_WILDCARD') };
         }
 
-        return {
-            header: 'Access-Control-Allow-Origin',
-            status: 'pass',
-            severity: 'Info',
-            message: `CORS configurado com origem explícita: ${value}.`,
-        };
+        return { header, status: 'pass', ...auditMessage('SEC_CORS_EXPLICIT_ORIGIN', { origin: value }) };
     }
 
     private checkServerHeader(headers: Record<string, string | undefined>): ISecurityCheckResult {
@@ -204,36 +136,18 @@ export class SecurityService {
         displayName: string,
         headerKey: string,
     ): ISecurityCheckResult {
+        const header = displayName;
         const value = this.getHeader(headers, headerKey);
 
         if (!value) {
-            return {
-                header: displayName,
-                status: 'pass',
-                severity: 'Info',
-                message: `Header ${displayName} ausente — bom, reduz fingerprinting.`,
-            };
+            return { header, status: 'pass', ...auditMessage('SEC_FINGERPRINT_ABSENT', { header }) };
         }
 
-        const hasVersion = /\d+\.\d+/.test(value);
-
-        if (hasVersion) {
-            return {
-                header: displayName,
-                status: 'warning',
-                severity: 'Warning',
-                message: `Header ${displayName} expõe informação de versão: "${value}".`,
-                recommendation: `Remova ou oculte o header ${displayName} para reduzir a superfície de ataque.`,
-            };
+        if (/\d+\.\d+/.test(value)) {
+            return { header, status: 'warning', ...auditMessage('SEC_FINGERPRINT_VERSION_EXPOSED', { header, value }) };
         }
 
-        return {
-            header: displayName,
-            status: 'pass',
-            severity: 'Info',
-            message: `Header ${displayName} presente ("${value}"), mas sem versão detalhada.`,
-            recommendation: `Considere remover o header ${displayName} para reduzir fingerprinting.`,
-        };
+        return { header, status: 'pass', ...auditMessage('SEC_FINGERPRINT_PRESENT', { header, value }) };
     }
 
     private getHeader(headers: Record<string, string | undefined>, name: string): string | undefined {

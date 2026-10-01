@@ -455,8 +455,25 @@ const evaluationController = new EvaluationController();
  *                             type: number
  *                           nonSuccessResponses:
  *                             type: number
- *                           warning:
- *                             type: string
+ *                           warnings:
+ *                             type: array
+ *                             description: "Avisos estruturados sobre a execução do teste (ex.: método mutante, body ausente). Use code para identificar o aviso."
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 code:
+ *                                   type: string
+ *                                   example: "PERF_MISSING_BODY"
+ *                                 severity:
+ *                                   type: string
+ *                                 message:
+ *                                   type: string
+ *                                 recommendation:
+ *                                   type: string
+ *                                   nullable: true
+ *                                 params:
+ *                                   type: object
+ *                                   nullable: true
  *                       error:
  *                         type: string
  *                         nullable: true
@@ -473,6 +490,10 @@ const evaluationController = new EvaluationController();
  *                       status:
  *                         type: string
  *                         enum: [pass, warning, missing, error]
+ *                       code:
+ *                         type: string
+ *                         description: "Identificador estável do achado."
+ *                         example: "SEC_HSTS_MISSING"
  *                       severity:
  *                         type: string
  *                       message:
@@ -480,6 +501,10 @@ const evaluationController = new EvaluationController();
  *                       recommendation:
  *                         type: string
  *                         nullable: true
+ *                       params:
+ *                         type: object
+ *                         nullable: true
+ *                         description: "Valores usados na mensagem (ex.: maxAge, header, value)."
  *                 failedPillars:
  *                   type: array
  *                   nullable: true
