@@ -105,30 +105,20 @@ export class FullEvaluationWorker {
                 return;
             }
 
+            const settledPillars = [
+                { pillar: 'contract', settled: contractSettled },
+                { pillar: 'performance', settled: performanceSettled },
+                { pillar: 'security', settled: securitySettled },
+            ] as const;
+
             const failedPillars: IFailedPillar[] = [];
-
-            if (!contractOk) {
-                const reason = contractSettled as PromiseRejectedResult;
-                failedPillars.push({
-                    pillar: 'contract',
-                    error: reason.reason?.message || String(reason.reason),
-                });
-            }
-
-            if (!performanceOk) {
-                const reason = performanceSettled as PromiseRejectedResult;
-                failedPillars.push({
-                    pillar: 'performance',
-                    error: reason.reason?.message || String(reason.reason),
-                });
-            }
-
-            if (!securityOk) {
-                const reason = securitySettled as PromiseRejectedResult;
-                failedPillars.push({
-                    pillar: 'security',
-                    error: reason.reason?.message || String(reason.reason),
-                });
+            for (const { pillar, settled } of settledPillars) {
+                if (settled.status === 'rejected') {
+                    failedPillars.push({
+                        pillar,
+                        error: settled.reason?.message || String(settled.reason),
+                    });
+                }
             }
 
             if (contractOk || performanceOk || securityOk) {
