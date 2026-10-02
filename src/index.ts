@@ -8,12 +8,15 @@ import customRuleRoutes from './routes/customRule.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { bootstrap } from './config/bootstrap.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { securityHeaders } from './middlewares/securityHeaders.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
 
+app.disable('x-powered-by');
+app.use(securityHeaders);
 app.use(cors({ origin: allowedOrigins }));
 
 app.use(express.json());

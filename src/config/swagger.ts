@@ -1,6 +1,20 @@
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
+
+const SWAGGER_UI_CSP = [
+    "default-src 'self'",
+    "img-src 'self' data:",
+    "style-src 'self' 'unsafe-inline'",
+    "script-src 'self'",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+].join('; ');
+
+function swaggerUiCsp(_req: Request, res: Response, next: NextFunction): void {
+    res.setHeader('Content-Security-Policy', SWAGGER_UI_CSP);
+    next();
+}
 
 const options = {
     definition: {
@@ -26,5 +40,5 @@ const options = {
 const swaggerSpec = swaggerJSDoc(options);
 
 export const setupSwagger = (app: Express) => {
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.use('/api-docs', swaggerUiCsp, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 };
