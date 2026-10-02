@@ -1,7 +1,8 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { IFullEvaluationRequest } from '../interfaces/evaluation.interface.js';
-import { prepareTargetsRequest } from '../utils/prepareTargetsRequest.js';
 import { enqueueOrFail } from '../utils/enqueueOrFail.js';
+import { parseOrThrow } from '../utils/parseOrThrow.js';
+import { fullEvaluationRequestSchema } from '../schemas/evaluation.schema.js';
 
 export class FullEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -11,7 +12,7 @@ export class FullEvaluationUsecase {
     }
 
     async execute(data: IFullEvaluationRequest, userId?: string | null) {
-        const requestData = prepareTargetsRequest(data);
+        const requestData = parseOrThrow(fullEvaluationRequestSchema, data);
 
         const evaluation = await this.lifecycle.create({
             openApiUrl: requestData.openApiUrl,

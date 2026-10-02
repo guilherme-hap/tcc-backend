@@ -178,7 +178,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targets ausentes, path vazio, método inválido ou limite de duração total excedido)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targets ausentes, path vazio, método inválido, método mutante sem allowMutatingMethods, DELETE com path parametrizado ou limite de duração total excedido)."
  *
  * /api/evaluations/full:
  *   post:
@@ -313,7 +313,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos ou limite de duração total excedido)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos, método mutante sem allowMutatingMethods, DELETE com path parametrizado ou limite de duração total excedido)."
  *
  * /api/evaluations/security:
  *   post:

@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { MAX_TARGETS, validateTotalDuration } from '../utils/loadTestLimits.js';
-import { loadTestOptionsSchema } from './loadTestOptions.schema.js';
+import { validateTargetMethods } from '../utils/httpMethodUtils.js';
+import { loadTestOptionsSchema, type LoadTestOptionsInput } from './loadTestOptions.schema.js';
 import { httpMethodSchema, httpUrl, rulesConfigSchema, severityWeightsSchema } from './shared.js';
-
-export { validateTotalDuration };
 
 export const contractRequestSchema = z.object({
     openApiUrl: httpUrl,
@@ -29,6 +28,14 @@ export const performanceTargetSchema = z.object({
 
 export type PerformanceTargetInput = z.infer<typeof performanceTargetSchema>;
 
+function refineTargets(
+    data: { targets: PerformanceTargetInput[]; loadTestOptions?: LoadTestOptionsInput },
+    ctx: z.RefinementCtx,
+): void {
+    validateTotalDuration(data, ctx);
+    validateTargetMethods(data, ctx);
+}
+
 export const performanceRequestSchema = z
     .object({
         openApiUrl: httpUrl,
@@ -36,9 +43,7 @@ export const performanceRequestSchema = z
         targets: z.array(performanceTargetSchema).min(1, 'At least one target is required').max(MAX_TARGETS, `Maximum of ${MAX_TARGETS} targets allowed`),
         loadTestOptions: loadTestOptionsSchema.optional(),
     })
-    .superRefine((data, ctx) => {
-        validateTotalDuration(data, ctx);
-    });
+    .superRefine(refineTargets);
 
 export type PerformanceRequestInput = z.infer<typeof performanceRequestSchema>;
 
@@ -87,8 +92,6 @@ export const fullEvaluationRequestSchema = z
                 }
             }),
     })
-    .superRefine((data, ctx) => {
-        validateTotalDuration(data, ctx);
-    });
+    .superRefine(refineTargets);
 
 export type FullEvaluationRequestInput = z.infer<typeof fullEvaluationRequestSchema>;

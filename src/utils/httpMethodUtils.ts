@@ -1,40 +1,49 @@
-import { AppError } from '../errors/AppError.js';
+import type { z } from 'zod';
 
 const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
+
+const TEMPLATED_PATH = /\{[^}]+\}/;
 
 export function isMutatingMethod(method?: string): boolean {
     if (!method) return false;
     return MUTATING_METHODS.includes(method.toUpperCase() as typeof MUTATING_METHODS[number]);
 }
 
-export function validateLoadTestMethod(opts: {
-    targetMethod?: string;
-    targetPath: string;
-    loadTestMethod?: string;
-    allowMutatingMethods?: boolean;
-}): string | undefined {
-    const effectiveMethod = (
-        opts.targetMethod || opts.loadTestMethod
-    )?.toUpperCase();
+function mutatingMethodMessage(method: string): string {
+    return `Load test for mutating method ${method} requires explicit opt-in ` +
+        `via allowMutatingMethods=true in loadTestOptions. ` +
+        `This may create or delete real data on the target API.`;
+}
 
-    if (isMutatingMethod(effectiveMethod) && !opts.allowMutatingMethods) {
-        throw new AppError(
-            `Load test for mutating method ${effectiveMethod} requires explicit opt-in ` +
-            `via allowMutatingMethods=true in loadTestOptions. ` +
-            `This may create or delete real data on the target API.`,
-            400,
-        );
+export function validateTargetMethods(
+    data: {
+        targets: { path: string; method?: string }[];
+        loadTestOptions?: { method?: string; allowMutatingMethods?: boolean };
+    },
+    ctx: z.RefinementCtx,
+): void {
+    const defaultMethod = data.loadTestOptions?.method;
+    const allowMutatingMethods = data.loadTestOptions?.allowMutatingMethods;
+
+    if (defaultMethod && isMutatingMethod(defaultMethod) && !allowMutatingMethods && data.targets.some((t) => !t.method)) {
+        ctx.addIssue({ code: 'custom', path: ['loadTestOptions', 'method'], message: mutatingMethodMessage(defaultMethod) });
     }
 
-    if (effectiveMethod === 'DELETE' && /\{[^}]+\}/.test(opts.targetPath)) {
-        throw new AppError(
-            `DELETE load tests require a fully resolved targetPath ` +
-            `(e.g., "/pet/123" instead of "/pet/{petId}"). ` +
-            `Synthetic path parameter generation is disabled for DELETE ` +
-            `to prevent accidental deletion of real data.`,
-            400,
-        );
-    }
+    data.targets.forEach((target, index) => {
+        if (target.method && isMutatingMethod(target.method) && !allowMutatingMethods) {
+            ctx.addIssue({ code: 'custom', path: ['targets', index, 'method'], message: mutatingMethodMessage(target.method) });
+        }
 
-    return effectiveMethod;
+        if ((target.method ?? defaultMethod) === 'DELETE' && TEMPLATED_PATH.test(target.path)) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['targets', index, 'path'],
+                message:
+                    `DELETE load tests require a fully resolved path ` +
+                    `(e.g., "/pet/123" instead of "/pet/{petId}"). ` +
+                    `Synthetic path parameter generation is disabled for DELETE ` +
+                    `to prevent accidental deletion of real data.`,
+            });
+        }
+    });
 }

@@ -1,7 +1,8 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { IPerformanceRequest } from '../interfaces/evaluation.interface.js';
-import { prepareTargetsRequest } from '../utils/prepareTargetsRequest.js';
 import { enqueueOrFail } from '../utils/enqueueOrFail.js';
+import { parseOrThrow } from '../utils/parseOrThrow.js';
+import { performanceRequestSchema } from '../schemas/evaluation.schema.js';
 
 export class PerformanceEvaluationUsecase {
     private lifecycle: EvaluationLifecycleService;
@@ -11,7 +12,7 @@ export class PerformanceEvaluationUsecase {
     }
 
     async execute(data: IPerformanceRequest, userId?: string | null) {
-        const requestData = prepareTargetsRequest(data);
+        const requestData = parseOrThrow(performanceRequestSchema, data);
 
         const evaluation = await this.lifecycle.create({
             openApiUrl: requestData.openApiUrl,

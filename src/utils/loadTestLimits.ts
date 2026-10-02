@@ -1,5 +1,4 @@
 import type { z } from 'zod';
-import { AppError } from '../errors/AppError.js';
 import type { IPerformanceTarget } from '../interfaces/evaluation.interface.js';
 
 export const DEFAULT_LOAD_LIMITS = {
@@ -22,7 +21,7 @@ export const DEFAULT_DURATION_SECONDS = 10;
 
 export function validateTotalDuration(
     data: { targets?: IPerformanceTarget[]; loadTestOptions?: { duration?: number } },
-    ctx?: z.RefinementCtx,
+    ctx: z.RefinementCtx,
 ): void {
     if (!data.targets || data.targets.length === 0) return;
 
@@ -30,15 +29,10 @@ export function validateTotalDuration(
     const totalDuration = data.targets.length * effectiveDuration;
 
     if (totalDuration > MAX_TOTAL_DURATION_SECONDS) {
-        const message = `Total load test duration (${totalDuration}s = ${data.targets.length} targets x ${effectiveDuration}s) exceeds the maximum allowed limit of ${MAX_TOTAL_DURATION_SECONDS}s.`;
-        if (ctx) {
-            ctx.addIssue({
-                code: 'custom',
-                path: ['targets'],
-                message,
-            });
-        } else {
-            throw new AppError(message, 400);
-        }
+        ctx.addIssue({
+            code: 'custom',
+            path: ['targets'],
+            message: `Total load test duration (${totalDuration}s = ${data.targets.length} targets x ${effectiveDuration}s) exceeds the maximum allowed limit of ${MAX_TOTAL_DURATION_SECONDS}s.`,
+        });
     }
 }

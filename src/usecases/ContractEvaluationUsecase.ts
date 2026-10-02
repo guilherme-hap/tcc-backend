@@ -1,7 +1,7 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { IContractRequest } from '../interfaces/evaluation.interface.js';
-import { AppError } from '../errors/AppError.js';
 import { enqueueOrFail } from '../utils/enqueueOrFail.js';
+import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { contractRequestSchema } from '../schemas/evaluation.schema.js';
 
 export class ContractEvaluationUsecase {
@@ -12,11 +12,7 @@ export class ContractEvaluationUsecase {
     }
 
     async execute(data: IContractRequest, userId?: string | null) {
-        const parsed = contractRequestSchema.safeParse(data);
-        if (!parsed.success) {
-            throw new AppError(parsed.error.issues.map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message)).join('; '), 400);
-        }
-        data = parsed.data;
+        data = parseOrThrow(contractRequestSchema, data);
 
         const evaluation = await this.lifecycle.create({
             openApiUrl: data.openApiUrl,
