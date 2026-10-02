@@ -1,11 +1,7 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
-import { auditMessage, IAuditMessage } from '../messages/catalog.js';
-
-export interface ISecurityCheckResult extends IAuditMessage {
-    header: string;
-    status: 'pass' | 'warning' | 'missing' | 'error';
-}
+import { auditMessage } from '../messages/catalog.js';
+import type { ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 

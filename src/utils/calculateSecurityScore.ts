@@ -1,5 +1,5 @@
 import type { Severity } from '../types/severity.js';
-import type { ISecurityCheckResult } from '../services/SecurityService.js';
+import type { ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
 
 export const SECURITY_SEVERITY_PENALTY: Record<Severity, number> = {
     'Error': 15,

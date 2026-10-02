@@ -1,19 +1,9 @@
 import autocannon from 'autocannon';
-import { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
+import { IAutocannonResult, ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_DURATION_SECONDS } from '../utils/loadTestLimits.js';
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
-
-export interface IAutocannonResult {
-    score: number;
-    averageLatency: number;
-    totalRequests: number;
-    errors: number;
-    timeouts: number;
-    nonSuccessResponses: number;
-    warnings: IAuditMessage[];
-}
 
 export class AutocannonService {
     public async runLoadTest(targetUrl: string, options: ILoadTestOptions = {}): Promise<IAutocannonResult> {

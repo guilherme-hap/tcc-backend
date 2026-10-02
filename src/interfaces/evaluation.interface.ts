@@ -1,6 +1,5 @@
 import type { Severity } from '../types/severity.js';
-import { IAutocannonResult } from '../services/AutocannonService.js';
-import { ISecurityCheckResult } from '../services/SecurityService.js';
+import type { IAuditMessage } from '../messages/catalog.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 import type {
     ContractRequestInput,
@@ -15,6 +14,21 @@ export interface ISpectralIssue {
     rule: string | number;
     message: string;
     severity: Severity;
+}
+
+export interface IAutocannonResult {
+    score: number;
+    averageLatency: number;
+    totalRequests: number;
+    errors: number;
+    timeouts: number;
+    nonSuccessResponses: number;
+    warnings: IAuditMessage[];
+}
+
+export interface ISecurityCheckResult extends IAuditMessage {
+    header: string;
+    status: 'pass' | 'warning' | 'missing' | 'error';
 }
 
 export interface IPerformanceTarget {
@@ -47,15 +61,6 @@ export type IFullEvaluationRequest = FullEvaluationRequestInput;
 export interface IFailedPillar {
     pillar: string;
     error: string;
-}
-
-export interface IFullEvaluationResult {
-    finalScore: number | null;
-    contractResult: ISpectralIssue[] | null;
-    performanceResults: IPerformanceTargetResult[] | null;
-    securityResult: ISecurityCheckResult[] | null;
-    failedPillars: IFailedPillar[];
-    status: EvaluationStatus;
 }
 
 export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
