@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { AppDataSource } from '../config/data-source.js';
+import { dbConnection } from '../config/database.js';
 import { EvaluationJob as EvaluationJobEntity, EvaluationJobStatus } from '../entities/EvaluationJob.js';
 import {
     EvaluationType,
@@ -87,13 +88,7 @@ class PostgresEvaluationQueue {
         const trigger = createWakeTrigger();
 
         const connectListener = async (): Promise<pg.Client> => {
-            const client = new pg.Client({
-                host: process.env.DB_HOST || 'localhost',
-                port: Number(process.env.DB_PORT) || 5432,
-                user: process.env.DB_USER || 'root',
-                password: process.env.DB_PASSWORD || 'root',
-                database: process.env.DB_NAME || 'tcc_db',
-            });
+            const client = new pg.Client(dbConnection);
 
             await client.connect();
             await client.query(`LISTEN ${channelName}`);
