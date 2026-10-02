@@ -42,9 +42,9 @@ export async function registerWorkers(): Promise<void> {
 
     const types = ['contract', 'performance', 'security', 'full'] as const;
 
-    for (const type of types) {
-        const envKey = `${type.toUpperCase()}_WORKER_CONCURRENCY`;
-        const concurrency = Number(process.env[envKey]) || (['contract', 'security'].includes(type) ? 10 : 2);
-        await evaluationQueue.listen(type, concurrency, startThen(buildHandler(type)));
-    }
+    await evaluationQueue.start(types.map((type) => ({
+        type,
+        concurrency: Number(process.env[`${type.toUpperCase()}_WORKER_CONCURRENCY`]) || (['contract', 'security'].includes(type) ? 10 : 2),
+        handler: startThen(buildHandler(type)),
+    })));
 }

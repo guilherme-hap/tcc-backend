@@ -18,7 +18,18 @@ export interface EvaluationJob {
 
 type JobHandler = (job: EvaluationJob) => Promise<void>;
 
+export interface QueueConsumer {
+    type: EvaluationType;
+    concurrency: number;
+    handler: JobHandler;
+}
+
 const IDLE_POLL_INTERVAL_MS = 30_000;
+const LISTEN_MAX_RECONNECT_DELAY_MS = 30_000;
+
+function channelOf(type: EvaluationType): string {
+    return `evaluation_jobs_${type}`;
+}
 
 function createWakeTrigger() {
     let generation = 0;
@@ -44,7 +55,11 @@ function createWakeTrigger() {
     };
 }
 
+type WakeTrigger = ReturnType<typeof createWakeTrigger>;
+
 class PostgresEvaluationQueue {
+    private triggers = new Map<string, WakeTrigger>();
+
     async enqueue(job: EvaluationJob): Promise<void> {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
@@ -56,7 +71,7 @@ class PostgresEvaluationQueue {
                 payload: job.params as Record<string, any>,
                 status: 'PENDING' as const,
             });
-            await queryRunner.query(`NOTIFY evaluation_jobs_${job.type}`);
+            await queryRunner.query(`NOTIFY ${channelOf(job.type)}`);
             await queryRunner.commitTransaction();
         } catch (err) {
             await queryRunner.rollbackTransaction();
@@ -79,67 +94,71 @@ class PostgresEvaluationQueue {
             console.log(`[Queue] Recovered ${count} orphaned jobs on startup`);
         }
     }
-    async listen(
-        type: EvaluationType,
-        concurrency: number,
-        handler: JobHandler,
-    ): Promise<void> {
-        const channelName = `evaluation_jobs_${type}`;
-        const trigger = createWakeTrigger();
 
-        const connectListener = async (): Promise<pg.Client> => {
-            const client = new pg.Client(dbConnection);
-
-            await client.connect();
-            await client.query(`LISTEN ${channelName}`);
-
-            client.on('notification', () => {
-                trigger.wake();
-            });
-
-            client.on('error', (err: Error) => {
-                console.error(`[Queue][${type}] LISTEN connection error:`, err.message);
-                reconnect();
-            });
-
-            console.log(`[Queue][${type}] LISTEN connected on channel "${channelName}"`);
-            return client;
-        };
-
-        let listenerClient: pg.Client | null = null;
-
-        const reconnect = async () => {
-            listenerClient = null;
-            let delay = 1000;
-            const maxDelay = 30000;
-
-            while (true) {
-                try {
-                    console.log(`[Queue][${type}] Reconnecting LISTEN in ${delay}ms…`);
-                    await new Promise((r) => setTimeout(r, delay));
-                    listenerClient = await connectListener();
-                    trigger.wake();
-                    return;
-                } catch (err: any) {
-                    console.error(`[Queue][${type}] Reconnection failed:`, err.message);
-                    delay = Math.min(delay * 2, maxDelay);
-                }
-            }
-        };
-
-        listenerClient = await connectListener();
-
-        for (let i = 0; i < concurrency; i++) {
-            this.consumerLoop(type, i, trigger, handler);
+    async start(consumers: QueueConsumer[]): Promise<void> {
+        for (const { type } of consumers) {
+            this.triggers.set(channelOf(type), createWakeTrigger());
         }
 
-        console.log(`[Queue][${type}] ${concurrency} consumer loop(s) started`);
+        await this.connectListener();
+
+        for (const { type, concurrency, handler } of consumers) {
+            const trigger = this.triggers.get(channelOf(type))!;
+            for (let i = 0; i < concurrency; i++) {
+                this.consumerLoop(type, i, trigger, handler);
+            }
+            console.log(`[Queue][${type}] ${concurrency} consumer loop(s) started`);
+        }
+    }
+
+    private async connectListener(): Promise<void> {
+        const client = new pg.Client(dbConnection);
+        let active = false;
+
+        client.on('error', (err: Error) => {
+            console.error('[Queue] LISTEN connection error:', err.message);
+            if (!active) return;
+            active = false;
+            client.end().catch(() => {});
+            this.reconnectListener();
+        });
+        client.on('notification', (msg) => this.triggers.get(msg.channel)?.wake());
+
+        try {
+            await client.connect();
+            for (const channel of this.triggers.keys()) {
+                await client.query(`LISTEN ${channel}`);
+            }
+        } catch (err) {
+            await client.end().catch(() => {});
+            throw err;
+        }
+
+        active = true;
+        console.log(`[Queue] LISTEN connected on ${this.triggers.size} channel(s)`);
+    }
+
+    private async reconnectListener(): Promise<void> {
+        let delay = 1000;
+
+        while (true) {
+            try {
+                console.log(`[Queue] Reconnecting LISTEN in ${delay}ms…`);
+                await new Promise((r) => setTimeout(r, delay));
+                await this.connectListener();
+                for (const trigger of this.triggers.values()) trigger.wake();
+                return;
+            } catch (err: any) {
+                console.error('[Queue] Reconnection failed:', err.message);
+                delay = Math.min(delay * 2, LISTEN_MAX_RECONNECT_DELAY_MS);
+            }
+        }
     }
 
     private async consumerLoop(
         type: EvaluationType,
         loopIndex: number,
-        trigger: ReturnType<typeof createWakeTrigger>,
+        trigger: WakeTrigger,
         handler: JobHandler,
     ): Promise<void> {
         const tag = `[Queue][${type}][loop-${loopIndex}]`;
