@@ -75,6 +75,14 @@ export const loadTestOptionsSchema = baseLoadTestOptionsSchema.superRefine((data
             message: `${field} exceeds the ${tierLabel} maximum of ${max.toLocaleString('en-US')}${unitSuffix} (received ${value.toLocaleString('en-US')}).${hint}`,
         });
     }
+
+    if (data.connections !== undefined && data.maxRequests !== undefined && data.connections > data.maxRequests) {
+        ctx.addIssue({
+            code: 'custom',
+            path: ['connections'],
+            message: `connections (${data.connections}) cannot exceed maxRequests (${data.maxRequests}).`,
+        });
+    }
 });
 
 export type LoadTestOptionsInput = z.infer<typeof loadTestOptionsSchema>;

@@ -133,7 +133,7 @@ const evaluationController = new EvaluationController();
  *                     example: 300
  *                   maxRequests:
  *                     type: number
- *                     description: "Quantidade máxima de requisições a disparar (padrão máx. 100.000; com allowHighLoad máx. 1.000.000)."
+ *                     description: "Quantidade máxima de requisições por alvo (padrão máx. 100.000; com allowHighLoad máx. 1.000.000). O teste termina ao atingir maxRequests ou duration, o que ocorrer primeiro. Não pode ser menor que connections."
  *                     example: 1000
  *                   requestsPerSecond:
  *                     type: number
@@ -255,7 +255,7 @@ const evaluationController = new EvaluationController();
  *                     example: 300
  *                   maxRequests:
  *                     type: number
- *                     description: "Quantidade máxima de requisições a disparar (padrão máx. 100.000; com allowHighLoad máx. 1.000.000)."
+ *                     description: "Quantidade máxima de requisições por alvo (padrão máx. 100.000; com allowHighLoad máx. 1.000.000). O teste termina ao atingir maxRequests ou duration, o que ocorrer primeiro. Não pode ser menor que connections."
  *                     example: 1000
  *                   requestsPerSecond:
  *                     type: number

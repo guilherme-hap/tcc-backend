@@ -29,8 +29,8 @@ export class AutocannonService {
         }
 
         const duration = options.duration ?? (isMutating ? 5 : DEFAULT_DURATION_SECONDS);
-        const connections = options.connections ?? (isMutating ? 2 : 10);
         const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
+        const connections = Math.min(options.connections ?? (isMutating ? 2 : 10), maxRequests ?? Infinity);
         const { targetLatency = 300, requestsPerSecond, body, payloadFactory } = options;
 
         const headers: Record<string, string> = { ...options.headers };
@@ -57,63 +57,48 @@ export class AutocannonService {
             warnings.push(auditMessage('PERF_HIGH_LOAD'));
         }
 
-        const result = await new Promise<autocannon.Result>((resolve, reject) => {
-            if (payloadFactory) {
-                const parsedUrl = new URL(targetUrl);
-                const basePath = parsedUrl.pathname || '/';
-                const fullPath = `${basePath}${parsedUrl.search}`;
+        const limits = {
+            duration,
+            connections,
+            ...(maxRequests && { amount: maxRequests }),
+            ...(requestsPerSecond && { overallRate: requestsPerSecond }),
+        };
 
-                autocannon(
-                    {
-                        url: `${parsedUrl.protocol}//${parsedUrl.host}`,
-                        duration,
-                        connections,
-                        ...(maxRequests && { amount: maxRequests }),
-                        ...(requestsPerSecond && { overallRate: requestsPerSecond }),
-                        requests: [
-                            {
-                                method: method as NonNullable<autocannon.Request["method"]>,
-                                path: fullPath,
-                                headers,
-                                setupRequest: (req: autocannon.Request) => {
-                                    const generatedBody = payloadFactory();
-                                    if (generatedBody !== undefined) {
-                                        req.body = generatedBody;
-                                    }
+        let runOptions: autocannon.Options;
+        if (payloadFactory) {
+            const parsedUrl = new URL(targetUrl);
+            const basePath = parsedUrl.pathname || '/';
 
-                                    return req;
-                                },
-                            },
-                        ],
-                    },
-                    (err, res) => {
-                        if (err) {
-                            return reject(err);
-                        }
-                        resolve(res);
-                    }
-                );
-            } else {
-                autocannon(
+            runOptions = {
+                ...limits,
+                url: `${parsedUrl.protocol}//${parsedUrl.host}`,
+                requests: [
                     {
-                        url: targetUrl,
-                        duration,
-                        connections,
-                        ...(maxRequests && { amount: maxRequests }),
-                        ...(requestsPerSecond && { overallRate: requestsPerSecond }),
-                        ...(method && { method: method as NonNullable<autocannon.Request["method"]> }),
+                        method: method as NonNullable<autocannon.Request["method"]>,
+                        path: `${basePath}${parsedUrl.search}`,
                         headers,
-                        ...(body && { body }),
+                        setupRequest: (req: autocannon.Request) => {
+                            const generatedBody = payloadFactory();
+                            if (generatedBody !== undefined) {
+                                req.body = generatedBody;
+                            }
+
+                            return req;
+                        },
                     },
-                    (err, res) => {
-                        if (err) {
-                            return reject(err);
-                        }
-                        resolve(res);
-                    }
-                );
-            }
-        });
+                ],
+            };
+        } else {
+            runOptions = {
+                ...limits,
+                url: targetUrl,
+                ...(method && { method: method as NonNullable<autocannon.Request["method"]> }),
+                headers,
+                ...(body && { body }),
+            };
+        }
+
+        const result = await this.run(runOptions, duration);
 
         const score = this.calculateApdex(result, targetLatency);
 
@@ -126,6 +111,22 @@ export class AutocannonService {
             nonSuccessResponses: result.non2xx ?? 0,
             warnings,
         };
+    }
+
+    private run(options: autocannon.Options, durationSeconds: number): Promise<autocannon.Result> {
+        return new Promise((resolve, reject) => {
+            let stopTimer: NodeJS.Timeout | undefined;
+            const instance = autocannon(options, (err, res) => {
+                clearTimeout(stopTimer);
+                if (err) {
+                    return reject(err);
+                }
+                resolve(res);
+            });
+            if (options.amount) {
+                stopTimer = setTimeout(() => instance.stop(), durationSeconds * 1000);
+            }
+        });
     }
 
     private calculateApdex(result: autocannon.Result, T: number): number {
