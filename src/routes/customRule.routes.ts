@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { CustomRuleController } from '../controllers/CustomRuleController.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { validate } from '../middlewares/validate.js';
+import { validateIdParam } from '../middlewares/validateIdParam.js';
 import { createCustomRuleSchema, updateCustomRuleSchema } from '../schemas/customRule.schema.js';
 
 const router = Router();
 const controller = new CustomRuleController();
+const validateCustomRuleId = validateIdParam('Custom rule not found');
 
 /**
  * @openapi
@@ -120,7 +122,7 @@ const controller = new CustomRuleController();
  *       401:
  *         description: "Autenticação obrigatória."
  *       404:
- *         description: "Regra não encontrada."
+ *         description: "Regra não encontrada ou id que não é UUID."
  *
  *   delete:
  *     summary: "Remove uma regra customizada do usuário autenticado"
@@ -149,7 +151,7 @@ const controller = new CustomRuleController();
  *       401:
  *         description: "Autenticação obrigatória."
  *       404:
- *         description: "Regra não encontrada."
+ *         description: "Regra não encontrada ou id que não é UUID."
  *
  * components:
  *   schemas:
@@ -180,7 +182,7 @@ const controller = new CustomRuleController();
  */
 router.post('/', requireAuth, validate(createCustomRuleSchema), controller.create);
 router.get('/', requireAuth, controller.list);
-router.put('/:id', requireAuth, validate(updateCustomRuleSchema), controller.update);
-router.delete('/:id', requireAuth, controller.delete);
+router.put('/:id', requireAuth, validateCustomRuleId, validate(updateCustomRuleSchema), controller.update);
+router.delete('/:id', requireAuth, validateCustomRuleId, controller.delete);
 
 export default router;

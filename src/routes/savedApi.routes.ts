@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { SavedApiController } from '../controllers/SavedApiController.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { validate } from '../middlewares/validate.js';
+import { validateIdParam } from '../middlewares/validateIdParam.js';
 import { createSavedApiSchema, updateSavedApiSchema } from '../schemas/savedApi.schema.js';
 
 const router = Router();
 const controller = new SavedApiController();
+const validateSavedApiId = validateIdParam('Saved API not found');
 
 /**
  * @openapi
@@ -136,7 +138,7 @@ const controller = new SavedApiController();
  *       401:
  *         description: "Autenticação obrigatória."
  *       404:
- *         description: "API não encontrada."
+ *         description: "API não encontrada ou id que não é UUID."
  *
  *   delete:
  *     summary: "Remove uma API salva do usuário autenticado"
@@ -165,7 +167,7 @@ const controller = new SavedApiController();
  *       401:
  *         description: "Autenticação obrigatória."
  *       404:
- *         description: "API não encontrada."
+ *         description: "API não encontrada ou id que não é UUID."
  *
  * components:
  *   schemas:
@@ -197,7 +199,7 @@ const controller = new SavedApiController();
  */
 router.post('/', requireAuth, validate(createSavedApiSchema), controller.create);
 router.get('/', requireAuth, controller.list);
-router.put('/:id', requireAuth, validate(updateSavedApiSchema), controller.update);
-router.delete('/:id', requireAuth, controller.delete);
+router.put('/:id', requireAuth, validateSavedApiId, validate(updateSavedApiSchema), controller.update);
+router.delete('/:id', requireAuth, validateSavedApiId, controller.delete);
 
 export default router;

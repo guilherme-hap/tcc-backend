@@ -11,6 +11,8 @@ export type HttpMethodInput = z.infer<typeof httpMethodSchema>;
 
 export const httpUrl = z.url({ protocol: /^https?$/ });
 
+export const idSchema = z.guid();
+
 export const rulesConfigSchema = z.record(z.string(), z.boolean());
 
 export const severityWeightsSchema = z.partialRecord(

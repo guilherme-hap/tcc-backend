@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { EvaluationController } from '../controllers/EvaluationController.js';
 import { optionalAuth } from '../middlewares/optionalAuth.js';
 import { validate } from '../middlewares/validate.js';
+import { validateIdParam } from '../middlewares/validateIdParam.js';
 import {
     contractRequestSchema,
     performanceRequestSchema,
@@ -520,12 +521,12 @@ const evaluationController = new EvaluationController();
  *                   nullable: true
  *                   description: "Motivo do erro quando o status for FAILED. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
  *       404:
- *         description: "Avaliação não encontrada ou pertence a outro usuário."
+ *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
  */
 router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluateContract);
 router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluatePerformance);
 router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluateSecurity);
 router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluateFull);
-router.get('/:id', optionalAuth, evaluationController.getEvaluation);
+router.get('/:id', optionalAuth, validateIdParam('Avaliação não encontrada'), evaluationController.getEvaluation);
 
 export default router;
