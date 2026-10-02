@@ -17,16 +17,29 @@ export interface EvaluationJob {
 
 type JobHandler = (job: EvaluationJob) => Promise<void>;
 
+const IDLE_POLL_INTERVAL_MS = 30_000;
+
 function createWakeTrigger() {
-    let resolve: () => void;
-    let promise = new Promise<void>((r) => { resolve = r; });
+    let generation = 0;
+    const waiters = new Set<() => void>();
 
     return {
-        wait: () => promise,
+        generation: () => generation,
         wake: () => {
-            resolve();
-            promise = new Promise<void>((r) => { resolve = r; });
+            generation++;
+            for (const release of waiters) release();
         },
+        waitSince: (seenGeneration: number, timeoutMs: number) => new Promise<void>((resolve) => {
+            if (generation !== seenGeneration) return resolve();
+
+            const release = () => {
+                clearTimeout(timer);
+                waiters.delete(release);
+                resolve();
+            };
+            const timer = setTimeout(release, timeoutMs);
+            waiters.add(release);
+        }),
     };
 }
 
@@ -138,6 +151,7 @@ class PostgresEvaluationQueue {
 
         while (true) {
             try {
+                const seenGeneration = trigger.generation();
                 const job = await this.claimJob(type);
 
                 if (job) {
@@ -150,7 +164,7 @@ class PostgresEvaluationQueue {
                     }
                     continue;
                 }
-                await trigger.wait();
+                await trigger.waitSince(seenGeneration, IDLE_POLL_INTERVAL_MS);
             } catch (loopErr: any) {
                 console.error(`${tag} Loop error (will retry in 1s):`, loopErr.message);
                 await new Promise((r) => setTimeout(r, 1000));
