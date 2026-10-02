@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController.js';
+import { validate } from '../middlewares/validate.js';
+import { loginSchema, registerSchema } from '../schemas/auth.schema.js';
 
 const router = Router();
 const authController = new AuthController();
@@ -110,10 +112,12 @@ const authController = new AuthController();
  *                   type: string
  *                   description: "Token JWT para autenticação."
  *                   example: "eyJhbGciOiJIUzI1NiIs..."
+ *       400:
+ *         description: "Erro de validação (email ou senha ausentes)."
  *       401:
  *         description: "Credenciais inválidas."
  */
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.post('/register', validate(registerSchema), authController.register);
+router.post('/login', validate(loginSchema), authController.login);
 
 export default router;

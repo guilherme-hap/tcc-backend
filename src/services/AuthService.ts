@@ -3,23 +3,14 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/data-source.js';
 import { User } from '../entities/User.js';
 import { AppError } from '../errors/AppError.js';
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
 
 export class AuthService {
     private get repository() {
         return AppDataSource.getRepository(User);
     }
 
-    async register(email: string, password: string): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
-        if (!email || !EMAIL_REGEX.test(email)) {
-            throw new AppError('Invalid email format', 400);
-        }
-
-        if (!password || password.length < 8) {
-            throw new AppError('Password must be at least 8 characters long', 400);
-        }
-
+    async register({ email, password }: RegisterInput): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
         const existing = await this.repository.findOneBy({ email });
         if (existing) {
             throw new AppError('Email already in use', 409);
@@ -37,7 +28,7 @@ export class AuthService {
         return { user: userWithoutPassword as Omit<User, 'passwordHash'>, token };
     }
 
-    async login(email: string, password: string): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
+    async login({ email, password }: LoginInput): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
         const user = await this.repository.findOneBy({ email });
         if (!user) {
             throw new AppError('Invalid credentials', 401);
