@@ -9,7 +9,7 @@ export function findMatchingSpecPath(targetPath: string, spec: any): string | un
         return undefined;
     }
 
-    let bestMatch: string | undefined;
+    let bestMatch: { path: string; length: number; templated: number } | undefined;
 
     for (const specPathKey of Object.keys(spec.paths)) {
         const specSegments = specPathKey.split('/').filter(Boolean);
@@ -17,20 +17,27 @@ export function findMatchingSpecPath(targetPath: string, spec: any): string | un
         if (specSegments.length < targetSegments.length) continue;
 
         const offset = specSegments.length - targetSegments.length;
+        let templated = 0;
         const isSuffixMatch = targetSegments.every((seg, i) => {
             const specSeg = specSegments[offset + i];
 
             if (seg === specSeg) return true;
+            if (!specSeg.startsWith('{')) return false;
 
-            return seg.startsWith('{') && specSeg.startsWith('{');
+            templated++;
+            return true;
         });
 
-        if (isSuffixMatch) {
-            if (!bestMatch || specSegments.length < bestMatch.split('/').filter(Boolean).length) {
-                bestMatch = specPathKey;
-            }
+        if (!isSuffixMatch) continue;
+
+        const isBetter = !bestMatch
+            || specSegments.length < bestMatch.length
+            || (specSegments.length === bestMatch.length && templated < bestMatch.templated);
+
+        if (isBetter) {
+            bestMatch = { path: specPathKey, length: specSegments.length, templated };
         }
     }
 
-    return bestMatch;
+    return bestMatch?.path;
 }
