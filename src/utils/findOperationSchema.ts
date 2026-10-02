@@ -21,7 +21,6 @@ export function findRequestBodySchema(
         return undefined;
     }
 
-    // OpenAPI 3.x: requestBody.content['application/json'].schema
     const requestBody = operation.requestBody;
     if (!requestBody) {
         return undefined;

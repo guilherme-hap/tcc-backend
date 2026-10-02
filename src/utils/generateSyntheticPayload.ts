@@ -20,11 +20,6 @@ function shouldRandomizeField(fieldName: string, propSchema: any): boolean {
     return true;
 }
 
-/**
- * OBS: Por enquanto olha apenas o primeiro nível dos campos de payload,
- * é necessário que ele seja recursivo para que os campos aninhados também recebam o sufixo.
- * Por enquanto essa limitação é aceitável pois geralmente os campos que precisam de identificação estão no primeiro nível.
- */
 function applyRandomization(payload: any, schema: any): void {
     if (!payload || typeof payload !== 'object') return;
 
@@ -51,9 +46,6 @@ function applyRandomization(payload: any, schema: any): void {
     }
 }
 
-/**
- * OBS: Por enquanto olha apenas o primeiro nível dos campos de payload, o mesmo que applyRandomization.
- */
 function applyFormatOverrides(payload: any, schema: any): void {
     if (!payload || typeof payload !== 'object') return;
 
