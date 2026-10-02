@@ -1,6 +1,7 @@
-import { SpectralResponseDto, SpectralSeverity } from '../dtos/SpectralResponseDto.js';
+import type { Severity } from '../types/severity.js';
+import type { ISpectralIssue } from '../interfaces/evaluation.interface.js';
 
-export const SEVERITY_PENALTY: Record<SpectralSeverity, number> = {
+export const SEVERITY_PENALTY: Record<Severity, number> = {
     'Error': 10,
     'Warning': 4,
     'Info': 1,
@@ -9,8 +10,8 @@ export const SEVERITY_PENALTY: Record<SpectralSeverity, number> = {
 };
 
 export function calculateContractScore(
-    issues: SpectralResponseDto[],
-    severityWeights?: Partial<Record<SpectralSeverity, number>>,
+    issues: ISpectralIssue[],
+    severityWeights?: Partial<Record<Severity, number>>,
 ): number {
     const penalties = { ...SEVERITY_PENALTY, ...severityWeights };
     const totalPenalty = issues.reduce((sum, issue) => {

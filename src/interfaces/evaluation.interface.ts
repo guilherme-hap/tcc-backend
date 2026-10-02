@@ -1,4 +1,4 @@
-import { SpectralResponseDto } from '../dtos/SpectralResponseDto.js';
+import type { Severity } from '../types/severity.js';
 import { IAutocannonResult } from '../services/AutocannonService.js';
 import { ISecurityCheckResult } from '../services/SecurityService.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
@@ -8,6 +8,14 @@ import type {
     SecurityRequestInput,
     FullEvaluationRequestInput,
 } from '../schemas/evaluation.schema.js';
+
+export interface ISpectralIssue {
+    endpoint: string;
+    method: string;
+    rule: string | number;
+    message: string;
+    severity: Severity;
+}
 
 export interface IPerformanceTarget {
     path: string;
@@ -43,7 +51,7 @@ export interface IFailedPillar {
 
 export interface IFullEvaluationResult {
     finalScore: number | null;
-    contractResult: SpectralResponseDto[] | null;
+    contractResult: ISpectralIssue[] | null;
     performanceResults: IPerformanceTargetResult[] | null;
     securityResult: ISecurityCheckResult[] | null;
     failedPillars: IFailedPillar[];
