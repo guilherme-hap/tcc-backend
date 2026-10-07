@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import type { EvaluationStatus, EvaluationType, IPerformanceTarget, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
-import type { IFailedPillar } from '../interfaces/evaluation.interface.js';
+import type { IFailedPillar, IPillarScores, IScoringParameters } from '../interfaces/evaluation.interface.js';
 import { User } from './User.js';
 
 @Entity('evaluations')
@@ -48,8 +48,11 @@ export class Evaluation {
     @Column({ name: 'failed_pillars', type: 'jsonb', nullable: true })
     failedPillars!: IFailedPillar[] | null;
 
-    @Column({ name: 'applied_weights', type: 'jsonb', nullable: true })
-    appliedWeights!: { contract: number; performance: number; security: number } | null;
+    @Column({ name: 'pillar_scores', type: 'jsonb', nullable: true })
+    pillarScores!: IPillarScores | null;
+
+    @Column({ name: 'scoring', type: 'jsonb', nullable: true })
+    scoring!: IScoringParameters | null;
 
     @Column({ name: 'error_message', type: 'varchar', nullable: true })
     errorMessage!: string | null;

@@ -412,11 +412,11 @@ const evaluationController = new EvaluationController();
  *                 finalScore:
  *                   type: number
  *                   nullable: true
- *                   description: "Nota final ponderada (0-100)."
- *                 appliedWeights:
+ *                   description: "Nota final (0-100) = soma de pillarScores × scoring.pillarWeights. Nula em PARTIAL e FAILED."
+ *                 pillarScores:
  *                   type: object
  *                   nullable: true
- *                   description: "Pesos aplicados no cálculo da nota final. Populado apenas em avaliações do tipo 'full'. Quando omitido na requisição, reflete o default (1/3 para cada pilar)."
+ *                   description: "Nota (0-100) de cada pilar que concluiu. Em PARTIAL traz só os pilares que rodaram; nulo em FAILED."
  *                   properties:
  *                     contract:
  *                       type: number
@@ -424,6 +424,59 @@ const evaluationController = new EvaluationController();
  *                       type: number
  *                     security:
  *                       type: number
+ *                 scoring:
+ *                   type: object
+ *                   nullable: true
+ *                   description: "Parâmetros efetivos usados no cálculo (padrões já aplicados), para reproduzir a nota a partir do registro. As chaves contract, performance e security só aparecem para os pilares que concluíram."
+ *                   properties:
+ *                     pillarWeights:
+ *                       type: object
+ *                       description: "Peso de cada pilar na nota final: 1 para avaliações de pilar único; no tipo full, os pesos informados ou 1/3 cada."
+ *                       properties:
+ *                         contract:
+ *                           type: number
+ *                         performance:
+ *                           type: number
+ *                         security:
+ *                           type: number
+ *                     contract:
+ *                       type: object
+ *                       properties:
+ *                         severityWeights:
+ *                           type: object
+ *                           description: "Peso de cada severidade (padrão mesclado com severityWeights da requisição)."
+ *                           additionalProperties:
+ *                             type: number
+ *                         rules:
+ *                           type: array
+ *                           description: "Regras do Spectral que entraram no denominador (ativas, do formato da especificação e com alvo no documento)."
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               name:
+ *                                 type: string
+ *                               severity:
+ *                                 type: string
+ *                                 enum: [Error, Warning, Info, Hint, Unknown]
+ *                     performance:
+ *                       type: object
+ *                       properties:
+ *                         targetLatency:
+ *                           type: number
+ *                           description: "Latência alvo T (ms) do Apdex; a zona frustrada começa em 4T."
+ *                     security:
+ *                       type: object
+ *                       properties:
+ *                         layerWeights:
+ *                           type: object
+ *                           description: "Peso de cada camada (transport, access, content, leakage)."
+ *                           additionalProperties:
+ *                             type: number
+ *                         statusScores:
+ *                           type: object
+ *                           description: "Valor de cada status de verificação (pass, warning, missing, error)."
+ *                           additionalProperties:
+ *                             type: number
  *                 spectralResult:
  *                   type: object
  *                   nullable: true

@@ -3,6 +3,8 @@ import type {
     EvaluationType,
     IContractResult,
     IPerformanceTargetResult,
+    IPillarScores,
+    IPillarScoring,
     ISecurityCheckResult,
 } from '../interfaces/evaluation.interface.js';
 import type { ParsedOpenApiContent } from '../utils/fetchOpenApiSpec.js';
@@ -32,6 +34,7 @@ export interface PillarContext<P extends PillarBaseParams> {
 export interface PillarOutcome<C extends PillarColumn = PillarColumn> {
     score: number;
     result: PillarResults[C];
+    scoring: IPillarScoring;
 }
 
 export interface Pillar<P extends PillarBaseParams, C extends PillarColumn = PillarColumn> {
@@ -42,7 +45,7 @@ export interface Pillar<P extends PillarBaseParams, C extends PillarColumn = Pil
 
 export interface Pipeline<P extends PillarBaseParams> {
     pillars: readonly Pillar<P>[];
-    weights?: (params: P) => EvaluationWeights;
+    weights: (params: P) => IPillarScores;
 }
 
 export type Pipelines = { [T in EvaluationType]: Pipeline<EvaluationRequestMap[T]> };

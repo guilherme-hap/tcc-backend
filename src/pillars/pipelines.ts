@@ -15,9 +15,9 @@ function resolveFullWeights({ weights }: FullEvaluationRequestInput): Evaluation
 }
 
 export const PIPELINES: Pipelines = {
-    contract: { pillars: [contractPillar] },
-    performance: { pillars: [performancePillar] },
-    security: { pillars: [securityPillar] },
+    contract: { pillars: [contractPillar], weights: () => ({ contract: 1 }) },
+    performance: { pillars: [performancePillar], weights: () => ({ performance: 1 }) },
+    security: { pillars: [securityPillar], weights: () => ({ security: 1 }) },
     full: {
         pillars: [contractPillar, performancePillar, securityPillar],
         weights: resolveFullWeights,

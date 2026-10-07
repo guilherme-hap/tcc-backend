@@ -5,7 +5,7 @@ import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_DURATION_SECONDS } from '../utils/loadTestLimits.js';
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
-const DEFAULT_TARGET_LATENCY_MS = 1000;
+export const DEFAULT_TARGET_LATENCY_MS = 1000;
 const MIN_SAMPLE_SIZE = 100;
 
 interface ResponseCounts {

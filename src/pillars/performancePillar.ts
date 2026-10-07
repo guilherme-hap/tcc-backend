@@ -1,4 +1,4 @@
-import { AutocannonService } from '../services/AutocannonService.js';
+import { AutocannonService, DEFAULT_TARGET_LATENCY_MS } from '../services/AutocannonService.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import type { IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { PerformanceRequestInput } from '../schemas/evaluation.schema.js';
@@ -67,6 +67,14 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
             ? Math.round((totalScore / counted.length) * 100) / 100
             : 0;
 
-        return { score, result: performanceResults };
+        return {
+            score,
+            result: performanceResults,
+            scoring: {
+                performance: {
+                    targetLatency: loadTestOptions?.targetLatency ?? DEFAULT_TARGET_LATENCY_MS,
+                },
+            },
+        };
     },
 };

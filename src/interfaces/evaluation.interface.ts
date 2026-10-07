@@ -1,6 +1,7 @@
 import type { Severity } from '../types/severity.js';
 import type { IAuditMessage } from '../messages/catalog.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
+import type { EvaluationWeights } from '../utils/weights.js';
 import type {
     ContractRequestInput,
     PerformanceRequestInput,
@@ -85,6 +86,26 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
 export interface IFailedPillar {
     pillar: string;
     error: string;
+}
+
+export type IPillarScores = Partial<Record<keyof EvaluationWeights, number>>;
+
+export interface IPillarScoring {
+    contract?: {
+        severityWeights: Record<Severity, number>;
+        rules: ISpectralRule[];
+    };
+    performance?: {
+        targetLatency: number;
+    };
+    security?: {
+        layerWeights: Record<SecurityLayer, number>;
+        statusScores: Record<ISecurityCheckResult['status'], number>;
+    };
+}
+
+export interface IScoringParameters extends IPillarScoring {
+    pillarWeights: IPillarScores;
 }
 
 export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';

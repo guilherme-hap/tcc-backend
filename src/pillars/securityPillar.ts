@@ -1,5 +1,5 @@
 import { SecurityService } from '../services/SecurityService.js';
-import { calculateSecurityScore } from '../utils/calculateSecurityScore.js';
+import { calculateSecurityScore, SECURITY_LAYER_WEIGHTS, SECURITY_STATUS_SCORE } from '../utils/calculateSecurityScore.js';
 import type { SecurityRequestInput } from '../schemas/evaluation.schema.js';
 import type { Pillar } from './types.js';
 
@@ -14,6 +14,12 @@ export const securityPillar: Pillar<SecurityRequestInput, 'securityResult'> = {
         return {
             score: calculateSecurityScore(results),
             result: results,
+            scoring: {
+                security: {
+                    layerWeights: SECURITY_LAYER_WEIGHTS,
+                    statusScores: SECURITY_STATUS_SCORE,
+                },
+            },
         };
     },
 };

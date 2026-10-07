@@ -9,6 +9,10 @@ export const SEVERITY_WEIGHTS: Record<Severity, number> = {
     'Unknown': 0,
 };
 
+export function resolveSeverityWeights(severityWeights?: Partial<Record<Severity, number>>): Record<Severity, number> {
+    return { ...SEVERITY_WEIGHTS, ...severityWeights };
+}
+
 interface IContractRuleSet {
     applicable: Map<string, Severity>;
     violated: Set<string>;
@@ -63,7 +67,7 @@ export function calculateContractScore(
     rules: ISpectralRule[],
     severityWeights?: Partial<Record<Severity, number>>,
 ): number {
-    const weights = { ...SEVERITY_WEIGHTS, ...severityWeights };
+    const weights = resolveSeverityWeights(severityWeights);
     const { applicable, violated } = buildRuleSet(issues, rules, weights);
 
     let total = 0;

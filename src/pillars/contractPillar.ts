@@ -1,5 +1,5 @@
 import { SpectralService } from '../services/SpectralService.js';
-import { buildContractResult, calculateContractScore } from '../utils/calculateContractScore.js';
+import { buildContractResult, calculateContractScore, resolveSeverityWeights } from '../utils/calculateContractScore.js';
 import type { ContractRequestInput } from '../schemas/evaluation.schema.js';
 import type { Pillar } from './types.js';
 
@@ -16,6 +16,12 @@ export const contractPillar: Pillar<ContractRequestInput, 'spectralResult'> = {
         return {
             score: calculateContractScore(analysis.issues, analysis.rules, severityWeights),
             result: buildContractResult(analysis),
+            scoring: {
+                contract: {
+                    severityWeights: resolveSeverityWeights(severityWeights),
+                    rules: analysis.rules,
+                },
+            },
         };
     },
 };
