@@ -51,20 +51,17 @@ export class EvaluationWorker {
     private async process<T extends EvaluationType>(job: EvaluationJobOf<T>): Promise<void> {
         const pipeline = PIPELINES[job.type];
         const ctx = createPillarContext<EvaluationJobOf<T>['params']>(job.params);
+        const runs: PillarRun[] = [];
 
-        const runs: PillarRun[] = (
-            await Promise.allSettled(pipeline.pillars.map((pillar) => pillar.run(ctx)))
-        ).map((settled, index) => ({ pillar: pipeline.pillars[index], settled }));
+        for (const stage of pipeline.stages) {
+            const settledStage = await Promise.allSettled(stage.map((pillar) => pillar.run(ctx)));
+            settledStage.forEach((settled, index) => runs.push({ pillar: stage[index], settled }));
+        }
 
-        await this.conclude(job.evaluationId, runs, pipeline.weights(job.params), pipeline.pillars.length === 1);
+        await this.conclude(job.evaluationId, runs, pipeline.weights(job.params));
     }
 
-    private async conclude(
-        evaluationId: string,
-        runs: PillarRun[],
-        pillarWeights: IPillarScores,
-        singlePillar: boolean,
-    ): Promise<void> {
+    private async conclude(evaluationId: string, runs: PillarRun[], pillarWeights: IPillarScores): Promise<void> {
         const results: Partial<PillarResults> = {};
         const failedPillars: IFailedPillar[] = [];
         const pillarScores: IPillarScores = {};
@@ -106,7 +103,7 @@ export class EvaluationWorker {
             return;
         }
 
-        const message = singlePillar
+        const message = runs.length === 1
             ? failedPillars[0].error
             : failedPillars.map((fp) => `${fp.pillar}: ${fp.error}`).join('; ');
         await this.lifecycle.fail(evaluationId, message, results);

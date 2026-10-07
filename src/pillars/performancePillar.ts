@@ -1,5 +1,6 @@
 import { AutocannonService, DEFAULT_TARGET_LATENCY_MS } from '../services/AutocannonService.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
+import { withMeasurementLock } from '../utils/measurementLock.js';
 import type { IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { PerformanceRequestInput } from '../schemas/evaluation.schema.js';
 import { PillarError } from './PillarError.js';
@@ -35,7 +36,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                     targetPath: target.path,
                 });
 
-                const result = await autocannonService.runLoadTest(targetUrl, loadTestOpts);
+                const result = await withMeasurementLock(() => autocannonService.runLoadTest(targetUrl, loadTestOpts));
 
                 performanceResults.push({
                     path: target.path,

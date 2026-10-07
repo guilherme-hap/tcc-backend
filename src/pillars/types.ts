@@ -44,7 +44,7 @@ export interface Pillar<P extends PillarBaseParams, C extends PillarColumn = Pil
 }
 
 export interface Pipeline<P extends PillarBaseParams> {
-    pillars: readonly Pillar<P>[];
+    stages: readonly (readonly Pillar<P>[])[];
     weights: (params: P) => IPillarScores;
 }
 
