@@ -81,17 +81,18 @@ export async function runPerformanceTargets(
         }
     }
 
-    const allFailed = performanceResults.length > 0 && performanceResults.every((r) => r.result === null);
-    if (allFailed) {
+    const hasMeasured = performanceResults.some((r) => r.result?.score != null);
+    if (performanceResults.length > 0 && !hasMeasured) {
         const errorDetails = performanceResults
-            .map((r) => `${r.method} ${r.path}: ${r.error || 'Failed'}`)
+            .map((r) => `${r.method} ${r.path}: ${r.error || 'Not measured (no valid sample)'}`)
             .join('; ');
-        throw new PerformancePillarError(`All performance targets failed: ${errorDetails}`, performanceResults);
+        throw new PerformancePillarError(`No performance target was measured: ${errorDetails}`, performanceResults);
     }
 
-    const totalScore = performanceResults.reduce((sum, r) => sum + (r.result?.score ?? 0), 0);
-    const score = performanceResults.length > 0
-        ? Math.round((totalScore / performanceResults.length) * 100) / 100
+    const counted = performanceResults.filter((r) => r.result === null || r.result.score != null);
+    const totalScore = counted.reduce((sum, r) => sum + (r.result?.score ?? 0), 0);
+    const score = counted.length > 0
+        ? Math.round((totalScore / counted.length) * 100) / 100
         : 0;
 
     return {

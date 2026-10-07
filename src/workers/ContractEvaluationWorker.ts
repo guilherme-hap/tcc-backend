@@ -1,6 +1,6 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { SpectralService } from '../services/SpectralService.js';
-import { calculateContractScore } from '../utils/calculateContractScore.js';
+import { buildContractResult, calculateContractScore } from '../utils/calculateContractScore.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
 import { IContractRequest } from '../interfaces/evaluation.interface.js';
 
@@ -18,11 +18,11 @@ export class ContractEvaluationWorker {
         const { openApiUrl, rulesConfig, severityWeights } = params as IContractRequest;
 
         try {
-            const issues = await this.spectralService.analyze(openApiUrl, rulesConfig || {});
-            const score = calculateContractScore(issues, severityWeights);
+            const analysis = await this.spectralService.analyze(openApiUrl, rulesConfig || {});
+            const score = calculateContractScore(analysis.issues, analysis.rules, severityWeights);
 
             await this.lifecycle.complete(evaluationId, {
-                spectralResult: issues,
+                spectralResult: buildContractResult(analysis),
                 finalScore: score,
             });
         } catch (error: any) {

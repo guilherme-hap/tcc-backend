@@ -5,7 +5,7 @@ import { SecurityService } from '../services/SecurityService.js';
 import { fetchOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 import { runPerformanceTargets, PerformancePillarError, RunPerformanceTargetsOutput } from '../utils/runPerformanceTargets.js';
 import { resolveBaseUrlFromSpec } from '../utils/resolveBaseUrl.js';
-import { calculateContractScore } from '../utils/calculateContractScore.js';
+import { buildContractResult, calculateContractScore } from '../utils/calculateContractScore.js';
 import { calculateSecurityScore } from '../utils/calculateSecurityScore.js';
 import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { EvaluationJob } from '../queues/EvaluationQueue.js';
@@ -77,14 +77,15 @@ export class FullEvaluationWorker {
             const performanceOk = performanceSettled.status === 'fulfilled';
             const securityOk = securitySettled.status === 'fulfilled';
 
-            const contractResult = contractOk ? contractSettled.value : null;
+            const contractAnalysis = contractOk ? contractSettled.value : null;
+            const contractResult = contractAnalysis ? buildContractResult(contractAnalysis) : null;
             const performanceData = performanceOk ? performanceSettled.value : null;
             const securityResult = securityOk ? securitySettled.value : null;
 
             const performanceResults = getPerformanceResults(performanceSettled);
 
             if (contractOk && performanceOk && securityOk) {
-                const contractScore = calculateContractScore(contractResult!, severityWeights);
+                const contractScore = calculateContractScore(contractAnalysis!.issues, contractAnalysis!.rules, severityWeights);
                 const performanceScore = performanceData!.score;
                 const securityScore = calculateSecurityScore(securityResult!);
 

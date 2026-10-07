@@ -28,7 +28,7 @@ const AUDIT_MESSAGES = {
         severity: 'Info',
         message: () =>
             'Parâmetros de path sintéticos (IDs de exemplo da spec) podem ter sido usados e provavelmente não existem no alvo. ' +
-            'Taxas altas de 404 são esperadas e não refletem a qualidade da API.',
+            'Respostas 4xx (como 404) são excluídas da amostra do Apdex e não afetam a nota.',
         recommendation: () => 'Use um path com IDs reais do ambiente de teste.',
     }),
     PERF_SYNTHETIC_UNIQUE_FIELDS: entry({
@@ -42,9 +42,27 @@ const AUDIT_MESSAGES = {
         severity: 'Warning',
         message: () =>
             'Nenhum body foi enviado: não há payload informado nem schema requestBody (OpenAPI 3) para esta operação ' +
-            '(parâmetros body do Swagger 2.0 não são suportados). Respostas de erro (ex.: 400/415) provavelmente ' +
-            'refletem a ausência do body, e não a qualidade da API.',
+            '(parâmetros body do Swagger 2.0 não são suportados). Respostas 4xx (ex.: 400/415) provavelmente ' +
+            'decorrem da ausência do body e são excluídas da amostra do Apdex.',
         recommendation: () => 'Informe um payload explícito para este alvo.',
+    }),
+    PERF_SMALL_SAMPLE: entry<{ sampleSize: number }>({
+        severity: 'Warning',
+        message: ({ sampleSize }) =>
+            `A amostra válida do Apdex tem apenas ${sampleSize} requisições (mínimo recomendado: 100); a nota é pouco confiável.`,
+        recommendation: () => 'Aumente a duração ou o número máximo de requisições do teste.',
+    }),
+    PERF_EXCLUDED_4XX: entry<{ count: number }>({
+        severity: 'Info',
+        message: ({ count }) =>
+            `${count} respostas 4xx foram excluídas da amostra do Apdex e não afetam a nota.`,
+        recommendation: () => 'Se esperava respostas de sucesso, informe path com IDs reais e payload válido para este alvo.',
+    }),
+    PERF_NO_VALID_SAMPLE: entry({
+        severity: 'Warning',
+        message: () =>
+            'Nenhuma requisição válida foi medida (todas as respostas foram 4xx ou não houve resposta); o alvo não recebeu nota.',
+        recommendation: () => 'Informe path com IDs reais e payload válido para que o endpoint responda com sucesso.',
     }),
     PERF_HIGH_LOAD: entry({
         severity: 'Warning',
@@ -52,6 +70,62 @@ const AUDIT_MESSAGES = {
         recommendation: () => 'Garanta que você tem autorização para testar a carga desta API.',
     }),
 
+    SEC_TRANSPORT_HTTPS_OK: entry({
+        severity: 'Info',
+        message: () => 'O alvo é acessado via HTTPS.',
+    }),
+    SEC_TRANSPORT_NOT_HTTPS: entry({
+        severity: 'Error',
+        message: () => 'O alvo foi informado com http://: o tráfego da API, incluindo credenciais, trafega sem criptografia.',
+        recommendation: () => 'Sirva a API por HTTPS e informe a URL base com https://.',
+    }),
+    SEC_TRANSPORT_NOT_HTTPS_LOCAL: entry<{ host: string }>({
+        severity: 'Error',
+        message: ({ host }) =>
+            `O alvo foi informado com http:// em um endereço local (${host}): o tráfego trafega sem criptografia. ` +
+            'O resultado da camada de transporte reflete o ambiente de desenvolvimento, não a API publicada; a nota não é ajustada.',
+        recommendation: () => 'Para avaliar o transporte, informe a URL base em https:// do ambiente publicado.',
+    }),
+    SEC_TRANSPORT_REDIRECT_OK: entry({
+        severity: 'Info',
+        message: () => 'A versão http:// do alvo redireciona para https://.',
+    }),
+    SEC_TRANSPORT_HTTP_REFUSED: entry({
+        severity: 'Info',
+        message: () => 'A versão http:// do alvo não atende requisições HTTP em texto puro (conexão recusada ou requisição rejeitada).',
+    }),
+    SEC_TRANSPORT_HTTP_TIMEOUT: entry({
+        severity: 'Info',
+        message: () =>
+            'A versão http:// do alvo não aceitou a conexão dentro do tempo limite (porta provavelmente filtrada); ' +
+            'tratada como não exposta em texto puro.',
+    }),
+    SEC_TRANSPORT_HTTP_NO_RESPONSE: entry({
+        severity: 'Warning',
+        message: () =>
+            'A versão http:// do alvo aceitou a conexão em texto puro, mas não respondeu dentro do tempo limite; ' +
+            'não foi possível confirmar o redirecionamento para HTTPS.',
+        recommendation: () =>
+            'Redirecione requisições HTTP para HTTPS ou feche a porta HTTP, para que o servidor não aceite tráfego em texto puro.',
+    }),
+    SEC_TRANSPORT_REDIRECT_NOT_HTTPS: entry<{ status: number; location: string }>({
+        severity: 'Error',
+        message: ({ status, location }) =>
+            `A versão http:// do alvo responde ${status}, mas o redirecionamento não aponta para https:// (Location: ${location}).`,
+        recommendation: () => 'Redirecione toda requisição HTTP para a URL equivalente em https:// (301 ou 308).',
+    }),
+    SEC_TRANSPORT_HTTP_SERVED: entry<{ status: number }>({
+        severity: 'Error',
+        message: ({ status }) => `A versão http:// do alvo responde ${status} em texto puro, sem redirecionar para HTTPS.`,
+        recommendation: () =>
+            'Redirecione requisições HTTP para HTTPS ou desative o atendimento na porta HTTP. ' +
+            'Combine com HSTS para que os clientes passem a usar HTTPS diretamente.',
+    }),
+    SEC_HSTS_REQUIRES_HTTPS: entry({
+        severity: 'Warning',
+        message: () => 'HSTS não se aplica: a resposta analisada não foi recebida por HTTPS, e navegadores ignoram o header em HTTP.',
+        recommendation: () => 'Sirva a API por HTTPS e envie Strict-Transport-Security nas respostas HTTPS.',
+    }),
     SEC_HSTS_MISSING: entry({
         severity: 'Warning',
         message: () => 'O header Strict-Transport-Security (HSTS) não está presente.',
@@ -68,19 +142,24 @@ const AUDIT_MESSAGES = {
         severity: 'Info',
         message: () => 'HSTS configurado corretamente.',
     }),
-    SEC_CSP_MISSING: entry({
-        severity: 'Info',
-        message: () => 'O header Content-Security-Policy (CSP) não está presente.',
-        recommendation: () => "Defina uma política CSP restritiva. Para APIs, ao menos: default-src 'none'.",
-    }),
-    SEC_CSP_WEAK_DIRECTIVES: entry<{ directives: string }>({
+    SEC_FRAMING_MISSING: entry({
         severity: 'Warning',
-        message: ({ directives }) => `CSP presente, mas contém diretivas fracas: ${directives}.`,
-        recommendation: () => 'Remova unsafe-inline e substitua * por origens explícitas.',
+        message: () =>
+            'Nenhuma proteção contra incorporação em frames: a diretiva frame-ancestors da Content-Security-Policy ' +
+            'e o header X-Frame-Options estão ausentes.',
+        recommendation: () =>
+            "Adicione Content-Security-Policy: frame-ancestors 'none' (ou X-Frame-Options: DENY). " +
+            'Em APIs JSON, essa é a única parte da CSP que se aplica.',
     }),
-    SEC_CSP_OK: entry({
+    SEC_FRAMING_WEAK: entry<{ source: string; value: string }>({
+        severity: 'Warning',
+        message: ({ source, value }) => `A proteção contra frames em ${source} é permissiva ou inválida: "${value}".`,
+        recommendation: () =>
+            "Use frame-ancestors 'none' ou 'self' na CSP, ou X-Frame-Options: DENY ou SAMEORIGIN (ALLOW-FROM é obsoleto).",
+    }),
+    SEC_FRAMING_OK: entry<{ source: string; value: string }>({
         severity: 'Info',
-        message: () => 'CSP configurado sem diretivas inseguras detectadas.',
+        message: ({ source, value }) => `Proteção contra frames configurada via ${source}: "${value}".`,
     }),
     SEC_XCTO_MISSING: entry({
         severity: 'Warning',
@@ -98,24 +177,53 @@ const AUDIT_MESSAGES = {
     }),
     SEC_CORS_NOT_CONFIGURED: entry({
         severity: 'Info',
-        message: () => 'Header Access-Control-Allow-Origin ausente (nenhum CORS configurado — seguro por padrão).',
+        message: () =>
+            'Uma origem não autorizada não recebeu Access-Control-Allow-Origin (CORS ausente ou restrito — seguro por padrão).',
     }),
-    SEC_CORS_WILDCARD_WITH_CREDENTIALS: entry({
+    SEC_CORS_REFLECTED_ORIGIN: entry<{ origin: string }>({
+        severity: 'Error',
+        message: ({ origin }) =>
+            `O servidor refletiu a origem arbitrária ${origin} em Access-Control-Allow-Origin e enviou ` +
+            'Access-Control-Allow-Credentials: true: qualquer site pode ler respostas autenticadas.',
+        recommendation: () =>
+            'Valide a origem contra uma lista fixa de origens confiáveis antes de refleti-la, principalmente com credentials.',
+    }),
+    SEC_CORS_NULL_ORIGIN_WITH_CREDENTIALS: entry({
         severity: 'Error',
         message: () =>
+            'CORS responde Access-Control-Allow-Origin: null com Access-Control-Allow-Credentials: true: ' +
+            'páginas em sandbox ou arquivos locais conseguem ler respostas autenticadas.',
+        recommendation: () => 'Não autorize a origem "null"; use uma lista fixa de origens confiáveis.',
+    }),
+    SEC_CORS_WILDCARD_WITH_CREDENTIALS: entry({
+        severity: 'Warning',
+        message: () =>
             'CORS configurado com Access-Control-Allow-Origin: * e Access-Control-Allow-Credentials: true — ' +
-            'combinação insegura e inválida pela especificação.',
+            'combinação inválida pela especificação (navegadores a bloqueiam), mas indica configuração incorreta.',
         recommendation: () =>
             'Nunca use wildcard (*) com credentials. Especifique origens explícitas ao habilitar credentials.',
     }),
     SEC_CORS_WILDCARD: entry({
-        severity: 'Warning',
-        message: () => 'CORS permite qualquer origem (Access-Control-Allow-Origin: *).',
-        recommendation: () => 'Restrinja a origens específicas confiáveis quando possível.',
+        severity: 'Info',
+        message: () =>
+            'CORS permite qualquer origem sem credenciais (Access-Control-Allow-Origin: *), ' +
+            'comum e aceitável em APIs públicas.',
+    }),
+    SEC_CORS_REFLECTED_ORIGIN_NO_CREDENTIALS: entry<{ origin: string }>({
+        severity: 'Info',
+        message: ({ origin }) =>
+            `O servidor refletiu a origem arbitrária ${origin} em Access-Control-Allow-Origin, sem credenciais: ` +
+            'equivale a permitir qualquer origem sem credenciais.',
+        recommendation: () => 'Se a API passar a usar cookies ou credenciais, restrinja as origens a uma lista fixa.',
     }),
     SEC_CORS_EXPLICIT_ORIGIN: entry<{ origin: string }>({
         severity: 'Info',
         message: ({ origin }) => `CORS configurado com origem explícita: ${origin}.`,
+    }),
+    SEC_CORS_PROBE_FAILED: entry({
+        severity: 'Warning',
+        message: () => 'Não foi possível executar a sonda de CORS (requisição com Origin forjada falhou); a configuração não foi verificada.',
+        recommendation: () => 'Execute a auditoria novamente.',
     }),
     SEC_FINGERPRINT_ABSENT: entry<{ header: string }>({
         severity: 'Info',

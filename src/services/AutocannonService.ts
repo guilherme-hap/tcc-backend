@@ -5,6 +5,21 @@ import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_DURATION_SECONDS } from '../utils/loadTestLimits.js';
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
+const DEFAULT_TARGET_LATENCY_MS = 1000;
+const MIN_SAMPLE_SIZE = 100;
+
+interface ResponseCounts {
+    satisfied: number;
+    tolerating: number;
+    frustrated: number;
+    excluded4xx: number;
+    serverErrors: number;
+    responses: number;
+    unanswered: number;
+    measured: number;
+    latencySum: number;
+}
+
 export class AutocannonService {
     public async runLoadTest(targetUrl: string, options: ILoadTestOptions = {}): Promise<IAutocannonResult> {
         const method = options.method?.toUpperCase();
@@ -21,7 +36,7 @@ export class AutocannonService {
         const duration = options.duration ?? (isMutating ? 5 : DEFAULT_DURATION_SECONDS);
         const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
         const connections = Math.min(options.connections ?? (isMutating ? 2 : 10), maxRequests ?? Infinity);
-        const { targetLatency = 300, requestsPerSecond, body, payloadFactory } = options;
+        const { targetLatency = DEFAULT_TARGET_LATENCY_MS, requestsPerSecond, body, payloadFactory } = options;
 
         const headers: Record<string, string> = { ...options.headers };
         const hasBody = !!body || !!payloadFactory;
@@ -88,30 +103,92 @@ export class AutocannonService {
             };
         }
 
-        const result = await this.run(runOptions, duration);
+        const { result, counts } = await this.run(runOptions, duration, targetLatency);
 
-        const score = this.calculateApdex(result, targetLatency);
+        const errors = result.errors ?? 0;
+        const satisfied = counts.satisfied;
+        const tolerating = counts.tolerating;
+        const frustrated = counts.frustrated + errors + counts.unanswered;
+        const sampleSize = satisfied + tolerating + frustrated;
+        const totalAttempts = counts.responses + errors + counts.unanswered;
+
+        if (counts.excluded4xx > 0) {
+            warnings.push(auditMessage('PERF_EXCLUDED_4XX', { count: counts.excluded4xx }));
+        }
+        if (sampleSize === 0) {
+            warnings.push(auditMessage('PERF_NO_VALID_SAMPLE'));
+        } else if (sampleSize < MIN_SAMPLE_SIZE) {
+            warnings.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize }));
+        }
+
+        const score = sampleSize === 0
+            ? null
+            : Math.round(((satisfied + tolerating / 2) / sampleSize) * 10000) / 100;
 
         return {
             score,
-            averageLatency: result.latency?.average ?? 0,
+            targetLatency,
+            satisfied,
+            tolerating,
+            frustrated,
+            sampleSize,
+            excluded4xx: counts.excluded4xx,
+            serverErrors: counts.serverErrors,
+            unanswered: counts.unanswered,
+            errorRate: totalAttempts === 0
+                ? 0
+                : Math.round(((counts.serverErrors + errors + counts.unanswered) / totalAttempts) * 10000) / 10000,
+            averageLatency: counts.measured === 0
+                ? 0
+                : Math.round((counts.latencySum / counts.measured) * 100) / 100,
             totalRequests: result.requests?.sent ?? 0,
-            errors: result.errors ?? 0,
+            errors,
             timeouts: result.timeouts ?? 0,
-            nonSuccessResponses: result.non2xx ?? 0,
             warnings,
         };
     }
 
-    private run(options: autocannon.Options, durationSeconds: number): Promise<autocannon.Result> {
+    private run(
+        options: autocannon.Options,
+        durationSeconds: number,
+        targetLatency: number,
+    ): Promise<{ result: autocannon.Result; counts: ResponseCounts }> {
         return new Promise((resolve, reject) => {
             let stopTimer: NodeJS.Timeout | undefined;
-            const instance = autocannon(options, (err, res) => {
+            const counts: ResponseCounts = {
+                satisfied: 0,
+                tolerating: 0,
+                frustrated: 0,
+                excluded4xx: 0,
+                serverErrors: 0,
+                responses: 0,
+                unanswered: 0,
+                measured: 0,
+                latencySum: 0,
+            };
+            const sentAtByClient = new Map<autocannon.Client, number>();
+            const setupClient = (client: autocannon.Client) => {
+                const emitter: NodeJS.EventEmitter = client;
+                emitter.on('request', () => sentAtByClient.set(client, Date.now()));
+                for (const event of ['response', 'timeout', 'connError']) {
+                    emitter.on(event, () => sentAtByClient.delete(client));
+                }
+            };
+            const instance = autocannon({ ...options, setupClient }, (err, res) => {
                 clearTimeout(stopTimer);
                 if (err) {
                     return reject(err);
                 }
-                resolve(res);
+                const finishedAt = Date.now();
+                for (const sentAt of sentAtByClient.values()) {
+                    if (finishedAt - sentAt > 4 * targetLatency) {
+                        counts.unanswered++;
+                    }
+                }
+                resolve({ result: res, counts });
+            });
+            instance.on('response', (_client, statusCode, _resBytes, responseTime) => {
+                this.classifyResponse(counts, statusCode, responseTime, targetLatency);
             });
             if (options.amount) {
                 stopTimer = setTimeout(() => instance.stop(), durationSeconds * 1000);
@@ -119,72 +196,27 @@ export class AutocannonService {
         });
     }
 
-    private calculateApdex(result: autocannon.Result, T: number): number {
-        const totalSent = result.requests?.sent ?? 0;
-        if (totalSent === 0) return 0;
+    private classifyResponse(counts: ResponseCounts, statusCode: number, responseTime: number, T: number): void {
+        if (statusCode < 200) return;
+        counts.responses++;
 
-        if (!result.latency || result.latency.max === undefined) {
-            return 0;
+        if (statusCode >= 400 && statusCode < 500) {
+            counts.excluded4xx++;
+            return;
         }
 
-        const apdexScore = result.latency.max === 0
-            ? 100
-            : this.calculatePercentileApdex(result.latency, T);
+        counts.measured++;
+        counts.latencySum += responseTime;
 
-        const connectionErrors = result.errors ?? 0;
-        const nonSuccessResponses = result.non2xx ?? 0;
-        const totalFailed = connectionErrors + nonSuccessResponses;
-        const successRatio = Math.max(0, (totalSent - totalFailed) / totalSent);
-
-        const finalScore = apdexScore * successRatio;
-
-        return Math.min(100, Math.max(0, Math.round(finalScore * 100) / 100));
-    }
-
-    private calculatePercentileApdex(latency: autocannon.Histogram, T: number): number {
-        const percentiles = [
-            { p: 0, v: latency.min ?? 0 },
-            { p: 0.001, v: latency.p0_001 ?? 0 },
-            { p: 0.01, v: latency.p0_01 ?? 0 },
-            { p: 0.1, v: latency.p0_1 ?? 0 },
-            { p: 1, v: latency.p1 ?? 0 },
-            { p: 2.5, v: latency.p2_5 ?? 0 },
-            { p: 10, v: latency.p10 ?? 0 },
-            { p: 25, v: latency.p25 ?? 0 },
-            { p: 50, v: latency.p50 ?? 0 },
-            { p: 75, v: latency.p75 ?? 0 },
-            { p: 90, v: latency.p90 ?? 0 },
-            { p: 97.5, v: latency.p97_5 ?? 0 },
-            { p: 99, v: latency.p99 ?? 0 },
-            { p: 99.9, v: latency.p99_9 ?? 0 },
-            { p: 99.99, v: latency.p99_99 ?? 0 },
-            { p: 99.999, v: latency.p99_999 ?? 0 },
-            { p: 100, v: latency.max ?? 0 },
-        ];
-
-        const getPercentileForValue = (value: number): number => {
-            if (value < percentiles[0].v) return 0;
-            if (value >= percentiles[percentiles.length - 1].v) return 100;
-
-            for (let i = 0; i < percentiles.length - 1; i++) {
-                const current = percentiles[i];
-                const next = percentiles[i + 1];
-
-                if (value >= current.v && value <= next.v) {
-                    if (next.v === current.v) {
-                        return next.p;
-                    }
-                    const ratio = (value - current.v) / (next.v - current.v);
-                    return current.p + ratio * (next.p - current.p);
-                }
-            }
-            return 100;
-        };
-
-        const satisfiedPct = getPercentileForValue(T);
-        const toleratingPctUpper = getPercentileForValue(4 * T);
-        const toleratingPct = Math.max(0, toleratingPctUpper - satisfiedPct);
-
-        return satisfiedPct + (toleratingPct / 2);
+        if (statusCode >= 500) {
+            counts.serverErrors++;
+            counts.frustrated++;
+        } else if (responseTime <= T) {
+            counts.satisfied++;
+        } else if (responseTime <= 4 * T) {
+            counts.tolerating++;
+        } else {
+            counts.frustrated++;
+        }
     }
 }

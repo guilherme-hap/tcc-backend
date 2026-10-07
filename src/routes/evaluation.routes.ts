@@ -22,7 +22,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/contract:
  *   post:
  *     summary: "Executa o linting de conformidade do contrato OpenAPI"
- *     description: "Baixa o arquivo OpenAPI (JSON/YAML) diretamente da URL informada e valida as regras oficiais do Spectral sobre a especificação completa. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado."
+ *     description: "Baixa o arquivo OpenAPI (JSON/YAML) diretamente da URL informada e valida as regras oficiais do Spectral sobre a especificação completa. A nota (0-100) é a razão de conformidade por regra: 100 × (1 − peso das regras violadas / peso das regras aplicáveis, isto é, ativas, do formato da especificação e com ao menos um alvo no documento); uma regra violada conta uma vez, independentemente do número de ocorrências. Pesos padrão por severidade: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -130,8 +130,8 @@ const evaluationController = new EvaluationController();
  *                     example: 10
  *                   targetLatency:
  *                     type: number
- *                     description: "Limite de latência alvo em milissegundos para cálculo do índice Apdex."
- *                     example: 300
+ *                     description: "Latência alvo T em milissegundos para o Apdex (padrão 1000). Respostas 2xx/3xx com latência ≤ T são satisfeitas, ≤ 4T toleradas e acima disso frustradas; 5xx, timeouts e erros de conexão também são frustrados."
+ *                     example: 1000
  *                   maxRequests:
  *                     type: number
  *                     description: "Quantidade máxima de requisições por alvo (padrão máx. 100.000; com allowHighLoad máx. 1.000.000). O teste termina ao atingir maxRequests ou duration, o que ocorrer primeiro. Não pode ser menor que connections."
@@ -252,8 +252,8 @@ const evaluationController = new EvaluationController();
  *                     example: 10
  *                   targetLatency:
  *                     type: number
- *                     description: "Limite de latência alvo em milissegundos para cálculo do índice Apdex."
- *                     example: 300
+ *                     description: "Latência alvo T em milissegundos para o Apdex (padrão 1000). Respostas 2xx/3xx com latência ≤ T são satisfeitas, ≤ 4T toleradas e acima disso frustradas; 5xx, timeouts e erros de conexão também são frustrados."
+ *                     example: 1000
  *                   maxRequests:
  *                     type: number
  *                     description: "Quantidade máxima de requisições por alvo (padrão máx. 100.000; com allowHighLoad máx. 1.000.000). O teste termina ao atingir maxRequests ou duration, o que ocorrer primeiro. Não pode ser menor que connections."
@@ -317,8 +317,8 @@ const evaluationController = new EvaluationController();
  *
  * /api/evaluations/security:
  *   post:
- *     summary: "Executa auditoria de segurança dos headers HTTP de uma API"
- *     description: "Analisa os headers de segurança HTTP (HSTS, CSP, X-Content-Type-Options, CORS, Server, X-Powered-By) do servidor da API. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado. Quando apiBaseUrl não é informada, a URL alvo é resolvida automaticamente a partir da especificação OpenAPI."
+ *     summary: "Executa auditoria de segurança HTTP de uma API"
+ *     description: "Executa 8 verificações no servidor da API, agrupadas em 4 camadas com pesos ROC: transporte (0,5208: HTTPS, redirecionamento HTTP para HTTPS, HSTS), controle de acesso (0,2708: CORS, com sonda de Origin forjada), conteúdo (0,1458: X-Content-Type-Options, proteção contra frames via frame-ancestors da CSP ou X-Frame-Options) e vazamento (0,0625: Server, X-Powered-By). O peso de cada camada é dividido igualmente entre suas verificações; cada uma vale 1 (pass), 0,5 (warning) ou 0 (missing/error), e a nota (0-100) é a soma ponderada normalizada. A severidade de cada achado é informativa e não entra na nota. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado. Quando apiBaseUrl não é informada, a URL alvo é resolvida automaticamente a partir da especificação OpenAPI."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -425,8 +425,39 @@ const evaluationController = new EvaluationController();
  *                     security:
  *                       type: number
  *                 spectralResult:
- *                   type: array
+ *                   type: object
  *                   nullable: true
+ *                   description: "Resultado do pilar de contrato: ocorrências do Spectral e resumo por regra."
+ *                   properties:
+ *                     issues:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           endpoint:
+ *                             type: string
+ *                           method:
+ *                             type: string
+ *                           rule:
+ *                             type: string
+ *                           message:
+ *                             type: string
+ *                           severity:
+ *                             type: string
+ *                             enum: [Error, Warning, Info, Hint, Unknown]
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         evaluatedRules:
+ *                           type: integer
+ *                           description: "Regras ativas, aplicáveis ao formato da especificação e com ao menos um alvo no documento, incluindo códigos extras reportados pelo Spectral (ex.: parser, invalid-ref)."
+ *                         violatedRules:
+ *                           type: integer
+ *                           description: "Regras com ao menos uma ocorrência."
+ *                         occurrencesByRule:
+ *                           type: object
+ *                           additionalProperties:
+ *                             type: integer
  *                 performanceResults:
  *                   type: array
  *                   nullable: true
@@ -446,15 +477,43 @@ const evaluationController = new EvaluationController();
  *                         properties:
  *                           score:
  *                             type: number
+ *                             nullable: true
+ *                             description: "Nota Apdex do alvo (0-100) = (satisfeitas + toleradas/2) / amostra x 100. Nulo quando não há amostra válida (alvo não medido, fora da média do pilar)."
+ *                           targetLatency:
+ *                             type: number
+ *                             description: "Latência alvo T (ms) usada no cálculo."
+ *                           satisfied:
+ *                             type: number
+ *                             description: "Respostas 2xx/3xx com latência <= T."
+ *                           tolerating:
+ *                             type: number
+ *                             description: "Respostas 2xx/3xx com latência > T e <= 4T."
+ *                           frustrated:
+ *                             type: number
+ *                             description: "Respostas 2xx/3xx com latência > 4T, respostas 5xx, timeouts, erros de conexão e requisições sem resposta há mais de 4T no fim do teste."
+ *                           sampleSize:
+ *                             type: number
+ *                             description: "Tamanho da amostra do Apdex (satisfeitas + toleradas + frustradas)."
+ *                           excluded4xx:
+ *                             type: number
+ *                             description: "Respostas 4xx, excluídas da amostra."
+ *                           serverErrors:
+ *                             type: number
+ *                             description: "Respostas 5xx (já contadas em frustrated)."
+ *                           unanswered:
+ *                             type: number
+ *                             description: "Requisições ainda sem resposta há mais de 4T quando o teste terminou (já contadas em frustrated). As pendentes há menos de 4T ficam fora da amostra."
+ *                           errorRate:
+ *                             type: number
+ *                             description: "(5xx + erros de conexão e timeouts + sem resposta) / (respostas + erros + sem resposta), de 0 a 1. Apenas diagnóstico; não entra na nota."
  *                           averageLatency:
  *                             type: number
+ *                             description: "Latência média (ms) das respostas não 4xx."
  *                           totalRequests:
  *                             type: number
  *                           errors:
  *                             type: number
  *                           timeouts:
- *                             type: number
- *                           nonSuccessResponses:
  *                             type: number
  *                           warnings:
  *                             type: array
@@ -482,10 +541,14 @@ const evaluationController = new EvaluationController();
  *                 securityResult:
  *                   type: array
  *                   nullable: true
- *                   description: "Array de resultados da auditoria de headers de segurança HTTP."
+ *                   description: "Array com as 8 verificações da auditoria de segurança HTTP (HTTPS, redirecionamento, HSTS, CORS, X-Content-Type-Options, frame-ancestors/X-Frame-Options, Server, X-Powered-By)."
  *                   items:
  *                     type: object
  *                     properties:
+ *                       layer:
+ *                         type: string
+ *                         enum: [transport, access, content, leakage]
+ *                         description: "Camada da verificação: transport (0,5208), access (0,2708), content (0,1458) ou leakage (0,0625)."
  *                       header:
  *                         type: string
  *                       status:
@@ -505,7 +568,7 @@ const evaluationController = new EvaluationController();
  *                       params:
  *                         type: object
  *                         nullable: true
- *                         description: "Valores usados na mensagem (ex.: maxAge, header, value)."
+ *                         description: "Valores usados na mensagem (ex.: maxAge, header, value, status, origin)."
  *                 failedPillars:
  *                   type: array
  *                   nullable: true

@@ -2,7 +2,7 @@ import pkgSpectralCore from '@stoplight/spectral-core';
 import type { ISpectralDiagnostic } from '@stoplight/spectral-core';
 import pkgSpectralParsers from '@stoplight/spectral-parsers';
 import { oas } from '@stoplight/spectral-rulesets';
-import type { ISpectralIssue } from '../interfaces/evaluation.interface.js';
+import type { ISpectralAnalysis, ISpectralIssue, ISpectralRule } from '../interfaces/evaluation.interface.js';
 import type { Severity } from '../types/severity.js';
 import { fetchOpenApiContent, ParsedOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 
@@ -34,7 +34,7 @@ export class SpectralService {
         openApiUrl: string,
         rulesConfig: Record<string, boolean> = {},
         preloadedContent?: ParsedOpenApiContent,
-    ): Promise<ISpectralIssue[]> {
+    ): Promise<ISpectralAnalysis> {
         const { format, rawString } = preloadedContent ?? (await fetchOpenApiContent(openApiUrl));
         const parser = format === 'yaml' ? Yaml : Json;
 
@@ -51,10 +51,29 @@ export class SpectralService {
             rules: customRules
         });
 
+        const targeted = new Set<string>();
+        for (const rule of Object.values(spectral.ruleset!.rules)) {
+            for (const then of rule.then) {
+                const original = then.function;
+                then.function = ((...args: Parameters<typeof original>) => {
+                    targeted.add(rule.name);
+                    return original(...args);
+                }) as typeof original;
+            }
+        }
+
         const document = new Document(rawString, parser as any, openApiUrl);
 
         const diagnostics = await spectral.run(document);
 
-        return diagnostics.map(toSpectralIssue);
+        const formats = document.formats ?? null;
+        const rules: ISpectralRule[] = Object.values(spectral.ruleset!.rules)
+            .filter((rule) => rule.enabled && rule.matchesFormat(formats) && targeted.has(rule.name))
+            .map((rule) => ({
+                name: rule.name,
+                severity: SEVERITY_BY_LEVEL[rule.severity] ?? 'Unknown',
+            }));
+
+        return { issues: diagnostics.map(toSpectralIssue), rules };
     }
 }

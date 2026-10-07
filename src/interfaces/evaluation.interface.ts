@@ -16,17 +16,49 @@ export interface ISpectralIssue {
     severity: Severity;
 }
 
+export interface ISpectralRule {
+    name: string;
+    severity: Severity;
+}
+
+export interface ISpectralAnalysis {
+    issues: ISpectralIssue[];
+    rules: ISpectralRule[];
+}
+
+export interface IContractSummary {
+    evaluatedRules: number;
+    violatedRules: number;
+    occurrencesByRule: Record<string, number>;
+}
+
+export interface IContractResult {
+    issues: ISpectralIssue[];
+    summary: IContractSummary;
+}
+
 export interface IAutocannonResult {
-    score: number;
+    score: number | null;
+    targetLatency: number;
+    satisfied: number;
+    tolerating: number;
+    frustrated: number;
+    sampleSize: number;
+    excluded4xx: number;
+    serverErrors: number;
+    unanswered: number;
+    errorRate: number;
     averageLatency: number;
     totalRequests: number;
     errors: number;
     timeouts: number;
-    nonSuccessResponses: number;
     warnings: IAuditMessage[];
 }
 
+export type SecurityLayer = 'transport' | 'access' | 'content' | 'leakage';
+
 export interface ISecurityCheckResult extends IAuditMessage {
+    layer: SecurityLayer;
     header: string;
     status: 'pass' | 'warning' | 'missing' | 'error';
 }

@@ -45,8 +45,8 @@ const validateCustomRuleId = validateIdParam('Custom rule not found');
  *               severityWeights:
  *                 type: object
  *                 nullable: true
- *                 description: "Pesos customizados para cada nível de severidade. Chaves válidas: Error, Warning, Info, Hint, Unknown. Valores devem ser numéricos não-negativos."
- *                 example: { "Error": 10, "Warning": 5, "Info": 1 }
+ *                 description: "Pesos customizados para cada nível de severidade. Chaves válidas: Error, Warning, Info, Hint, Unknown. Valores devem ser numéricos não-negativos. Chaves omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
+ *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
  *     responses:
  *       201:
  *         description: "Regra customizada criada com sucesso."
