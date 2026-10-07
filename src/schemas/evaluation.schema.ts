@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { EvaluationRequestMap, EvaluationType } from '../interfaces/evaluation.interface.js';
 import { DEFAULT_WEIGHTS } from '../utils/weights.js';
-import { MAX_TARGETS, validateTotalDuration } from '../utils/loadTestLimits.js';
+import { MAX_TARGETS, validateTargetApdexWindow, validateTotalDuration } from '../utils/loadTestLimits.js';
 import { validateTargetMethods } from '../utils/httpMethodUtils.js';
 import { loadTestOptionsSchema, type LoadTestOptionsInput } from './loadTestOptions.schema.js';
 import { httpMethodSchema, httpUrl, rulesConfigSchema, severityWeightsSchema } from './shared.js';
@@ -35,6 +35,7 @@ function refineTargets(
 ): void {
     validateTotalDuration(data, ctx);
     validateTargetMethods(data, ctx);
+    validateTargetApdexWindow(data, ctx);
 }
 
 export const performanceRequestSchema = z

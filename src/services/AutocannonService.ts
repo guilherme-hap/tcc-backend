@@ -2,10 +2,9 @@ import autocannon from 'autocannon';
 import { IAutocannonResult, ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { isMutatingMethod } from '../utils/httpMethodUtils.js';
-import { DEFAULT_DURATION_SECONDS } from '../utils/loadTestLimits.js';
+import { DEFAULT_TARGET_LATENCY_MS, FRUSTRATED_LATENCY_MULTIPLIER, defaultDurationFor } from '../utils/loadTestLimits.js';
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
-export const DEFAULT_TARGET_LATENCY_MS = 1000;
 const MIN_SAMPLE_SIZE = 100;
 
 interface ResponseCounts {
@@ -33,7 +32,7 @@ export class AutocannonService {
             );
         }
 
-        const duration = options.duration ?? (isMutating ? 5 : DEFAULT_DURATION_SECONDS);
+        const duration = options.duration ?? defaultDurationFor(method);
         const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
         const connections = Math.min(options.connections ?? (isMutating ? 2 : 10), maxRequests ?? Infinity);
         const { targetLatency = DEFAULT_TARGET_LATENCY_MS, requestsPerSecond, body, payloadFactory } = options;
@@ -181,7 +180,7 @@ export class AutocannonService {
                 }
                 const finishedAt = Date.now();
                 for (const sentAt of sentAtByClient.values()) {
-                    if (finishedAt - sentAt > 4 * targetLatency) {
+                    if (finishedAt - sentAt > FRUSTRATED_LATENCY_MULTIPLIER * targetLatency) {
                         counts.unanswered++;
                     }
                 }
@@ -213,7 +212,7 @@ export class AutocannonService {
             counts.frustrated++;
         } else if (responseTime <= T) {
             counts.satisfied++;
-        } else if (responseTime <= 4 * T) {
+        } else if (responseTime <= FRUSTRATED_LATENCY_MULTIPLIER * T) {
             counts.tolerating++;
         } else {
             counts.frustrated++;

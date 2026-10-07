@@ -7,6 +7,9 @@ import {
     MAX_TARGETS,
     MAX_TOTAL_DURATION_SECONDS,
     DEFAULT_DURATION_SECONDS,
+    DEFAULT_TARGET_LATENCY_MS,
+    apdexWindowIssue,
+    defaultDurationFor,
 } from '../utils/loadTestLimits.js';
 
 export {
@@ -73,6 +76,18 @@ export const loadTestOptionsSchema = baseLoadTestOptionsSchema.superRefine((data
             code: 'custom',
             path: [field],
             message: `${field} exceeds the ${tierLabel} maximum of ${max.toLocaleString('en-US')}${unitSuffix} (received ${value.toLocaleString('en-US')}).${hint}`,
+        });
+    }
+
+    const windowIssue = apdexWindowIssue(
+        data.duration ?? defaultDurationFor(data.method),
+        data.targetLatency ?? DEFAULT_TARGET_LATENCY_MS,
+    );
+    if (windowIssue) {
+        ctx.addIssue({
+            code: 'custom',
+            path: [data.duration !== undefined ? 'duration' : 'targetLatency'],
+            message: windowIssue,
         });
     }
 

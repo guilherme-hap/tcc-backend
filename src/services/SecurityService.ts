@@ -2,6 +2,7 @@ import net from 'node:net';
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 import { auditMessage } from '../messages/catalog.js';
+import { AppError } from '../errors/AppError.js';
 import type { ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
 
 type Headers = Record<string, string | undefined>;
@@ -10,6 +11,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const REDIRECT_PROBE_TIMEOUT_MS = 5_000;
 const CONNECT_PROBE_TIMEOUT_MS = 3_000;
 const CORS_PROBE_TIMEOUT_MS = 10_000;
+const CORS_PROBE_ATTEMPTS = 2;
 const FORGED_ORIGIN = 'https://origem-forjada.auditor.invalid';
 
 export class SecurityService {
@@ -186,16 +188,7 @@ export class SecurityService {
         const header = 'Access-Control-Allow-Origin';
         const layer = 'access';
 
-        let headers: Headers;
-        try {
-            const response = await this.probeRequest(targetUrl, {
-                timeout: CORS_PROBE_TIMEOUT_MS,
-                headers: { Origin: FORGED_ORIGIN },
-            });
-            headers = response.headers as Headers;
-        } catch {
-            return { layer, header, status: 'error', ...auditMessage('SEC_CORS_PROBE_FAILED') };
-        }
+        const headers = (await this.probeCors(targetUrl)).headers as Headers;
 
         const allowOrigin = this.getHeader(headers, 'access-control-allow-origin')?.trim();
         if (!allowOrigin) {
@@ -226,6 +219,22 @@ export class SecurityService {
         }
 
         return { layer, header, status: 'pass', ...auditMessage('SEC_CORS_EXPLICIT_ORIGIN', { origin: allowOrigin }) };
+    }
+
+    private async probeCors(targetUrl: string): Promise<AxiosResponse> {
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= CORS_PROBE_ATTEMPTS; attempt++) {
+            try {
+                return await this.probeRequest(targetUrl, {
+                    timeout: CORS_PROBE_TIMEOUT_MS,
+                    headers: { Origin: FORGED_ORIGIN },
+                });
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        const detail = lastError instanceof Error ? lastError.message : String(lastError);
+        throw new AppError(`CORS probe failed after ${CORS_PROBE_ATTEMPTS} attempts: ${detail}`, 502);
     }
 
     private checkXContentTypeOptions(headers: Headers): ISecurityCheckResult {
@@ -303,7 +312,7 @@ export class SecurityService {
         }
 
         if (/\d+\.\d+/.test(value)) {
-            return { layer, header, status: 'warning', ...auditMessage('SEC_FINGERPRINT_VERSION_EXPOSED', { header, value }) };
+            return { layer, header, status: 'error', ...auditMessage('SEC_FINGERPRINT_VERSION_EXPOSED', { header, value }) };
         }
 
         return { layer, header, status: 'pass', ...auditMessage('SEC_FINGERPRINT_PRESENT', { header, value }) };

@@ -1,4 +1,5 @@
-import { AutocannonService, DEFAULT_TARGET_LATENCY_MS } from '../services/AutocannonService.js';
+import { AutocannonService } from '../services/AutocannonService.js';
+import { DEFAULT_TARGET_LATENCY_MS } from '../utils/loadTestLimits.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { withMeasurementLock } from '../utils/measurementLock.js';
 import type { IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';

@@ -122,7 +122,7 @@ const evaluationController = new EvaluationController();
  *                 properties:
  *                   duration:
  *                     type: number
- *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300)."
+ *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300). Padrão 10 (5 para métodos mutantes). Precisa ser maior que 4 × targetLatency, para que um alvo que não responde seja contado como frustrado."
  *                     example: 10
  *                   connections:
  *                     type: number
@@ -183,7 +183,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/full:
  *   post:
  *     summary: "Executa avaliação completa (Contrato global + Performance pontual + Segurança dos headers)"
- *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Contrato e segurança rodam primeiro; o teste de carga roda depois, sozinho. Se o contrato apontar erro estrutural na especificação (regras oas2-schema ou oas3-schema com severidade Error), o teste de carga não é executado e a avaliação termina como PARTIAL, com failedPillars indicando o código PERF_SKIPPED_INVALID_SPEC. Ao final, pondera as notas individuais dos 3 pilares calculando o score global; em PARTIAL a nota final é nula e pillarScores traz as notas dos pilares que rodaram."
+ *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Contrato e segurança rodam primeiro; o teste de carga roda depois, sozinho. Se o contrato apontar erro estrutural na especificação (oas2-schema, oas3-schema ou parser com severidade Error, ou documento não reconhecido como OpenAPI, unrecognized-format), o teste de carga não é executado e a avaliação termina como PARTIAL, com failedPillars indicando o código PERF_SKIPPED_INVALID_SPEC. Ao final, pondera as notas individuais dos 3 pilares calculando o score global; em PARTIAL a nota final é nula e pillarScores traz as notas dos pilares que rodaram."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -244,7 +244,7 @@ const evaluationController = new EvaluationController();
  *                 properties:
  *                   duration:
  *                     type: number
- *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300)."
+ *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300). Padrão 10 (5 para métodos mutantes). Precisa ser maior que 4 × targetLatency, para que um alvo que não responde seja contado como frustrado."
  *                     example: 10
  *                   connections:
  *                     type: number
@@ -318,7 +318,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/security:
  *   post:
  *     summary: "Executa auditoria de segurança HTTP de uma API"
- *     description: "Executa 8 verificações no servidor da API, agrupadas em 4 camadas com pesos ROC: transporte (0,5208: HTTPS, redirecionamento HTTP para HTTPS, HSTS), controle de acesso (0,2708: CORS, com sonda de Origin forjada), conteúdo (0,1458: X-Content-Type-Options, proteção contra frames via frame-ancestors da CSP ou X-Frame-Options) e vazamento (0,0625: Server, X-Powered-By). O peso de cada camada é dividido igualmente entre suas verificações; cada uma vale 1 (pass), 0,5 (warning) ou 0 (missing/error), e a nota (0-100) é a soma ponderada normalizada. A severidade de cada achado é informativa e não entra na nota. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado. Quando apiBaseUrl não é informada, a URL alvo é resolvida automaticamente a partir da especificação OpenAPI."
+ *     description: "Executa 8 verificações no servidor da API, agrupadas em 4 camadas com pesos ROC: transporte (0,5208: HTTPS, redirecionamento HTTP para HTTPS, HSTS), controle de acesso (0,2708: CORS, com sonda de Origin forjada), conteúdo (0,1458: X-Content-Type-Options, proteção contra frames via frame-ancestors da CSP ou X-Frame-Options) e vazamento (0,0625: Server, X-Powered-By). O peso de cada camada é dividido igualmente entre suas verificações; cada uma vale 1 (pass), 0,5 (warning) ou 0 (missing/error), e a nota (0-100) é a soma ponderada normalizada. Versão exposta em Server ou X-Powered-By vale 0. Se a sonda de CORS falhar em duas tentativas, o pilar falha em vez de pontuar a verificação. A severidade de cada achado é informativa e não entra na nota. O processo é enfileirado de forma assíncrona. Use GET /api/evaluations/{id} para acompanhar o resultado. Quando apiBaseUrl não é informada, a URL alvo é resolvida automaticamente a partir da especificação OpenAPI."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []

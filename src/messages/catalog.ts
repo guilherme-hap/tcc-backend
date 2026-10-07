@@ -227,11 +227,6 @@ const AUDIT_MESSAGES = {
         severity: 'Info',
         message: ({ origin }) => `CORS configurado com origem explícita: ${origin}.`,
     }),
-    SEC_CORS_PROBE_FAILED: entry({
-        severity: 'Warning',
-        message: () => 'Não foi possível executar a sonda de CORS (requisição com Origin forjada falhou); a configuração não foi verificada.',
-        recommendation: () => 'Execute a auditoria novamente.',
-    }),
     SEC_FINGERPRINT_ABSENT: entry<{ header: string }>({
         severity: 'Info',
         message: ({ header }) => `Header ${header} ausente — bom, reduz fingerprinting.`,
