@@ -183,7 +183,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/full:
  *   post:
  *     summary: "Executa avaliação completa (Contrato global + Performance pontual + Segurança dos headers)"
- *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Ao final, pondera as notas individuais dos 3 pilares calculando o score global."
+ *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Contrato e segurança rodam primeiro; o teste de carga roda depois, sozinho. Se o contrato apontar erro estrutural na especificação (regras oas2-schema ou oas3-schema com severidade Error), o teste de carga não é executado e a avaliação termina como PARTIAL, com failedPillars indicando o código PERF_SKIPPED_INVALID_SPEC. Ao final, pondera as notas individuais dos 3 pilares calculando o score global; em PARTIAL a nota final é nula e pillarScores traz as notas dos pilares que rodaram."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -632,6 +632,9 @@ const evaluationController = new EvaluationController();
  *                         type: string
  *                       error:
  *                         type: string
+ *                       code:
+ *                         type: string
+ *                         description: "Presente quando o pilar não foi executado por uma pré-condição (ex.: PERF_SKIPPED_INVALID_SPEC)."
  *                 errorMessage:
  *                   type: string
  *                   nullable: true

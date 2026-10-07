@@ -1,3 +1,4 @@
+import type { IAuditMessage } from '../messages/catalog.js';
 import type { PillarResults } from './types.js';
 
 export class PillarError extends Error {
@@ -7,5 +8,12 @@ export class PillarError extends Error {
     ) {
         super(message);
         this.name = 'PillarError';
+    }
+}
+
+export class PillarSkipped extends Error {
+    constructor(public audit: IAuditMessage) {
+        super(audit.message);
+        this.name = 'PillarSkipped';
     }
 }

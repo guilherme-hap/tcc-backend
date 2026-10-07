@@ -1,6 +1,6 @@
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { createPillarContext } from '../pillars/createPillarContext.js';
-import { PillarError } from '../pillars/PillarError.js';
+import { PillarError, PillarSkipped } from '../pillars/PillarError.js';
 import { PIPELINES } from '../pillars/pipelines.js';
 import type { PillarColumn, PillarName, PillarOutcome, PillarResults } from '../pillars/types.js';
 import type {
@@ -52,17 +52,34 @@ export class EvaluationWorker {
         const pipeline = PIPELINES[job.type];
         const ctx = createPillarContext<EvaluationJobOf<T>['params']>(job.params);
         const runs: PillarRun[] = [];
+        const results: Partial<PillarResults> = {};
 
         for (const stage of pipeline.stages) {
-            const settledStage = await Promise.allSettled(stage.map((pillar) => pillar.run(ctx)));
-            settledStage.forEach((settled, index) => runs.push({ pillar: stage[index], settled }));
+            const settledStage = await Promise.allSettled(stage.map(async (pillar) => {
+                const blocked = pipeline.precondition?.(pillar.name, results);
+                if (blocked) {
+                    throw new PillarSkipped(blocked);
+                }
+                return pillar.run(ctx);
+            }));
+            settledStage.forEach((settled, index) => {
+                const pillar = stage[index];
+                if (settled.status === 'fulfilled') {
+                    storeResult(results, pillar.column, settled.value.result);
+                }
+                runs.push({ pillar, settled });
+            });
         }
 
-        await this.conclude(job.evaluationId, runs, pipeline.weights(job.params));
+        await this.conclude(job.evaluationId, runs, results, pipeline.weights(job.params));
     }
 
-    private async conclude(evaluationId: string, runs: PillarRun[], pillarWeights: IPillarScores): Promise<void> {
-        const results: Partial<PillarResults> = {};
+    private async conclude(
+        evaluationId: string,
+        runs: PillarRun[],
+        results: Partial<PillarResults>,
+        pillarWeights: IPillarScores,
+    ): Promise<void> {
         const failedPillars: IFailedPillar[] = [];
         const pillarScores: IPillarScores = {};
         const scoring: IScoringParameters = { pillarWeights };
@@ -70,16 +87,20 @@ export class EvaluationWorker {
 
         for (const { pillar, settled } of runs) {
             if (settled.status === 'fulfilled') {
-                storeResult(results, pillar.column, settled.value.result);
                 pillarScores[pillar.name] = settled.value.score;
                 Object.assign(scoring, settled.value.scoring);
                 weightedSum += settled.value.score * (pillarWeights[pillar.name] ?? 0);
                 continue;
             }
-            if (settled.reason instanceof PillarError) {
-                Object.assign(results, settled.reason.partialResults);
+            const reason: unknown = settled.reason;
+            if (reason instanceof PillarError) {
+                Object.assign(results, reason.partialResults);
             }
-            failedPillars.push({ pillar: pillar.name, error: errorMessageOf(settled.reason) });
+            failedPillars.push({
+                pillar: pillar.name,
+                error: errorMessageOf(reason),
+                ...(reason instanceof PillarSkipped && { code: reason.audit.code }),
+            });
         }
 
         if (failedPillars.length === 0) {

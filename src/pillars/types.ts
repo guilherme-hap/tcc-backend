@@ -7,6 +7,7 @@ import type {
     IPillarScoring,
     ISecurityCheckResult,
 } from '../interfaces/evaluation.interface.js';
+import type { IAuditMessage } from '../messages/catalog.js';
 import type { ParsedOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 import type { EvaluationWeights } from '../utils/weights.js';
 
@@ -46,6 +47,7 @@ export interface Pillar<P extends PillarBaseParams, C extends PillarColumn = Pil
 export interface Pipeline<P extends PillarBaseParams> {
     stages: readonly (readonly Pillar<P>[])[];
     weights: (params: P) => IPillarScores;
+    precondition?: (pillar: PillarName, results: Partial<PillarResults>) => IAuditMessage | null;
 }
 
 export type Pipelines = { [T in EvaluationType]: Pipeline<EvaluationRequestMap[T]> };

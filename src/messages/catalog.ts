@@ -69,6 +69,13 @@ const AUDIT_MESSAGES = {
         message: () => 'Opção de carga alta habilitada: o teste pode gerar carga significativa contra o alvo.',
         recommendation: () => 'Garanta que você tem autorização para testar a carga desta API.',
     }),
+    PERF_SKIPPED_INVALID_SPEC: entry<{ rule: string }>({
+        severity: 'Error',
+        message: ({ rule }) =>
+            `O teste de carga não foi executado: a especificação tem erro estrutural (${rule}), ` +
+            'e ela é usada para montar as URLs e os payloads do teste.',
+        recommendation: () => 'Corrija os erros de estrutura apontados no pilar de contrato e avalie novamente.',
+    }),
 
     SEC_TRANSPORT_HTTPS_OK: entry({
         severity: 'Info',

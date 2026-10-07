@@ -1,5 +1,5 @@
 import type { Severity } from '../types/severity.js';
-import type { IAuditMessage } from '../messages/catalog.js';
+import type { AuditMessageCode, IAuditMessage } from '../messages/catalog.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 import type { EvaluationWeights } from '../utils/weights.js';
 import type {
@@ -86,6 +86,7 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
 export interface IFailedPillar {
     pillar: string;
     error: string;
+    code?: AuditMessageCode;
 }
 
 export type IPillarScores = Partial<Record<keyof EvaluationWeights, number>>;
