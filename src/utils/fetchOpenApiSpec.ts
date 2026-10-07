@@ -86,8 +86,3 @@ export async function fetchOpenApiContent(openApiUrl: string): Promise<ParsedOpe
     }
     return parseOpenApiContent(response.data);
 }
-
-export async function fetchOpenApiSpec(openApiUrl: string): Promise<any> {
-    return (await fetchOpenApiContent(openApiUrl)).data;
-}
-

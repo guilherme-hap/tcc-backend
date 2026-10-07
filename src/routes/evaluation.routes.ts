@@ -586,10 +586,10 @@ const evaluationController = new EvaluationController();
  *       404:
  *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
  */
-router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluateContract);
-router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluatePerformance);
-router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluateSecurity);
-router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluateFull);
+router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluate('contract'));
+router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluate('performance'));
+router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluate('security'));
+router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluate('full'));
 router.get('/:id', optionalAuth, validateIdParam('Avaliação não encontrada'), evaluationController.getEvaluation);
 
 export default router;

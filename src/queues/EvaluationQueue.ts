@@ -2,19 +2,7 @@ import pg from 'pg';
 import { AppDataSource } from '../config/data-source.js';
 import { dbConnection } from '../config/database.js';
 import { EvaluationJob as EvaluationJobEntity, EvaluationJobStatus } from '../entities/EvaluationJob.js';
-import {
-    EvaluationType,
-    IContractRequest,
-    IPerformanceRequest,
-    ISecurityRequest,
-    IFullEvaluationRequest,
-} from '../interfaces/evaluation.interface.js';
-
-export interface EvaluationJob {
-    evaluationId: string;
-    type: EvaluationType;
-    params: IContractRequest | IPerformanceRequest | ISecurityRequest | IFullEvaluationRequest;
-}
+import type { EvaluationJob, EvaluationJobOf, EvaluationType } from '../interfaces/evaluation.interface.js';
 
 type JobHandler = (job: EvaluationJob) => Promise<void>;
 
@@ -60,7 +48,7 @@ type WakeTrigger = ReturnType<typeof createWakeTrigger>;
 class PostgresEvaluationQueue {
     private triggers = new Map<string, WakeTrigger>();
 
-    async enqueue(job: EvaluationJob): Promise<void> {
+    async enqueue<T extends EvaluationType>(job: EvaluationJobOf<T>): Promise<void> {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -68,7 +56,7 @@ class PostgresEvaluationQueue {
             await queryRunner.manager.save(EvaluationJobEntity, {
                 evaluationId: job.evaluationId,
                 type: job.type,
-                payload: job.params as Record<string, any>,
+                payload: job.params,
                 status: 'PENDING' as const,
             });
             await queryRunner.query(`NOTIFY ${channelOf(job.type)}`);
@@ -222,9 +210,9 @@ class PostgresEvaluationQueue {
             return {
                 id: rawRow.id as string,
                 evaluationId: (rawRow.evaluation_id ?? rawRow.evaluationId) as string,
-                type: rawRow.type as EvaluationType,
-                params: rawRow.payload as EvaluationJob['params'],
-            };
+                type: rawRow.type,
+                params: rawRow.payload,
+            } as EvaluationJob & { id: string };
         } catch (err) {
             await queryRunner.rollbackTransaction();
             throw err;

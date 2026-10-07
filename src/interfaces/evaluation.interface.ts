@@ -82,14 +82,6 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
     payloadFactory?: () => string | undefined;
 };
 
-export type IContractRequest = ContractRequestInput;
-
-export type IPerformanceRequest = PerformanceRequestInput;
-
-export type ISecurityRequest = SecurityRequestInput;
-
-export type IFullEvaluationRequest = FullEvaluationRequestInput;
-
 export interface IFailedPillar {
     pillar: string;
     error: string;
@@ -98,3 +90,18 @@ export interface IFailedPillar {
 export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
 
 export type EvaluationType = 'contract' | 'performance' | 'security' | 'full';
+
+export interface EvaluationRequestMap {
+    contract: ContractRequestInput;
+    performance: PerformanceRequestInput;
+    security: SecurityRequestInput;
+    full: FullEvaluationRequestInput;
+}
+
+export interface EvaluationJobOf<T extends EvaluationType> {
+    evaluationId: string;
+    type: T;
+    params: EvaluationRequestMap[T];
+}
+
+export type EvaluationJob = { [T in EvaluationType]: EvaluationJobOf<T> }[EvaluationType];

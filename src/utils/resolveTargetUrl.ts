@@ -1,4 +1,4 @@
-import { resolveBaseUrlFromSpec, buildTargetUrl } from './resolveBaseUrl.js';
+import { buildTargetUrl } from './resolveBaseUrl.js';
 import { resolvePathParameters } from './resolvePathParameters.js';
 import { findRequestBodySchema } from './findOperationSchema.js';
 import { generateSyntheticPayload } from './generateSyntheticPayload.js';
@@ -7,22 +7,17 @@ import { ILoadTestOptions, HttpMethod } from '../interfaces/evaluation.interface
 
 export function resolveTargetUrl(
     spec: any,
-    openApiUrl: string,
+    baseUrl: string,
     targetPath: string,
-    apiBaseUrl?: string | null,
     method?: string,
 ): string {
-    const effectiveBaseUrl = apiBaseUrl?.trim()
-        ? apiBaseUrl.trim()
-        : resolveBaseUrlFromSpec(spec, openApiUrl);
-
     const effectiveMethod = method?.toUpperCase();
     let resolvedPath = targetPath;
     if (effectiveMethod && effectiveMethod !== 'DELETE' && targetPath.includes('{')) {
         resolvedPath = resolvePathParameters(targetPath, spec, effectiveMethod);
     }
 
-    return buildTargetUrl(effectiveBaseUrl, resolvedPath);
+    return buildTargetUrl(baseUrl, resolvedPath);
 }
 
 export function prepareLoadTestOptions(params: {

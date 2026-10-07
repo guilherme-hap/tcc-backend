@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { EvaluationRequestMap, EvaluationType } from '../interfaces/evaluation.interface.js';
 import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { MAX_TARGETS, validateTotalDuration } from '../utils/loadTestLimits.js';
 import { validateTargetMethods } from '../utils/httpMethodUtils.js';
@@ -95,3 +96,10 @@ export const fullEvaluationRequestSchema = z
     .superRefine(refineTargets);
 
 export type FullEvaluationRequestInput = z.infer<typeof fullEvaluationRequestSchema>;
+
+export const EVALUATION_SCHEMAS: { [T in EvaluationType]: z.ZodType<EvaluationRequestMap[T]> } = {
+    contract: contractRequestSchema,
+    performance: performanceRequestSchema,
+    security: securityRequestSchema,
+    full: fullEvaluationRequestSchema,
+};
