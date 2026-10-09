@@ -662,7 +662,12 @@ const evaluationController = new EvaluationController();
  *                 errorMessage:
  *                   type: string
  *                   nullable: true
- *                   description: "Motivo do erro, em português, quando o status for FAILED. Com mais de um pilar e causas diferentes, junta as mensagens no formato 'Contrato: ... Segurança: ...' (causa comum, como falha ao baixar a especificação, aparece uma vez só); use failedPillars para tratar cada pilar. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
+ *                   description: "Motivo do erro, em português, quando o status for FAILED. Com mais de um pilar e causas diferentes, tem o formato 'Nenhum pilar foi concluído. Contrato: ... Segurança: ...' (causa comum, como falha ao baixar a especificação, aparece uma vez só); use failedPillars para tratar cada pilar. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
+ *                 errorCode:
+ *                   type: string
+ *                   nullable: true
+ *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver failedPillars), EVALUATION_ENQUEUE_FAILED ou EXECUTION_FAILED quando a falha ocorreu fora dos pilares."
+ *                   example: "SPEC_FETCH_FAILED"
  *       404:
  *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
  *         content:

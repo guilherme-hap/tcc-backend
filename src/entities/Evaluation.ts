@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import type { EvaluationStatus, EvaluationType, IPerformanceTarget, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
-import type { IFailedPillar, IPillarScores, IScoringParameters } from '../interfaces/evaluation.interface.js';
+import type { FailureCode, IFailedPillar, IPillarScores, IScoringParameters } from '../interfaces/evaluation.interface.js';
 import { User } from './User.js';
 
 @Entity('evaluations')
@@ -56,6 +56,9 @@ export class Evaluation {
 
     @Column({ name: 'error_message', type: 'varchar', nullable: true })
     errorMessage!: string | null;
+
+    @Column({ name: 'error_code', type: 'varchar', nullable: true })
+    errorCode!: FailureCode | null;
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;

@@ -132,9 +132,11 @@ export class EvaluationWorker {
         }
 
         const sharedCause = failedPillars.every((fp) => fp.error === failedPillars[0].error);
-        const message = sharedCause
-            ? failedPillars[0].error
-            : failedPillars.map((fp) => `${PILLAR_LABELS[fp.pillar]}: ${fp.error}`).join(' ');
-        await this.lifecycle.fail(evaluationId, message, { ...results, failedPillars });
+        const failure = sharedCause
+            ? { message: failedPillars[0].error, code: failedPillars[0].code }
+            : new AppError('EVALUATION_PILLARS_FAILED', {
+                details: failedPillars.map((fp) => `${PILLAR_LABELS[fp.pillar]}: ${fp.error}`).join(' '),
+            });
+        await this.lifecycle.fail(evaluationId, failure, { ...results, failedPillars });
     }
 }

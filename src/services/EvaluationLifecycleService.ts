@@ -2,7 +2,7 @@ import { In } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
-import { EvaluationType, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
+import { EvaluationType, FailureCode, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
 
 export class EvaluationLifecycleService {
     private get repository() {
@@ -51,14 +51,14 @@ export class EvaluationLifecycleService {
 
     async fail(
         evaluationId: string,
-        error: string | Error,
+        failure: { message: string; code: FailureCode },
         extraResults?: Partial<Pick<Evaluation, 'performanceResults' | 'spectralResult' | 'securityResult' | 'failedPillars'>>,
     ): Promise<void> {
-        const errorMessage = error instanceof Error ? error.message : error;
         await this.repository.update({ id: evaluationId, status: In(['PENDING', 'RUNNING']) }, {
             ...(extraResults ?? {}),
             status: 'FAILED',
-            errorMessage,
+            errorMessage: failure.message,
+            errorCode: failure.code,
         } as QueryDeepPartialEntity<Evaluation>);
     }
 

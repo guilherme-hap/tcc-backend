@@ -102,6 +102,10 @@ const ERROR_MESSAGES = {
         status: 502,
         message: ({ details }) => `Nenhum alvo de performance foi medido: ${details}`,
     }),
+    EVALUATION_PILLARS_FAILED: entry<{ details: string }>({
+        status: 502,
+        message: ({ details }) => `Nenhum pilar foi concluído. ${details}`,
+    }),
     EXECUTION_FAILED: entry({
         status: 500,
         message: () => 'Erro inesperado durante a execução.',
