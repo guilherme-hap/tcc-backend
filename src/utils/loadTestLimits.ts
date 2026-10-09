@@ -31,7 +31,7 @@ export function apdexWindowIssue(durationSeconds: number, targetLatencyMs: numbe
     const frustratedSeconds = (FRUSTRATED_LATENCY_MULTIPLIER * targetLatencyMs) / 1000;
     if (durationSeconds > frustratedSeconds) return null;
 
-    return `duration (${durationSeconds}s) must be greater than ${FRUSTRATED_LATENCY_MULTIPLIER} x targetLatency (${frustratedSeconds}s); a shorter test cannot classify an unresponsive target as frustrated.`;
+    return `A duração do teste (${durationSeconds}s) deve ser maior que ${frustratedSeconds}s (${FRUSTRATED_LATENCY_MULTIPLIER} vezes a latência alvo); um teste mais curto não consegue classificar como frustrado um alvo que não responde.`;
 }
 
 export function validateTargetApdexWindow(
@@ -56,7 +56,7 @@ export function validateTargetApdexWindow(
             ctx.addIssue({
                 code: 'custom',
                 path: ['targets', index, 'method'],
-                message: `${issue} Set loadTestOptions.duration explicitly (${duration}s is the default for this method).`,
+                message: `${issue} Informe a duração do teste explicitamente (${duration}s é o padrão para este método).`,
             });
         }
     });
@@ -75,7 +75,7 @@ export function validateTotalDuration(
         ctx.addIssue({
             code: 'custom',
             path: ['targets'],
-            message: `Total load test duration (${totalDuration}s = ${data.targets.length} targets x ${effectiveDuration}s) exceeds the maximum allowed limit of ${MAX_TOTAL_DURATION_SECONDS}s.`,
+            message: `A duração total do teste de carga (${totalDuration}s = ${data.targets.length} alvos x ${effectiveDuration}s) excede o limite de ${MAX_TOTAL_DURATION_SECONDS}s.`,
         });
     }
 }

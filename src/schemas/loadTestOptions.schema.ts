@@ -47,7 +47,7 @@ interface LimitedField {
 }
 
 const LIMITED_FIELDS: readonly LimitedField[] = [
-    { field: 'duration', limitKey: 'MAX_DURATION_SECONDS', unit: 'seconds' },
+    { field: 'duration', limitKey: 'MAX_DURATION_SECONDS', unit: 'segundos' },
     { field: 'connections', limitKey: 'MAX_CONNECTIONS' },
     { field: 'maxRequests', limitKey: 'MAX_REQUESTS' },
     { field: 'requestsPerSecond', limitKey: 'MAX_REQUESTS_PER_SECOND' },
@@ -55,7 +55,7 @@ const LIMITED_FIELDS: readonly LimitedField[] = [
 
 export const loadTestOptionsSchema = baseLoadTestOptionsSchema.superRefine((data, ctx) => {
     const limits = data.allowHighLoad ? ELEVATED_LOAD_LIMITS : DEFAULT_LOAD_LIMITS;
-    const tierLabel = data.allowHighLoad ? 'elevated' : 'default';
+    const tierLabel = data.allowHighLoad ? 'elevado' : 'padrão';
 
     for (const { field, limitKey, unit } of LIMITED_FIELDS) {
         const value = data[field];
@@ -69,13 +69,13 @@ export const loadTestOptionsSchema = baseLoadTestOptionsSchema.superRefine((data
         const fitsInElevated = !data.allowHighLoad && value <= elevatedMax;
 
         const hint = fitsInElevated
-            ? ' To use higher limits, set allowHighLoad: true in loadTestOptions.'
+            ? ' Para usar limites maiores, habilite a carga elevada (allowHighLoad).'
             : '';
 
         ctx.addIssue({
             code: 'custom',
             path: [field],
-            message: `${field} exceeds the ${tierLabel} maximum of ${max.toLocaleString('en-US')}${unitSuffix} (received ${value.toLocaleString('en-US')}).${hint}`,
+            message: `Excede o limite ${tierLabel} de ${max.toLocaleString('pt-BR')}${unitSuffix} (recebido: ${value.toLocaleString('pt-BR')}).${hint}`,
         });
     }
 
@@ -95,7 +95,7 @@ export const loadTestOptionsSchema = baseLoadTestOptionsSchema.superRefine((data
         ctx.addIssue({
             code: 'custom',
             path: ['connections'],
-            message: `connections (${data.connections}) cannot exceed maxRequests (${data.maxRequests}).`,
+            message: `Não pode ser maior que o máximo de requisições, ${data.maxRequests} (recebido: ${data.connections}).`,
         });
     }
 });

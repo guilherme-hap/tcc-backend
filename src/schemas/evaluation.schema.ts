@@ -22,7 +22,7 @@ export const securityRequestSchema = z.object({
 export type SecurityRequestInput = z.infer<typeof securityRequestSchema>;
 
 export const performanceTargetSchema = z.object({
-    path: z.string().trim().min(1, 'path is required'),
+    path: z.string().trim().min(1, 'Informe o path do alvo'),
     method: httpMethodSchema.optional(),
     payload: z.any().optional(),
 });
@@ -42,7 +42,7 @@ export const performanceRequestSchema = z
     .object({
         openApiUrl: httpUrl,
         apiBaseUrl: httpUrl.trim().optional(),
-        targets: z.array(performanceTargetSchema).min(1, 'At least one target is required').max(MAX_TARGETS, `Maximum of ${MAX_TARGETS} targets allowed`),
+        targets: z.array(performanceTargetSchema).min(1, 'Informe ao menos um alvo').max(MAX_TARGETS, `São permitidos no máximo ${MAX_TARGETS} alvos`),
         loadTestOptions: loadTestOptionsSchema.optional(),
     })
     .superRefine(refineTargets);
@@ -53,7 +53,7 @@ export const fullEvaluationRequestSchema = z
     .object({
         openApiUrl: httpUrl,
         apiBaseUrl: httpUrl.trim().optional(),
-        targets: z.array(performanceTargetSchema).min(1, 'At least one target is required').max(MAX_TARGETS, `Maximum of ${MAX_TARGETS} targets allowed`),
+        targets: z.array(performanceTargetSchema).min(1, 'Informe ao menos um alvo').max(MAX_TARGETS, `São permitidos no máximo ${MAX_TARGETS} alvos`),
         rulesConfig: rulesConfigSchema.optional(),
         severityWeights: severityWeightsSchema.optional(),
         loadTestOptions: loadTestOptionsSchema.optional(),
@@ -80,16 +80,16 @@ export const fullEvaluationRequestSchema = z
                 const sum = contractWeight + performanceWeight + securityWeight;
                 if (Math.abs(sum - 1) > 0.001) {
                     const formatWeight = (val: number, isExplicit: boolean) =>
-                        isExplicit ? `${val}` : `${Number(val.toFixed(4))} (default 1/3)`;
+                        isExplicit ? `${val}` : `${Number(val.toFixed(4))} (padrão 1/3)`;
 
                     const hasDefaulted = !hasContract || !hasPerformance || !hasSecurity;
                     const note = hasDefaulted
-                        ? ' Note: omitted weights automatically use their default (1/3). When customizing weights, specify all three or ensure the sum including defaults equals 1.'
+                        ? ' Pesos omitidos usam o padrão (1/3): informe os três ou garanta que a soma, incluindo os padrões, seja 1.'
                         : '';
 
                     ctx.addIssue({
                         code: 'custom',
-                        message: `Weights must sum to 1. Received: contract=${formatWeight(contractWeight, hasContract)}, performance=${formatWeight(performanceWeight, hasPerformance)}, security=${formatWeight(securityWeight, hasSecurity)} (sum=${Number(sum.toFixed(4))}).${note}`,
+                        message: `Os pesos devem somar 1. Recebido: contrato=${formatWeight(contractWeight, hasContract)}, performance=${formatWeight(performanceWeight, hasPerformance)}, segurança=${formatWeight(securityWeight, hasSecurity)} (soma=${Number(sum.toFixed(4))}).${note}`,
                     });
                 }
             }),

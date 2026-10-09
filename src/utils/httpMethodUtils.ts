@@ -10,9 +10,8 @@ export function isMutatingMethod(method?: string): boolean {
 }
 
 function mutatingMethodMessage(method: string): string {
-    return `Load test for mutating method ${method} requires explicit opt-in ` +
-        `via allowMutatingMethods=true in loadTestOptions. ` +
-        `This may create or delete real data on the target API.`;
+    return `O teste de carga com o método ${method} exige autorização explícita para métodos que alteram dados ` +
+        `(allowMutatingMethods), pois pode criar ou apagar dados reais na API alvo.`;
 }
 
 export function validateTargetMethods(
@@ -39,10 +38,10 @@ export function validateTargetMethods(
                 code: 'custom',
                 path: ['targets', index, 'path'],
                 message:
-                    `DELETE load tests require a fully resolved path ` +
-                    `(e.g., "/pet/123" instead of "/pet/{petId}"). ` +
-                    `Synthetic path parameter generation is disabled for DELETE ` +
-                    `to prevent accidental deletion of real data.`,
+                    `Testes de carga com DELETE exigem um path já resolvido ` +
+                    `(ex.: "/pet/123" em vez de "/pet/{petId}"). ` +
+                    `Parâmetros de path sintéticos não são gerados para DELETE, ` +
+                    `para evitar a exclusão acidental de dados reais.`,
             });
         }
     });
