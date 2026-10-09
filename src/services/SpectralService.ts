@@ -1,20 +1,12 @@
 import pkgSpectralCore from '@stoplight/spectral-core';
 import type { ISpectralDiagnostic } from '@stoplight/spectral-core';
 import pkgSpectralParsers from '@stoplight/spectral-parsers';
-import { oas } from '@stoplight/spectral-rulesets';
 import type { ISpectralAnalysis, ISpectralIssue, ISpectralRule } from '../interfaces/evaluation.interface.js';
-import type { Severity } from '../types/severity.js';
 import { fetchOpenApiContent, ParsedOpenApiContent } from '../utils/fetchOpenApiSpec.js';
+import { SEVERITY_BY_LEVEL, createOasSpectral } from '../utils/spectralRules.js';
 
-const { Spectral, Document } = pkgSpectralCore;
+const { Document } = pkgSpectralCore;
 const { Json, Yaml } = pkgSpectralParsers;
-
-const SEVERITY_BY_LEVEL: Record<number, Severity> = {
-    0: 'Error',
-    1: 'Warning',
-    2: 'Info',
-    3: 'Hint',
-};
 
 function toSpectralIssue(diagnostic: ISpectralDiagnostic): ISpectralIssue {
     const [root, endpoint, method] = diagnostic.path;
@@ -38,18 +30,7 @@ export class SpectralService {
         const { format, rawString } = preloadedContent ?? (await fetchOpenApiContent(openApiUrl));
         const parser = format === 'yaml' ? Yaml : Json;
 
-        const customRules: Record<string, any> = {};
-        for (const [key, value] of Object.entries(rulesConfig)) {
-            customRules[key] = value ? true : 'off';
-        }
-
-        const spectral = new Spectral();
-        spectral.setRuleset({
-            extends: [
-                [oas as any, 'recommended'],
-            ],
-            rules: customRules
-        });
+        const spectral = createOasSpectral(rulesConfig);
 
         const targeted = new Set<string>();
         for (const rule of Object.values(spectral.ruleset!.rules)) {

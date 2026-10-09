@@ -6,6 +6,7 @@ import evaluationRoutes from './routes/evaluation.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import savedApiRoutes from './routes/savedApi.routes.js';
 import customRuleRoutes from './routes/customRule.routes.js';
+import ruleRoutes from './routes/rule.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { bootstrap } from './config/bootstrap.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -27,6 +28,7 @@ app.use('/api/evaluations', evaluationRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user/apis', savedApiRoutes);
 app.use('/api/user/rules', customRuleRoutes);
+app.use('/api/rules', ruleRoutes);
 
 setupSwagger(app);
 

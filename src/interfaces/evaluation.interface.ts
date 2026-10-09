@@ -23,6 +23,15 @@ export interface ISpectralRule {
     severity: Severity;
 }
 
+export type OasVersion = '2.0' | '3.0' | '3.1';
+
+export interface ISpectralCatalogRule extends ISpectralRule {
+    description: string | null;
+    enabledByDefault: boolean;
+    oasVersions: OasVersion[];
+    documentationUrl: string | null;
+}
+
 export interface ISpectralAnalysis {
     issues: ISpectralIssue[];
     rules: ISpectralRule[];
