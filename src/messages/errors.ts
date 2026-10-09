@@ -18,6 +18,18 @@ const ERROR_MESSAGES = {
         status: 400,
         message: () => 'A requisição contém campos inválidos.',
     }),
+    REQUEST_BODY_MALFORMED: entry({
+        status: 400,
+        message: () => 'O corpo da requisição não é um JSON válido.',
+    }),
+    REQUEST_BODY_TOO_LARGE: entry({
+        status: 413,
+        message: () => 'O corpo da requisição excede o tamanho máximo permitido.',
+    }),
+    ROUTE_NOT_FOUND: entry({
+        status: 404,
+        message: () => 'Rota não encontrada.',
+    }),
     AUTH_REQUIRED: entry({
         status: 401,
         message: () => 'Autenticação obrigatória.',

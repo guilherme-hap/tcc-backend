@@ -9,6 +9,7 @@ import customRuleRoutes from './routes/customRule.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { bootstrap } from './config/bootstrap.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { notFound } from './middlewares/notFound.js';
 import { securityHeaders } from './middlewares/securityHeaders.js';
 
 const app = express();
@@ -27,8 +28,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user/apis', savedApiRoutes);
 app.use('/api/user/rules', customRuleRoutes);
 
-app.use(errorHandler);
-
 setupSwagger(app);
+
+app.use(notFound);
+app.use(errorHandler);
 
 bootstrap(app, PORT);
