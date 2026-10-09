@@ -29,7 +29,7 @@ export class SavedApiService {
     async findByIdAndUser(id: string, userId: string): Promise<SavedApi> {
         const savedApi = await this.repository.findOneBy({ id, userId });
         if (!savedApi) {
-            throw new AppError('Saved API not found', 404);
+            throw new AppError('SAVED_API_NOT_FOUND');
         }
         return savedApi;
     }
@@ -48,7 +48,7 @@ export class SavedApiService {
     async delete(id: string, userId: string): Promise<void> {
         const result = await this.repository.delete({ id, userId });
         if (result.affected === 0) {
-            throw new AppError('Saved API not found', 404);
+            throw new AppError('SAVED_API_NOT_FOUND');
         }
     }
 }

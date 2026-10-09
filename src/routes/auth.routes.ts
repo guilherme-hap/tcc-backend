@@ -62,8 +62,16 @@ const authController = new AuthController();
  *                   example: "eyJhbGciOiJIUzI1NiIs..."
  *       400:
  *         description: "Erro de validação (email inválido ou senha muito curta)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
  *         description: "Email já está em uso."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/auth/login:
  *   post:
@@ -114,8 +122,16 @@ const authController = new AuthController();
  *                   example: "eyJhbGciOiJIUzI1NiIs..."
  *       400:
  *         description: "Erro de validação (email ou senha ausentes)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: "Credenciais inválidas."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/register', validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);

@@ -6,7 +6,7 @@ import type { AuthenticatedRequest } from './optionalAuth.js';
 export function requireAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction): void {
     const payload = verifyToken(req.headers.authorization);
     if (!payload) {
-        throw new AppError('Authentication required', 401);
+        throw new AppError('AUTH_REQUIRED');
     }
     req.userId = payload.sub;
     next();

@@ -44,10 +44,11 @@ export class EvaluationUsecase {
         } catch (err) {
             const detail = err instanceof Error ? err.message : String(err);
             console.error(`[Enqueue] Failed for evaluation ${job.evaluationId}:`, detail);
+            const failure = new AppError('EVALUATION_ENQUEUE_FAILED');
             await this.lifecycle
-                .fail(job.evaluationId, `Failed to enqueue ${job.type} evaluation: ${detail}`)
+                .fail(job.evaluationId, failure)
                 .catch((e) => console.error(`[Enqueue] Failed to persist FAILED for ${job.evaluationId}:`, e));
-            throw new AppError(`Could not queue ${job.type} evaluation. Please try again later.`, 500);
+            throw failure;
         }
     }
 }

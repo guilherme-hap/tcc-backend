@@ -7,7 +7,7 @@ import { createSavedApiSchema, updateSavedApiSchema } from '../schemas/savedApi.
 
 const router = Router();
 const controller = new SavedApiController();
-const validateSavedApiId = validateIdParam('Saved API not found');
+const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
 
 /**
  * @openapi
@@ -72,8 +72,16 @@ const validateSavedApiId = validateIdParam('Saved API not found');
  *               $ref: '#/components/schemas/SavedApi'
  *       400:
  *         description: "Erro de validação (campos obrigatórios ausentes, URL sem http/https, rulesConfig não booleano ou loadTestOptions fora dos limites de carga)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  *   get:
  *     summary: "Lista todas as APIs salvas do usuário autenticado"
@@ -92,6 +100,10 @@ const validateSavedApiId = validateIdParam('Saved API not found');
  *                 $ref: '#/components/schemas/SavedApi'
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/user/apis/{id}:
  *   put:
@@ -135,10 +147,22 @@ const validateSavedApiId = validateIdParam('Saved API not found');
  *               $ref: '#/components/schemas/SavedApi'
  *       400:
  *         description: "Corpo da requisição vazio ou inválido (mesmas regras da criação)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: "API não encontrada ou id que não é UUID."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  *   delete:
  *     summary: "Remove uma API salva do usuário autenticado"
@@ -166,8 +190,16 @@ const validateSavedApiId = validateIdParam('Saved API not found');
  *                   example: "Saved API deleted successfully"
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: "API não encontrada ou id que não é UUID."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * components:
  *   schemas:

@@ -22,10 +22,10 @@ export class EvaluationController {
     public getEvaluation = async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
         const evaluation = await this.lifecycle.findById(req.params.id);
         if (!evaluation) {
-            throw new AppError('Avaliação não encontrada', 404);
+            throw new AppError('EVALUATION_NOT_FOUND');
         }
         if (evaluation.userId && evaluation.userId !== req.userId) {
-            throw new AppError('Avaliação não encontrada', 404);
+            throw new AppError('EVALUATION_NOT_FOUND');
         }
         res.status(200).json(evaluation);
     };

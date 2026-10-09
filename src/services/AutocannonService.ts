@@ -24,12 +24,8 @@ export class AutocannonService {
         const method = options.method?.toUpperCase();
         const isMutating = isMutatingMethod(method);
 
-        if (isMutating && !options.allowMutatingMethods) {
-            throw new AppError(
-                `Load test for mutating method ${method} requires explicit opt-in ` +
-                `via allowMutatingMethods=true.`,
-                400,
-            );
+        if (isMutating && method && !options.allowMutatingMethods) {
+            throw new AppError('LOAD_TEST_MUTATING_NOT_ALLOWED', { method });
         }
 
         const duration = options.duration ?? defaultDurationFor(method);

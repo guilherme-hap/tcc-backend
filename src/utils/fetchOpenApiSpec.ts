@@ -17,11 +17,8 @@ function isRecord(value: unknown): value is Record<string, any> {
 }
 
 function throwInvalidRootError(value: unknown): never {
-    const typeDesc = Array.isArray(value) ? 'an array' : (value === null ? 'null' : typeof value);
-    throw new AppError(
-        `The OpenAPI specification must have an object as its root (received ${typeDesc}) — did you point openApiUrl to the wrong endpoint?`,
-        400
-    );
+    const received = Array.isArray(value) ? 'array' : (value === null ? 'null' : typeof value);
+    throw new AppError('SPEC_INVALID_ROOT', { received });
 }
 
 export function parseOpenApiContent(content: string): ParsedOpenApiContent {
@@ -50,11 +47,8 @@ export function parseOpenApiContent(content: string): ParsedOpenApiContent {
     try {
         parsedYaml = yaml.load(content, { schema: yaml.JSON_SCHEMA });
     } catch (yamlErr: any) {
-        const yamlMessage = yamlErr instanceof Error ? yamlErr.message : String(yamlErr);
-        throw new AppError(
-            `The OpenAPI specification is neither valid JSON nor valid YAML (YAML: ${yamlMessage})`,
-            400
-        );
+        const detail = yamlErr instanceof Error ? yamlErr.message : String(yamlErr);
+        throw new AppError('SPEC_PARSE_FAILED', { detail });
     }
 
     if (!isRecord(parsedYaml)) {
@@ -82,7 +76,7 @@ export async function fetchOpenApiContent(openApiUrl: string): Promise<ParsedOpe
         const reason = err?.response?.status
             ? `HTTP ${err.response.status}`
             : (err?.code ?? err?.message ?? 'unknown error');
-        throw new AppError(`Could not fetch the OpenAPI specification (${reason})`, 400);
+        throw new AppError('SPEC_FETCH_FAILED', { reason: String(reason) });
     }
     return parseOpenApiContent(response.data);
 }

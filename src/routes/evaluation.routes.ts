@@ -61,6 +61,10 @@ const evaluationController = new EvaluationController();
  *                   example: "PENDING"
  *       400:
  *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente ou sem protocolo http/https, rulesConfig com valor não booleano, severityWeights negativo)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/evaluations/performance:
  *   post:
@@ -179,6 +183,10 @@ const evaluationController = new EvaluationController();
  *                   example: "PENDING"
  *       400:
  *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targets ausentes, path vazio, método inválido, método mutante sem allowMutatingMethods, DELETE com path parametrizado ou limite de duração total excedido)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/evaluations/full:
  *   post:
@@ -314,6 +322,10 @@ const evaluationController = new EvaluationController();
  *                   example: "PENDING"
  *       400:
  *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos, método mutante sem allowMutatingMethods, DELETE com path parametrizado ou limite de duração total excedido)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/evaluations/security:
  *   post:
@@ -357,6 +369,10 @@ const evaluationController = new EvaluationController();
  *                   example: "PENDING"
  *       400:
  *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente, openApiUrl ou apiBaseUrl sem protocolo http/https)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/evaluations/{id}:
  *   get:
@@ -641,11 +657,15 @@ const evaluationController = new EvaluationController();
  *                   description: "Motivo do erro quando o status for FAILED. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
  *       404:
  *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluate('contract'));
 router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluate('performance'));
 router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluate('security'));
 router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluate('full'));
-router.get('/:id', optionalAuth, validateIdParam('Avaliação não encontrada'), evaluationController.getEvaluation);
+router.get('/:id', optionalAuth, validateIdParam('EVALUATION_NOT_FOUND'), evaluationController.getEvaluation);
 
 export default router;

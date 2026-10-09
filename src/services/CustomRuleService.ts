@@ -28,7 +28,7 @@ export class CustomRuleService {
     async findByIdAndUser(id: string, userId: string): Promise<CustomRule> {
         const customRule = await this.repository.findOneBy({ id, userId });
         if (!customRule) {
-            throw new AppError('Custom rule not found', 404);
+            throw new AppError('CUSTOM_RULE_NOT_FOUND');
         }
         return customRule;
     }
@@ -46,7 +46,7 @@ export class CustomRuleService {
     async delete(id: string, userId: string): Promise<void> {
         const result = await this.repository.delete({ id, userId });
         if (result.affected === 0) {
-            throw new AppError('Custom rule not found', 404);
+            throw new AppError('CUSTOM_RULE_NOT_FOUND');
         }
     }
 }

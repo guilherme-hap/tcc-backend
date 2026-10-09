@@ -1,6 +1,6 @@
 import type { Severity } from '../types/severity.js';
 
-type MessageParams = Record<string, string | number>;
+export type MessageParams = Record<string, string | number>;
 
 interface CatalogEntry<P> {
     severity: Severity;

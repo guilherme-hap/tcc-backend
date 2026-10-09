@@ -45,7 +45,12 @@ export class SecurityService {
             }
         } catch {
         }
-        return await axios.get(targetUrl, { timeout: REQUEST_TIMEOUT_MS, validateStatus: () => true });
+        try {
+            return await axios.get(targetUrl, { timeout: REQUEST_TIMEOUT_MS, validateStatus: () => true });
+        } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            throw new AppError('SECURITY_TARGET_UNREACHABLE', { detail });
+        }
     }
 
     private async probeRequest(
@@ -234,7 +239,7 @@ export class SecurityService {
             }
         }
         const detail = lastError instanceof Error ? lastError.message : String(lastError);
-        throw new AppError(`CORS probe failed after ${CORS_PROBE_ATTEMPTS} attempts: ${detail}`, 502);
+        throw new AppError('SECURITY_CORS_PROBE_FAILED', { attempts: CORS_PROBE_ATTEMPTS, detail });
     }
 
     private checkXContentTypeOptions(headers: Headers): ISecurityCheckResult {

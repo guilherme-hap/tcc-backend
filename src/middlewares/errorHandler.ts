@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError.js';
+import { ValidationError } from '../errors/ValidationError.js';
 
 export function errorHandler(
     err: Error,
@@ -7,16 +8,15 @@ export function errorHandler(
     res: Response,
     next: NextFunction
 ): void {
-    if (err instanceof AppError) {
-        res.status(err.statusCode).json({
-            error: err.message,
-        });
-        return;
+    if (!(err instanceof AppError)) {
+        console.error('Unhandled internal server error:', err);
     }
 
-    console.error('Unhandled internal server error:', err);
+    const error = err instanceof AppError ? err : new AppError('INTERNAL_ERROR');
 
-    res.status(500).json({
-        error: 'Internal server error',
+    res.status(error.statusCode).json({
+        error: error.message,
+        code: error.code,
+        ...(error instanceof ValidationError && { issues: error.issues }),
     });
 }

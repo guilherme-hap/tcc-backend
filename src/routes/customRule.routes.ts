@@ -7,7 +7,7 @@ import { createCustomRuleSchema, updateCustomRuleSchema } from '../schemas/custo
 
 const router = Router();
 const controller = new CustomRuleController();
-const validateCustomRuleId = validateIdParam('Custom rule not found');
+const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
 
 /**
  * @openapi
@@ -56,8 +56,16 @@ const validateCustomRuleId = validateIdParam('Custom rule not found');
  *               $ref: '#/components/schemas/CustomRule'
  *       400:
  *         description: "Erro de validação (campos obrigatórios ausentes, valor não-booleano em rulesConfig, ou severityWeights com chave/valor inválido)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  *   get:
  *     summary: "Lista todas as regras customizadas do usuário autenticado"
@@ -76,6 +84,10 @@ const validateCustomRuleId = validateIdParam('Custom rule not found');
  *                 $ref: '#/components/schemas/CustomRule'
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/user/rules/{id}:
  *   put:
@@ -119,10 +131,22 @@ const validateCustomRuleId = validateIdParam('Custom rule not found');
  *               $ref: '#/components/schemas/CustomRule'
  *       400:
  *         description: "Corpo da requisição vazio ou valores inválidos."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: "Regra não encontrada ou id que não é UUID."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  *   delete:
  *     summary: "Remove uma regra customizada do usuário autenticado"
@@ -150,8 +174,16 @@ const validateCustomRuleId = validateIdParam('Custom rule not found');
  *                   example: "Custom rule deleted successfully"
  *       401:
  *         description: "Autenticação obrigatória."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: "Regra não encontrada ou id que não é UUID."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * components:
  *   schemas:

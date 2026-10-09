@@ -13,7 +13,7 @@ export class AuthService {
     async register({ email, password }: RegisterInput): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
         const existing = await this.repository.findOneBy({ email });
         if (existing) {
-            throw new AppError('Email already in use', 409);
+            throw new AppError('AUTH_EMAIL_IN_USE');
         }
 
         const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
@@ -31,12 +31,12 @@ export class AuthService {
     async login({ email, password }: LoginInput): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
         const user = await this.repository.findOneBy({ email });
         if (!user) {
-            throw new AppError('Invalid credentials', 401);
+            throw new AppError('AUTH_INVALID_CREDENTIALS');
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
         if (!isPasswordValid) {
-            throw new AppError('Invalid credentials', 401);
+            throw new AppError('AUTH_INVALID_CREDENTIALS');
         }
 
         const token = this.generateToken(user);
@@ -47,7 +47,7 @@ export class AuthService {
 
     private generateToken(user: User): string {
         if (!process.env.JWT_SECRET) {
-            throw new AppError('JWT_SECRET is not configured', 500);
+            throw new AppError('INTERNAL_ERROR');
         }
 
         const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
