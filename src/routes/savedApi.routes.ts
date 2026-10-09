@@ -51,7 +51,7 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *                 properties:
  *                   rulesConfig:
  *                     type: object
- *                     description: "Configuração de regras customizadas do Spectral."
+ *                     description: "Liga (true) ou desliga (false) regras do Spectral; nomes válidos em GET /api/rules."
  *                     example: { "operation-tags": true }
  *                   loadTestOptions:
  *                     type: object
@@ -71,7 +71,7 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
  *       400:
- *         description: "Erro de validação (campos obrigatórios ausentes, URL sem http/https, rulesConfig não booleano ou loadTestOptions fora dos limites de carga)."
+ *         description: "Erro de validação (campos obrigatórios ausentes, URL sem http/https, rulesConfig não booleano ou com regra fora do catálogo, ou loadTestOptions fora dos limites de carga)."
  *         content:
  *           application/json:
  *             schema:

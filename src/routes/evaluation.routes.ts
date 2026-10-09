@@ -42,7 +42,7 @@ const evaluationController = new EvaluationController();
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
  *               rulesConfig:
  *                 type: object
- *                 description: "Configuração opcional de regras customizadas para o Spectral."
+ *                 description: "Liga (true) ou desliga (false) regras do Spectral; as omitidas ficam no estado padrão. Os nomes válidos e o estado padrão de cada regra estão em GET /api/rules; nome fora do catálogo é rejeitado com 400."
  *                 example: { "operation-tags": true }
  *     responses:
  *       202:
@@ -60,7 +60,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente ou sem protocolo http/https, rulesConfig com valor não booleano, severityWeights negativo)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ausente ou sem protocolo http/https, rulesConfig com valor não booleano ou regra fora do catálogo, severityWeights negativo)."
  *         content:
  *           application/json:
  *             schema:
@@ -244,7 +244,7 @@ const evaluationController = new EvaluationController();
  *                     payload: { "name": "doggie", "photoUrls": [] }
  *               rulesConfig:
  *                 type: object
- *                 description: "Configuração opcional de regras customizadas para o Spectral."
+ *                 description: "Liga (true) ou desliga (false) regras do Spectral; as omitidas ficam no estado padrão. Os nomes válidos e o estado padrão de cada regra estão em GET /api/rules; nome fora do catálogo é rejeitado com 400."
  *                 example: { "operation-tags": true }
  *               loadTestOptions:
  *                 type: object

@@ -53,3 +53,7 @@ export function listSpectralRules(): ISpectralCatalogRule[] {
 
     return catalog;
 }
+
+export function isSpectralRule(name: string): boolean {
+    return listSpectralRules().some((rule) => rule.name === name);
+}

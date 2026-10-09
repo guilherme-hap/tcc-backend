@@ -38,7 +38,7 @@ const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
  *                 example: "Regras rigorosas"
  *               rulesConfig:
  *                 type: object
- *                 description: "Mapa de regras Spectral (chave: nome da regra, valor: boolean habilitado/desabilitado). Todos os valores devem ser booleanos."
+ *                 description: "Mapa de regras Spectral (chave: nome da regra, valor: boolean habilitado/desabilitado). Todos os valores devem ser booleanos e os nomes devem existir no catálogo (GET /api/rules)."
  *                 additionalProperties:
  *                   type: boolean
  *                 example: { "operation-tags": true, "info-contact": false }
@@ -55,7 +55,7 @@ const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
  *             schema:
  *               $ref: '#/components/schemas/CustomRule'
  *       400:
- *         description: "Erro de validação (campos obrigatórios ausentes, valor não-booleano em rulesConfig, ou severityWeights com chave/valor inválido)."
+ *         description: "Erro de validação (campos obrigatórios ausentes, valor não-booleano ou regra fora do catálogo em rulesConfig, ou severityWeights com chave/valor inválido)."
  *         content:
  *           application/json:
  *             schema:
