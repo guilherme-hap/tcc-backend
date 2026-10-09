@@ -606,7 +606,11 @@ const evaluationController = new EvaluationController();
  *                       error:
  *                         type: string
  *                         nullable: true
- *                         description: "Mensagem de erro caso a execução do teste de carga tenha falhado para este alvo."
+ *                         description: "Mensagem de erro, em português, caso a execução do teste de carga tenha falhado para este alvo."
+ *                       code:
+ *                         type: string
+ *                         nullable: true
+ *                         description: "Código do erro deste alvo, presente junto com error (ex.: LOAD_TEST_FAILED, LOAD_TEST_MUTATING_NOT_ALLOWED)."
  *                 securityResult:
  *                   type: array
  *                   nullable: true
@@ -641,20 +645,24 @@ const evaluationController = new EvaluationController();
  *                 failedPillars:
  *                   type: array
  *                   nullable: true
+ *                   description: "Pilares que não concluíram, um item por pilar. Preenchido em PARTIAL e em FAILED (nulo em FAILED quando a falha ocorreu fora dos pilares)."
  *                   items:
  *                     type: object
  *                     properties:
  *                       pillar:
  *                         type: string
+ *                         enum: [contract, performance, security]
  *                       error:
  *                         type: string
+ *                         description: "Mensagem em português. Detalhes vindos da rede ou de bibliotecas (ex.: ECONNREFUSED) aparecem entre parênteses, como recebidos."
  *                       code:
  *                         type: string
- *                         description: "Presente quando o pilar não foi executado por uma pré-condição (ex.: PERF_SKIPPED_INVALID_SPEC)."
+ *                         description: "Identificador estável do motivo: código de erro (ex.: SPEC_FETCH_FAILED, SECURITY_TARGET_UNREACHABLE, PERFORMANCE_NO_TARGET_MEASURED) ou, quando o pilar foi pulado por uma pré-condição, código de auditoria (PERF_SKIPPED_INVALID_SPEC)."
+ *                         example: "SPEC_FETCH_FAILED"
  *                 errorMessage:
  *                   type: string
  *                   nullable: true
- *                   description: "Motivo do erro quando o status for FAILED. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
+ *                   description: "Motivo do erro, em português, quando o status for FAILED. Com mais de um pilar e causas diferentes, junta as mensagens no formato 'Contrato: ... Segurança: ...' (causa comum, como falha ao baixar a especificação, aparece uma vez só); use failedPillars para tratar cada pilar. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
  *       404:
  *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
  *         content:

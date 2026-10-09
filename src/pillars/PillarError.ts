@@ -1,12 +1,14 @@
+import { AppError } from '../errors/AppError.js';
 import type { IAuditMessage } from '../messages/catalog.js';
+import type { ErrorMessageArgs } from '../messages/errors.js';
 import type { PillarResults } from './types.js';
 
-export class PillarError extends Error {
+export class PillarError extends AppError {
     constructor(
-        message: string,
         public partialResults: Partial<PillarResults>,
+        ...args: ErrorMessageArgs
     ) {
-        super(message);
+        super(...args);
         this.name = 'PillarError';
     }
 }

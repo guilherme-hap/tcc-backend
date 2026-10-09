@@ -1,5 +1,6 @@
 import type { Severity } from '../types/severity.js';
 import type { AuditMessageCode, IAuditMessage } from '../messages/catalog.js';
+import type { ErrorCode } from '../messages/errors.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 import type { EvaluationWeights } from '../utils/weights.js';
 import type {
@@ -75,6 +76,7 @@ export interface IPerformanceTargetResult {
     method: string;
     result: IAutocannonResult | null;
     error?: string;
+    code?: ErrorCode;
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -83,10 +85,12 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
     payloadFactory?: () => string | undefined;
 };
 
+export type FailureCode = ErrorCode | AuditMessageCode;
+
 export interface IFailedPillar {
-    pillar: string;
+    pillar: keyof EvaluationWeights;
     error: string;
-    code?: AuditMessageCode;
+    code: FailureCode;
 }
 
 export type IPillarScores = Partial<Record<keyof EvaluationWeights, number>>;

@@ -52,7 +52,7 @@ export class EvaluationLifecycleService {
     async fail(
         evaluationId: string,
         error: string | Error,
-        extraResults?: Partial<Pick<Evaluation, 'performanceResults' | 'spectralResult' | 'securityResult'>>,
+        extraResults?: Partial<Pick<Evaluation, 'performanceResults' | 'spectralResult' | 'securityResult' | 'failedPillars'>>,
     ): Promise<void> {
         const errorMessage = error instanceof Error ? error.message : error;
         await this.repository.update({ id: evaluationId, status: In(['PENDING', 'RUNNING']) }, {

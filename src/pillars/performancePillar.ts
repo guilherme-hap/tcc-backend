@@ -1,3 +1,4 @@
+import { AppError } from '../errors/AppError.js';
 import { AutocannonService } from '../services/AutocannonService.js';
 import { DEFAULT_TARGET_LATENCY_MS } from '../utils/loadTestLimits.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
@@ -44,23 +45,24 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                     method: effectiveMethod,
                     result,
                 });
-            } catch (err: any) {
-                const errorMessage = err instanceof Error ? err.message : String(err);
+            } catch (err: unknown) {
+                const failure = AppError.from(err, 'LOAD_TEST_FAILED');
                 performanceResults.push({
                     path: target.path,
                     method: effectiveMethod,
                     result: null,
-                    error: errorMessage,
+                    error: failure.message,
+                    code: failure.code,
                 });
             }
         }
 
         const hasMeasured = performanceResults.some((r) => r.result?.score != null);
         if (performanceResults.length > 0 && !hasMeasured) {
-            const errorDetails = performanceResults
-                .map((r) => `${r.method} ${r.path}: ${r.error || 'Not measured (no valid sample)'}`)
-                .join('; ');
-            throw new PillarError(`No performance target was measured: ${errorDetails}`, { performanceResults });
+            const details = performanceResults
+                .map((r) => `${r.method} ${r.path}: ${r.error || 'sem amostra válida.'}`)
+                .join(' ');
+            throw new PillarError({ performanceResults }, 'PERFORMANCE_NO_TARGET_MEASURED', { details });
         }
 
         const counted = performanceResults.filter((r) => r.result === null || r.result.score != null);

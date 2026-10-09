@@ -46,7 +46,7 @@ const options = {
                         code: {
                             type: 'string',
                             enum: ERROR_CODES,
-                            description: 'Identificador estável do erro.',
+                            description: 'Identificador estável do erro. Os mesmos códigos aparecem em failedPillars[].code e performanceResults[].code no GET /api/evaluations/{id}.',
                             example: 'VALIDATION_FAILED',
                         },
                         issues: {

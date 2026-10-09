@@ -1,3 +1,4 @@
+import { AppError } from '../errors/AppError.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { createPillarContext } from '../pillars/createPillarContext.js';
 import { PillarError, PillarSkipped } from '../pillars/PillarError.js';
@@ -25,9 +26,19 @@ function round2(value: number): number {
     return Math.round(value * 100) / 100;
 }
 
-function errorMessageOf(reason: unknown): string {
-    return (reason instanceof Error && reason.message) || String(reason);
+function toFailure(evaluationId: string, pillar: PillarName, reason: unknown): AppError {
+    if (reason instanceof AppError) {
+        return reason;
+    }
+    console.error(`[Worker] Unexpected error in the ${pillar} pillar of evaluation ${evaluationId}:`, reason);
+    return new AppError('EXECUTION_FAILED');
 }
+
+const PILLAR_LABELS: Record<PillarName, string> = {
+    contract: 'Contrato',
+    performance: 'Performance',
+    security: 'Segurança',
+};
 
 export class EvaluationWorker {
     private lifecycle = new EvaluationLifecycleService();
@@ -40,8 +51,7 @@ export class EvaluationWorker {
         } catch (error: unknown) {
             console.error(`[Worker] Error processing evaluation ${evaluationId}:`, error);
             try {
-                const message = error instanceof Error ? error.message : String(error);
-                await this.lifecycle.fail(evaluationId, message);
+                await this.lifecycle.fail(evaluationId, error instanceof AppError ? error : new AppError('EXECUTION_FAILED'));
             } catch (persistError) {
                 console.error(`[Worker] Failed to persist FAILED status for ${evaluationId}:`, persistError);
             }
@@ -96,11 +106,8 @@ export class EvaluationWorker {
             if (reason instanceof PillarError) {
                 Object.assign(results, reason.partialResults);
             }
-            failedPillars.push({
-                pillar: pillar.name,
-                error: errorMessageOf(reason),
-                ...(reason instanceof PillarSkipped && { code: reason.audit.code }),
-            });
+            const failure = reason instanceof PillarSkipped ? reason.audit : toFailure(evaluationId, pillar.name, reason);
+            failedPillars.push({ pillar: pillar.name, error: failure.message, code: failure.code });
         }
 
         if (failedPillars.length === 0) {
@@ -124,9 +131,10 @@ export class EvaluationWorker {
             return;
         }
 
-        const message = runs.length === 1
+        const sharedCause = failedPillars.every((fp) => fp.error === failedPillars[0].error);
+        const message = sharedCause
             ? failedPillars[0].error
-            : failedPillars.map((fp) => `${fp.pillar}: ${fp.error}`).join('; ');
-        await this.lifecycle.fail(evaluationId, message, results);
+            : failedPillars.map((fp) => `${PILLAR_LABELS[fp.pillar]}: ${fp.error}`).join(' ');
+        await this.lifecycle.fail(evaluationId, message, { ...results, failedPillars });
     }
 }

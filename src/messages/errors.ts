@@ -94,6 +94,18 @@ const ERROR_MESSAGES = {
         message: ({ method }) =>
             `O teste de carga com o método ${method} exige autorização explícita para métodos que alteram dados (allowMutatingMethods).`,
     }),
+    LOAD_TEST_FAILED: entry<{ detail: string }>({
+        status: 502,
+        message: ({ detail }) => `O teste de carga não pôde ser executado (${detail}).`,
+    }),
+    PERFORMANCE_NO_TARGET_MEASURED: entry<{ details: string }>({
+        status: 502,
+        message: ({ details }) => `Nenhum alvo de performance foi medido: ${details}`,
+    }),
+    EXECUTION_FAILED: entry({
+        status: 500,
+        message: () => 'Erro inesperado durante a execução.',
+    }),
 };
 
 export type ErrorCode = keyof typeof ERROR_MESSAGES;
