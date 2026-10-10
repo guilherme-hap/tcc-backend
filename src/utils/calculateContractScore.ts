@@ -1,5 +1,6 @@
 import type { Severity } from '../types/severity.js';
-import type { IContractResult, ISpectralAnalysis, ISpectralIssue, ISpectralRule } from '../interfaces/evaluation.interface.js';
+import type { IContractResult, IScorePart, ISpectralAnalysis, ISpectralIssue, ISpectralRule } from '../interfaces/evaluation.interface.js';
+import { scorePart } from './scorePart.js';
 
 export const SEVERITY_WEIGHTS: Record<Severity, number> = {
     'Error': 0.5208,
@@ -66,19 +67,36 @@ export function calculateContractScore(
     issues: ISpectralIssue[],
     rules: ISpectralRule[],
     severityWeights?: Partial<Record<Severity, number>>,
-): number {
+): { score: number; breakdown: IScorePart[] } {
     const weights = resolveSeverityWeights(severityWeights);
     const { applicable, violated } = buildRuleSet(issues, rules, weights);
 
+    const bySeverity = new Map<Severity, { total: number; violated: number }>();
     let total = 0;
     let violatedTotal = 0;
     for (const [code, severity] of applicable) {
         const weight = weights[severity] ?? 0;
+        const group = bySeverity.get(severity) ?? { total: 0, violated: 0 };
+        group.total += weight;
         total += weight;
-        if (violated.has(code)) violatedTotal += weight;
+        if (violated.has(code)) {
+            group.violated += weight;
+            violatedTotal += weight;
+        }
+        bySeverity.set(severity, group);
     }
 
-    if (total <= 0) return 100;
+    if (total <= 0) return { score: 100, breakdown: [] };
     const score = 100 * (1 - violatedTotal / total);
-    return Math.round(Math.max(0, Math.min(100, score)) * 100) / 100;
+    const breakdown: IScorePart[] = [];
+    for (const severity of Object.keys(SEVERITY_WEIGHTS) as Severity[]) {
+        const group = bySeverity.get(severity);
+        if (!group || group.total <= 0) continue;
+        breakdown.push(scorePart(severity, group.total / total, 100 * (1 - group.violated / group.total)));
+    }
+
+    return {
+        score: Math.round(Math.max(0, Math.min(100, score)) * 100) / 100,
+        breakdown,
+    };
 }

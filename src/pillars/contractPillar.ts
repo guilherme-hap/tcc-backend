@@ -15,7 +15,7 @@ export const contractPillar: Pillar<ContractRequestInput, 'spectralResult'> = {
         const analysis = await withMeasurementLock(() => spectralService.analyze(openApiUrl, rulesConfig || {}, content));
 
         return {
-            score: calculateContractScore(analysis.issues, analysis.rules, severityWeights),
+            ...calculateContractScore(analysis.issues, analysis.rules, severityWeights),
             result: buildContractResult(analysis),
             scoring: {
                 contract: {

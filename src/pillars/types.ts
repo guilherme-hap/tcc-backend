@@ -5,6 +5,7 @@ import type {
     IPerformanceTargetResult,
     IPillarScores,
     IPillarScoring,
+    IScorePart,
     ISecurityCheckResult,
 } from '../interfaces/evaluation.interface.js';
 import type { IAuditMessage } from '../messages/catalog.js';
@@ -34,6 +35,7 @@ export interface PillarContext<P extends PillarBaseParams> {
 
 export interface PillarOutcome<C extends PillarColumn = PillarColumn> {
     score: number;
+    breakdown: IScorePart[];
     result: PillarResults[C];
     scoring: IPillarScoring;
 }

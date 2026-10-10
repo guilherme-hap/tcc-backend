@@ -1,4 +1,5 @@
-import type { ISecurityCheckResult, SecurityLayer } from '../interfaces/evaluation.interface.js';
+import type { IScorePart, ISecurityCheckResult, SecurityLayer } from '../interfaces/evaluation.interface.js';
+import { scorePart } from './scorePart.js';
 
 export const SECURITY_LAYER_WEIGHTS: Record<SecurityLayer, number> = {
     transport: 0.5208,
@@ -14,7 +15,8 @@ export const SECURITY_STATUS_SCORE: Record<ISecurityCheckResult['status'], numbe
     error: 0,
 };
 
-export function calculateSecurityScore(results: ISecurityCheckResult[]): number {
+export function calculateSecurityScore(results: ISecurityCheckResult[]): { score: number; breakdown: IScorePart[] } {
+    const layers: { layer: SecurityLayer; weight: number; score: number }[] = [];
     let weightedSum = 0;
     let totalWeight = 0;
 
@@ -26,8 +28,12 @@ export function calculateSecurityScore(results: ISecurityCheckResult[]): number 
         const layerScore = checks.reduce((sum, r) => sum + SECURITY_STATUS_SCORE[r.status], 0) / checks.length;
         weightedSum += layerWeight * layerScore;
         totalWeight += layerWeight;
+        layers.push({ layer, weight: layerWeight, score: layerScore });
     }
 
-    if (totalWeight === 0) return 0;
-    return Math.round((100 * weightedSum / totalWeight) * 100) / 100;
+    if (totalWeight === 0) return { score: 0, breakdown: [] };
+    return {
+        score: Math.round((100 * weightedSum / totalWeight) * 100) / 100,
+        breakdown: layers.map(({ layer, weight, score }) => scorePart(layer, weight / totalWeight, 100 * score)),
+    };
 }

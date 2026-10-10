@@ -3,6 +3,7 @@ import { AutocannonService } from '../services/AutocannonService.js';
 import { DEFAULT_TARGET_LATENCY_MS } from '../utils/loadTestLimits.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { withMeasurementLock } from '../utils/measurementLock.js';
+import { scorePart } from '../utils/scorePart.js';
 import type { IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { PerformanceRequestInput } from '../schemas/evaluation.schema.js';
 import { PillarError } from './PillarError.js';
@@ -65,14 +66,17 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
             throw new PillarError({ performanceResults }, 'PERFORMANCE_NO_TARGET_MEASURED', { details });
         }
 
-        const counted = performanceResults.filter((r) => r.result === null || r.result.score != null);
-        const totalScore = counted.reduce((sum, r) => sum + (r.result?.score ?? 0), 0);
+        const counted = performanceResults
+            .map((r, index) => ({ index, counts: r.result === null || r.result.score != null, score: r.result?.score ?? 0 }))
+            .filter((target) => target.counts);
+        const totalScore = counted.reduce((sum, target) => sum + target.score, 0);
         const score = counted.length > 0
             ? Math.round((totalScore / counted.length) * 100) / 100
             : 0;
 
         return {
             score,
+            breakdown: counted.map((target) => scorePart(String(target.index), 1 / counted.length, target.score)),
             result: performanceResults,
             scoring: {
                 performance: {

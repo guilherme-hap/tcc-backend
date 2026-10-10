@@ -12,7 +12,7 @@ export const securityPillar: Pillar<SecurityRequestInput, 'securityResult'> = {
         const results = await securityService.analyze(await ctx.apiBaseUrl());
 
         return {
-            score: calculateSecurityScore(results),
+            ...calculateSecurityScore(results),
             result: results,
             scoring: {
                 security: {
