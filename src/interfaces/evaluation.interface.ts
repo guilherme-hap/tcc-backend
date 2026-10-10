@@ -122,6 +122,16 @@ export interface IScoringParameters extends IPillarScoring {
     pillarWeights: IPillarScores;
 }
 
+export interface IScorePart {
+    id: string;
+    weight: number;
+    score: number;
+    points: number;
+    maxPoints: number;
+}
+
+export type IScoreBreakdown = Partial<Record<keyof EvaluationWeights | 'final', IScorePart[]>>;
+
 export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
 
 export type EvaluationType = 'contract' | 'performance' | 'security' | 'full';
