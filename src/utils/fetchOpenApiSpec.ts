@@ -21,6 +21,15 @@ function throwInvalidRootError(value: unknown): never {
     throw new AppError('SPEC_INVALID_ROOT', { received });
 }
 
+function describeYamlError(error: unknown): string {
+    if (error instanceof yaml.YAMLException) {
+        return error.mark
+            ? `${error.reason}, linha ${error.mark.line + 1}, coluna ${error.mark.column + 1}`
+            : error.reason;
+    }
+    return error instanceof Error ? error.message : String(error);
+}
+
 export function parseOpenApiContent(content: string): ParsedOpenApiContent {
     let parsedJson: unknown;
     let isJsonSyntaxValid = false;
@@ -46,9 +55,8 @@ export function parseOpenApiContent(content: string): ParsedOpenApiContent {
     let parsedYaml: unknown;
     try {
         parsedYaml = yaml.load(content, { schema: yaml.JSON_SCHEMA });
-    } catch (yamlErr: any) {
-        const detail = yamlErr instanceof Error ? yamlErr.message : String(yamlErr);
-        throw new AppError('SPEC_PARSE_FAILED', { detail });
+    } catch (yamlErr: unknown) {
+        throw new AppError('SPEC_PARSE_FAILED', { detail: describeYamlError(yamlErr) });
     }
 
     if (!isRecord(parsedYaml)) {
