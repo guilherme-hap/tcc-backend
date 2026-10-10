@@ -493,6 +493,29 @@ const evaluationController = new EvaluationController();
  *                           description: "Valor de cada status de verificação (pass, warning, missing, error)."
  *                           additionalProperties:
  *                             type: number
+ *                 scoreBreakdown:
+ *                   type: object
+ *                   nullable: true
+ *                   description: "Decomposição de cada nota em partes, calculada junto com a própria nota. As chaves contract, performance e security só aparecem para os pilares que concluíram; final só aparece quando finalScore é calculado. Partes: final = um item por pilar (id = nome do pilar); contract = um por severidade com regras aplicáveis e peso maior que zero (id = severidade); performance = um por alvo que entra na média (id = índice do alvo em performanceResults); security = um por camada com verificações (id = camada). A lista fica vazia quando a nota não vem de uma soma ponderada (contrato sem regra com peso)."
+ *                   additionalProperties:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         weight:
+ *                           type: number
+ *                           description: "Fração da nota que a parte representa (4 casas)."
+ *                         score:
+ *                           type: number
+ *                           description: "Nota da parte, de 0 a 100."
+ *                         points:
+ *                           type: number
+ *                           description: "Contribuição da parte para a nota: weight × score. A soma das partes pode diferir da nota em 0,01 pelo arredondamento."
+ *                         maxPoints:
+ *                           type: number
+ *                           description: "Contribuição máxima da parte: weight × 100."
  *                 spectralResult:
  *                   type: object
  *                   nullable: true
