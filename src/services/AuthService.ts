@@ -45,6 +45,15 @@ export class AuthService {
         return { user: userWithoutPassword as Omit<User, 'passwordHash'>, token };
     }
 
+    async getById(userId: string): Promise<{ id: string; email: string }> {
+        const user = await this.repository.findOneBy({ id: userId });
+        if (!user) {
+            throw new AppError('AUTH_INVALID_TOKEN');
+        }
+
+        return { id: user.id, email: user.email };
+    }
+
     private generateToken(user: User): string {
         if (!process.env.JWT_SECRET) {
             throw new AppError('INTERNAL_ERROR');

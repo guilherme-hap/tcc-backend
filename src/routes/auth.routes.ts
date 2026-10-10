@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/AuthController.js';
 import { validate } from '../middlewares/validate.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
 import { loginSchema, registerSchema } from '../schemas/auth.schema.js';
 
 const router = Router();
@@ -132,8 +133,41 @@ const authController = new AuthController();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *
+ * /api/auth/me:
+ *   get:
+ *     summary: "Retorna o usuário da sessão"
+ *     description: "Devolve o usuário dono do token enviado. Serve para restaurar a sessão ao recarregar a página e para conferir se o token ainda vale."
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: "Usuário autenticado."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "123e4567-e89b-12d3-a456-426614174000"
+ *                     email:
+ *                       type: string
+ *                       example: "user@example.com"
+ *       401:
+ *         description: "Token ausente, inválido, expirado ou de uma conta que não existe mais."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/register', validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);
+router.get('/me', requireAuth, authController.me);
 
 export default router;

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/AuthService.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
+import type { AuthenticatedRequest } from '../middlewares/optionalAuth.js';
 
 export class AuthController {
     private authService: AuthService;
@@ -25,5 +26,11 @@ export class AuthController {
             user: { id: result.user.id, email: result.user.email },
             token: result.token,
         });
+    };
+
+    me = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        const user = await this.authService.getById(req.userId!);
+
+        res.status(200).json({ user });
     };
 }
