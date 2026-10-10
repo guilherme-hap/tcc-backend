@@ -44,6 +44,27 @@ const evaluationController = new EvaluationController();
  *                 type: object
  *                 description: "Liga (true) ou desliga (false) regras do Spectral; as omitidas ficam no estado padrão. Os nomes válidos e o estado padrão de cada regra estão em GET /api/rules; nome fora do catálogo é rejeitado com 400."
  *                 example: { "operation-tags": true }
+ *               severityWeights:
+ *                 type: object
+ *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos maiores ou iguais a 0. Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
+ *                 properties:
+ *                   Error:
+ *                     type: number
+ *                     minimum: 0
+ *                   Warning:
+ *                     type: number
+ *                     minimum: 0
+ *                   Info:
+ *                     type: number
+ *                     minimum: 0
+ *                   Hint:
+ *                     type: number
+ *                     minimum: 0
+ *                   Unknown:
+ *                     type: number
+ *                     minimum: 0
+ *                 additionalProperties: false
+ *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
  *     responses:
  *       202:
  *         description: "Avaliação enfileirada com sucesso."
@@ -246,6 +267,27 @@ const evaluationController = new EvaluationController();
  *                 type: object
  *                 description: "Liga (true) ou desliga (false) regras do Spectral; as omitidas ficam no estado padrão. Os nomes válidos e o estado padrão de cada regra estão em GET /api/rules; nome fora do catálogo é rejeitado com 400."
  *                 example: { "operation-tags": true }
+ *               severityWeights:
+ *                 type: object
+ *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos maiores ou iguais a 0. Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
+ *                 properties:
+ *                   Error:
+ *                     type: number
+ *                     minimum: 0
+ *                   Warning:
+ *                     type: number
+ *                     minimum: 0
+ *                   Info:
+ *                     type: number
+ *                     minimum: 0
+ *                   Hint:
+ *                     type: number
+ *                     minimum: 0
+ *                   Unknown:
+ *                     type: number
+ *                     minimum: 0
+ *                 additionalProperties: false
+ *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
  *               loadTestOptions:
  *                 type: object
  *                 description: "Opções adicionais de teste do Autocannon. Limites padrão (default): duration ≤ 60s, connections ≤ 50, maxRequests ≤ 100.000, requestsPerSecond ≤ 1.000. Com allowHighLoad=true: duration ≤ 300s, connections ≤ 500, maxRequests ≤ 1.000.000, requestsPerSecond ≤ 10.000."
