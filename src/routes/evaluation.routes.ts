@@ -691,6 +691,14 @@ const evaluationController = new EvaluationController();
  *                   nullable: true
  *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver failedPillars), EVALUATION_ENQUEUE_FAILED ou EXECUTION_FAILED quando a falha ocorreu fora dos pilares."
  *                   example: "SPEC_FETCH_FAILED"
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: "Momento em que a avaliação foi criada."
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: "Momento da última alteração do registro (ex.: mudança de status)."
  *       404:
  *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
  *         content:
