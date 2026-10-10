@@ -47,23 +47,28 @@ const evaluationController = new EvaluationController();
  *                 example: { "operation-tags": true }
  *               severityWeights:
  *                 type: object
- *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos maiores ou iguais a 0. Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
+ *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos de 0 a 1000 (só a proporção entre eles importa). Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
  *                 properties:
  *                   Error:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Warning:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Info:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Hint:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Unknown:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                 additionalProperties: false
  *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
  *     responses:
@@ -270,23 +275,28 @@ const evaluationController = new EvaluationController();
  *                 example: { "operation-tags": true }
  *               severityWeights:
  *                 type: object
- *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos maiores ou iguais a 0. Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
+ *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos de 0 a 1000 (só a proporção entre eles importa). Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
  *                 properties:
  *                   Error:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Warning:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Info:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Hint:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                   Unknown:
  *                     type: number
  *                     minimum: 0
+ *                     maximum: 1000
  *                 additionalProperties: false
  *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
  *               loadTestOptions:

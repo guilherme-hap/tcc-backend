@@ -26,7 +26,9 @@ export const rulesConfigSchema = z.record(z.string(), z.boolean()).superRefine((
     }
 });
 
+const MAX_SEVERITY_WEIGHT = 1000;
+
 export const severityWeightsSchema = z.partialRecord(
     z.enum(['Error', 'Warning', 'Info', 'Hint', 'Unknown']),
-    z.number().min(0),
+    z.number().min(0).max(MAX_SEVERITY_WEIGHT),
 );
