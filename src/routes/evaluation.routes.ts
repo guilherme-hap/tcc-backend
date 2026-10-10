@@ -584,6 +584,10 @@ const evaluationController = new EvaluationController();
  *                 evaluationType:
  *                   type: string
  *                   enum: [contract, performance, security, full]
+ *                 visibility:
+ *                   type: string
+ *                   enum: [private, anonymous]
+ *                   description: "private: criada com uma conta, só o dono acessa e ela aparece no histórico. anonymous: criada sem token, acessível por qualquer pessoa que tenha o id."
  *                 status:
  *                   type: string
  *                   enum: [PENDING, RUNNING, COMPLETED, PARTIAL, FAILED]

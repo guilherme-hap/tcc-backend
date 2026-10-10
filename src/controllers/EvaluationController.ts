@@ -16,6 +16,7 @@ function toEvaluationResponse(evaluation: Evaluation) {
         targets: evaluation.targets,
         requestSettings: evaluation.requestSettings,
         evaluationType: evaluation.evaluationType,
+        visibility: evaluation.userId ? 'private' : 'anonymous',
         status: evaluation.status,
         finalScore: evaluation.finalScore,
         pillarScores: evaluation.pillarScores,
