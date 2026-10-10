@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import type { EvaluationStatus, EvaluationType, IPerformanceTarget, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
-import type { FailureCode, IFailedPillar, IPillarScores, IScoreBreakdown, IScoringParameters } from '../interfaces/evaluation.interface.js';
+import type { FailureCode, IContractResult, IFailedPillar, IPillarScores, IScoreBreakdown, IScoringParameters, ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
 import { User } from './User.js';
 
 @Entity('evaluations')
@@ -34,10 +34,10 @@ export class Evaluation {
     status!: EvaluationStatus;
 
     @Column({ name: 'spectral_result', type: 'jsonb', nullable: true })
-    spectralResult!: any;
+    spectralResult!: IContractResult | null;
 
     @Column({ name: 'security_result', type: 'jsonb', nullable: true })
-    securityResult!: any;
+    securityResult!: ISecurityCheckResult[] | null;
 
     @Column({ name: 'final_score', type: 'float', nullable: true })
     finalScore!: number | null;
