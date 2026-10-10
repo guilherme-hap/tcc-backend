@@ -55,7 +55,7 @@ const AUDIT_MESSAGES = {
     PERF_EXCLUDED_4XX: entry<{ count: number }>({
         severity: 'Info',
         message: ({ count }) =>
-            `${count} respostas 4xx foram excluídas da amostra do Apdex e não afetam a nota.`,
+            `${count.toLocaleString('pt-BR')} respostas 4xx foram excluídas da amostra do Apdex e não afetam a nota.`,
         recommendation: () => 'Se esperava respostas de sucesso, informe path com IDs reais e payload válido para este alvo.',
     }),
     PERF_NO_VALID_SAMPLE: entry({
