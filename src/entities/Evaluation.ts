@@ -36,9 +36,6 @@ export class Evaluation {
     @Column({ name: 'spectral_result', type: 'jsonb', nullable: true })
     spectralResult!: any;
 
-    @Column({ name: 'autocannon_result', type: 'jsonb', nullable: true })
-    autocannonResult!: any;
-
     @Column({ name: 'security_result', type: 'jsonb', nullable: true })
     securityResult!: any;
 
