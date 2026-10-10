@@ -569,6 +569,18 @@ const evaluationController = new EvaluationController();
  *                         type: string
  *                       payload:
  *                         nullable: true
+ *                 requestSettings:
+ *                   type: object
+ *                   nullable: true
+ *                   description: "Configurações do pedido, como foram enviadas (sem os padrões), para salvar a API ou repetir a avaliação. Difere de scoring, que traz os valores efetivos já com os padrões aplicados (targetLatency pode aparecer nos dois). Os cabeçalhos e o body de loadTestOptions não são guardados. Nulo quando o pedido não trouxe rulesConfig nem loadTestOptions."
+ *                   properties:
+ *                     rulesConfig:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: boolean
+ *                     loadTestOptions:
+ *                       type: object
+ *                       description: "Opções do teste de carga enviadas, sem headers e body."
  *                 evaluationType:
  *                   type: string
  *                   enum: [contract, performance, security, full]

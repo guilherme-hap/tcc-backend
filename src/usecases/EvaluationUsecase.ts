@@ -3,12 +3,27 @@ import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { AppError } from '../errors/AppError.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { EVALUATION_SCHEMAS } from '../schemas/evaluation.schema.js';
-import type { EvaluationJobOf, EvaluationType, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
+import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
+import type { EvaluationJobOf, EvaluationType, IEvaluationRequestSettings, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
 
 interface PersistedRequestFields {
     openApiUrl: string;
     apiBaseUrl?: string;
     targets?: IPerformanceTarget[];
+    rulesConfig?: Record<string, boolean>;
+    loadTestOptions?: LoadTestOptionsInput;
+}
+
+function toRequestSettings(request: PersistedRequestFields): IEvaluationRequestSettings | null {
+    const settings: IEvaluationRequestSettings = {};
+
+    if (request.rulesConfig) settings.rulesConfig = request.rulesConfig;
+    if (request.loadTestOptions) {
+        const { headers: _headers, body: _body, ...loadTestOptions } = request.loadTestOptions;
+        settings.loadTestOptions = loadTestOptions;
+    }
+
+    return Object.keys(settings).length > 0 ? settings : null;
 }
 
 export class EvaluationUsecase {
@@ -26,6 +41,7 @@ export class EvaluationUsecase {
             openApiUrl: request.openApiUrl,
             apiBaseUrl: request.apiBaseUrl,
             targets: request.targets,
+            requestSettings: toRequestSettings(request),
             evaluationType: type,
             userId: userId ?? null,
         });

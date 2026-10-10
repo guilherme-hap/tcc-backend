@@ -94,6 +94,11 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
     payloadFactory?: () => string | undefined;
 };
 
+export interface IEvaluationRequestSettings {
+    rulesConfig?: Record<string, boolean>;
+    loadTestOptions?: Omit<LoadTestOptionsInput, 'headers' | 'body'>;
+}
+
 export type FailureCode = ErrorCode | AuditMessageCode;
 
 export interface IFailedPillar {

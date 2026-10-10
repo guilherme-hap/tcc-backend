@@ -3,7 +3,7 @@ import type { FindOperator, FindOptionsWhere } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
-import { EvaluationType, FailureCode, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
+import { EvaluationType, FailureCode, IEvaluationRequestSettings, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
 import type { ListEvaluationsQuery } from '../schemas/evaluation.schema.js';
 
 function escapeLikePattern(term: string): string {
@@ -19,6 +19,7 @@ export class EvaluationLifecycleService {
         openApiUrl: string;
         apiBaseUrl?: string | null;
         targets?: IPerformanceTarget[] | null;
+        requestSettings?: IEvaluationRequestSettings | null;
         evaluationType: EvaluationType;
         userId?: string | null;
     }): Promise<Evaluation> {
@@ -26,6 +27,7 @@ export class EvaluationLifecycleService {
             openApiUrl: data.openApiUrl,
             apiBaseUrl: data.apiBaseUrl || null,
             targets: data.targets || null,
+            requestSettings: data.requestSettings ?? null,
             evaluationType: data.evaluationType,
             userId: data.userId ?? null,
             status: 'PENDING',

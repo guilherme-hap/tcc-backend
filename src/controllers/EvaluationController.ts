@@ -14,6 +14,7 @@ function toEvaluationResponse(evaluation: Evaluation) {
         openApiUrl: evaluation.openApiUrl,
         apiBaseUrl: evaluation.apiBaseUrl,
         targets: evaluation.targets,
+        requestSettings: evaluation.requestSettings,
         evaluationType: evaluation.evaluationType,
         status: evaluation.status,
         finalScore: evaluation.finalScore,
