@@ -1,6 +1,6 @@
-import axios from 'axios';
 import * as yaml from 'js-yaml';
 import { AppError } from '../errors/AppError.js';
+import { describeFetchError, fetchRemoteText } from './fetchRemoteText.js';
 
 export type OpenApiFormat = 'json' | 'yaml';
 
@@ -9,8 +9,6 @@ export interface ParsedOpenApiContent {
     format: OpenApiFormat;
     rawString: string;
 }
-
-const FETCH_TIMEOUT_MS = Number(process.env.OPENAPI_FETCH_TIMEOUT_MS) || 15_000;
 
 function isRecord(value: unknown): value is Record<string, any> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -71,20 +69,11 @@ export function parseOpenApiContent(content: string): ParsedOpenApiContent {
 }
 
 export async function fetchOpenApiContent(openApiUrl: string): Promise<ParsedOpenApiContent> {
-    let response;
+    let content: string;
     try {
-        response = await axios.get<string>(openApiUrl, {
-            timeout: FETCH_TIMEOUT_MS,
-            maxContentLength: 5 * 1024 * 1024,
-            maxRedirects: 3,
-            responseType: 'text',
-            transformResponse: (r) => r,
-        });
-    } catch (err: any) {
-        const reason = err?.response?.status
-            ? `HTTP ${err.response.status}`
-            : (err?.code ?? err?.message ?? 'unknown error');
-        throw new AppError('SPEC_FETCH_FAILED', { reason: String(reason) });
+        content = await fetchRemoteText(openApiUrl);
+    } catch (err: unknown) {
+        throw new AppError('SPEC_FETCH_FAILED', { reason: describeFetchError(err) });
     }
-    return parseOpenApiContent(response.data);
+    return parseOpenApiContent(content);
 }
