@@ -10,8 +10,10 @@ import type {
     EvaluationType,
     IFailedPillar,
     IPillarScores,
+    IScoreBreakdown,
     IScoringParameters,
 } from '../interfaces/evaluation.interface.js';
+import { scorePart } from '../utils/scorePart.js';
 
 interface PillarRun {
     pillar: { name: PillarName; column: PillarColumn };
@@ -93,11 +95,13 @@ export class EvaluationWorker {
         const failedPillars: IFailedPillar[] = [];
         const pillarScores: IPillarScores = {};
         const scoring: IScoringParameters = { pillarWeights };
+        const scoreBreakdown: IScoreBreakdown = {};
         let weightedSum = 0;
 
         for (const { pillar, settled } of runs) {
             if (settled.status === 'fulfilled') {
                 pillarScores[pillar.name] = settled.value.score;
+                scoreBreakdown[pillar.name] = settled.value.breakdown;
                 Object.assign(scoring, settled.value.scoring);
                 weightedSum += settled.value.score * (pillarWeights[pillar.name] ?? 0);
                 continue;
@@ -116,6 +120,12 @@ export class EvaluationWorker {
                 finalScore: round2(weightedSum),
                 pillarScores,
                 scoring,
+                scoreBreakdown: {
+                    final: (Object.keys(pillarWeights) as PillarName[]).map((name) => (
+                        scorePart(name, pillarWeights[name] ?? 0, pillarScores[name] ?? 0)
+                    )),
+                    ...scoreBreakdown,
+                },
             });
             return;
         }
@@ -127,6 +137,7 @@ export class EvaluationWorker {
                 failedPillars,
                 pillarScores,
                 scoring,
+                scoreBreakdown,
             });
             return;
         }
