@@ -6,6 +6,7 @@ import { DEFAULT_TARGET_LATENCY_MS, FRUSTRATED_LATENCY_MULTIPLIER, defaultDurati
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
 const MIN_SAMPLE_SIZE = 100;
+const MIN_RESPONSE_TIMEOUT_SECONDS = 10;
 
 interface ResponseCounts {
     satisfied: number;
@@ -60,6 +61,10 @@ export class AutocannonService {
         const limits = {
             duration,
             connections,
+            timeout: Math.max(
+                MIN_RESPONSE_TIMEOUT_SECONDS,
+                Math.ceil((FRUSTRATED_LATENCY_MULTIPLIER * targetLatency) / 1000),
+            ),
             ...(maxRequests && { amount: maxRequests }),
             ...(requestsPerSecond && { overallRate: requestsPerSecond }),
         };
