@@ -20,6 +20,27 @@ export {
     DEFAULT_DURATION_SECONDS,
 };
 
+const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+const HEADER_VALUE_FORBIDDEN_PATTERN = /[\r\n\0]/;
+
+const headersSchema = z.record(z.string(), z.string()).superRefine((headers, ctx) => {
+    for (const [name, value] of Object.entries(headers)) {
+        if (!HEADER_NAME_PATTERN.test(name)) {
+            ctx.addIssue({
+                code: 'custom',
+                path: [name],
+                message: 'Nome inválido para um cabeçalho HTTP: use letras, dígitos e hífens, sem espaços nem dois-pontos (ex.: X-Api-Key).',
+            });
+        } else if (HEADER_VALUE_FORBIDDEN_PATTERN.test(value)) {
+            ctx.addIssue({
+                code: 'custom',
+                path: [name],
+                message: 'O valor não pode conter quebra de linha.',
+            });
+        }
+    }
+});
+
 export const loadTestOptionsShape = {
     duration: z.number().positive().optional(),
     connections: z.number().int().positive().optional(),
@@ -27,7 +48,7 @@ export const loadTestOptionsShape = {
     maxRequests: z.number().int().positive().optional(),
     requestsPerSecond: z.number().positive().optional(),
     method: httpMethodSchema.optional(),
-    headers: z.record(z.string(), z.string()).optional(),
+    headers: headersSchema.optional(),
     body: z.string().optional(),
     allowMutatingMethods: z.boolean().optional(),
     allowHighLoad: z.boolean().optional(),
