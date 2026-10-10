@@ -64,6 +64,13 @@ const AUDIT_MESSAGES = {
             'Nenhuma requisição válida foi medida (todas as respostas foram 4xx ou não houve resposta); o alvo não recebeu nota.',
         recommendation: () => 'Informe path com IDs reais e payload válido para que o endpoint responda com sucesso.',
     }),
+    PERF_NO_RESPONSE: entry<{ attempts: number }>({
+        severity: 'Warning',
+        message: ({ attempts }) =>
+            `Nenhuma das ${attempts.toLocaleString('pt-BR')} requisições recebeu resposta (falha de conexão ou tempo esgotado); ` +
+            'a nota 0 pode indicar um endereço incorreto, e não uma API lenta.',
+        recommendation: () => 'Confira a URL base, o host e a porta do alvo, e se ele está acessível a partir do auditor.',
+    }),
     PERF_HIGH_LOAD: entry({
         severity: 'Warning',
         message: () => 'Opção de carga alta habilitada: o teste pode gerar carga significativa contra o alvo.',

@@ -115,6 +115,9 @@ export class AutocannonService {
         if (counts.excluded4xx > 0) {
             warnings.push(auditMessage('PERF_EXCLUDED_4XX', { count: counts.excluded4xx }));
         }
+        if (counts.responses === 0 && totalAttempts > 0) {
+            warnings.push(auditMessage('PERF_NO_RESPONSE', { attempts: totalAttempts }));
+        }
         if (sampleSize === 0) {
             warnings.push(auditMessage('PERF_NO_VALID_SAMPLE'));
         } else if (sampleSize < MIN_SAMPLE_SIZE) {
