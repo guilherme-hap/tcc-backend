@@ -1,9 +1,13 @@
 import pkgSpectralCore from '@stoplight/spectral-core';
+import pkgSpectralRefResolver from '@stoplight/spectral-ref-resolver';
 import { oas } from '@stoplight/spectral-rulesets';
+import { AppError } from '../errors/AppError.js';
 import type { ISpectralCatalogRule, OasVersion } from '../interfaces/evaluation.interface.js';
 import type { Severity } from '../types/severity.js';
+import { createFetchDeadline, describeFetchError, fetchRemoteText } from './fetchRemoteText.js';
 
 const { Spectral } = pkgSpectralCore;
+const { Resolver } = pkgSpectralRefResolver;
 
 export const SEVERITY_BY_LEVEL: Record<number, Severity> = {
     0: 'Error',
@@ -20,13 +24,29 @@ const OAS_VERSION_SAMPLES: Record<OasVersion, object> = {
 
 const OAS_VERSIONS = Object.keys(OAS_VERSION_SAMPLES) as OasVersion[];
 
+function createRefResolver() {
+    let deadline: AbortSignal | undefined;
+
+    const resolve = async (ref: { href(): string }): Promise<string> => {
+        const url = ref.href();
+        deadline ??= createFetchDeadline();
+        try {
+            return await fetchRemoteText(url, deadline);
+        } catch (err: unknown) {
+            throw new AppError('SPEC_REF_FETCH_FAILED', { url, reason: describeFetchError(err) });
+        }
+    };
+
+    return new Resolver({ resolvers: { http: { resolve }, https: { resolve } } });
+}
+
 export function createOasSpectral(rulesConfig: Record<string, boolean> = {}) {
     const rules: Record<string, any> = {};
     for (const [name, enabled] of Object.entries(rulesConfig)) {
         rules[name] = enabled ? true : 'off';
     }
 
-    const spectral = new Spectral();
+    const spectral = new Spectral({ resolver: createRefResolver() });
     spectral.setRuleset({
         extends: [
             [oas as any, 'recommended'],

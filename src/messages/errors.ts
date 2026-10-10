@@ -71,6 +71,10 @@ const ERROR_MESSAGES = {
         status: 400,
         message: ({ reason }) => `Não foi possível baixar a especificação OpenAPI (${reason}).`,
     }),
+    SPEC_REF_FETCH_FAILED: entry<{ url: string; reason: string }>({
+        status: 400,
+        message: ({ url, reason }) => `Não foi possível baixar a referência externa ${url} (${reason}).`,
+    }),
     SPEC_PARSE_FAILED: entry<{ detail: string }>({
         status: 400,
         message: ({ detail }) => `A especificação OpenAPI não é um JSON nem um YAML válido (YAML: ${detail}).`,
