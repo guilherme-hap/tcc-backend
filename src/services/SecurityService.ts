@@ -7,6 +7,12 @@ import type { ISecurityCheckResult } from '../interfaces/evaluation.interface.js
 
 type Headers = Record<string, string | undefined>;
 
+interface ProbeOptions {
+    timeout: number;
+    maxRedirects?: number;
+    headers?: Record<string, string>;
+}
+
 const REQUEST_TIMEOUT_MS = 10_000;
 const REDIRECT_PROBE_TIMEOUT_MS = 5_000;
 const CONNECT_PROBE_TIMEOUT_MS = 3_000;
@@ -39,30 +45,38 @@ export class SecurityService {
 
     private async fetchHeaders(targetUrl: string): Promise<AxiosResponse> {
         try {
-            const headResponse = await axios.head(targetUrl, { timeout: REQUEST_TIMEOUT_MS, validateStatus: () => true });
+            const headResponse = await this.requestHeaders('HEAD', targetUrl, { timeout: REQUEST_TIMEOUT_MS });
             if (headResponse.status !== 405) {
                 return headResponse;
             }
         } catch {
         }
         try {
-            return await axios.get(targetUrl, { timeout: REQUEST_TIMEOUT_MS, validateStatus: () => true });
+            return await this.requestHeaders('GET', targetUrl, { timeout: REQUEST_TIMEOUT_MS });
         } catch (error) {
             const detail = error instanceof Error ? error.message : String(error);
             throw new AppError('SECURITY_TARGET_UNREACHABLE', { detail });
         }
     }
 
-    private async probeRequest(
-        url: string,
-        options: { timeout: number; maxRedirects?: number; headers?: Record<string, string> },
-    ): Promise<AxiosResponse> {
-        const config = { ...options, validateStatus: () => true };
-        const headResponse = await axios.head(url, config);
+    private async probeRequest(url: string, options: ProbeOptions): Promise<AxiosResponse> {
+        const headResponse = await this.requestHeaders('HEAD', url, options);
         if (headResponse.status !== 405) {
             return headResponse;
         }
-        return await axios.get(url, config);
+        return await this.requestHeaders('GET', url, options);
+    }
+
+    private async requestHeaders(method: 'HEAD' | 'GET', url: string, options: ProbeOptions): Promise<AxiosResponse> {
+        const response = await axios.request({
+            ...options,
+            url,
+            method,
+            responseType: 'stream',
+            validateStatus: () => true,
+        });
+        response.data.destroy();
+        return response;
     }
 
     private checkHttps(targetUrl: string): ISecurityCheckResult {
