@@ -1,8 +1,14 @@
-import { In } from 'typeorm';
+import { And, ILike, In, LessThan, MoreThanOrEqual } from 'typeorm';
+import type { FindOperator, FindOptionsWhere } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
 import { EvaluationType, FailureCode, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
+import type { ListEvaluationsQuery } from '../schemas/evaluation.schema.js';
+
+function escapeLikePattern(term: string): string {
+    return term.replace(/[\\%_]/g, '\\$&');
+}
 
 export class EvaluationLifecycleService {
     private get repository() {
@@ -64,5 +70,28 @@ export class EvaluationLifecycleService {
 
     async findById(evaluationId: string): Promise<Evaluation | null> {
         return this.repository.findOneBy({ id: evaluationId });
+    }
+
+    async listByUser(userId: string, query: ListEvaluationsQuery): Promise<{ items: Evaluation[]; total: number }> {
+        const where: FindOptionsWhere<Evaluation> = { userId };
+
+        if (query.search) where.openApiUrl = ILike(`%${escapeLikePattern(query.search)}%`);
+        if (query.type) where.evaluationType = query.type;
+        if (query.status) where.status = In(query.status);
+
+        const period: FindOperator<Date>[] = [];
+        if (query.from) period.push(MoreThanOrEqual(new Date(query.from)));
+        if (query.to) period.push(LessThan(new Date(query.to)));
+        if (period.length > 0) where.createdAt = And(...period);
+
+        const [items, total] = await this.repository.findAndCount({
+            select: { id: true, evaluationType: true, status: true, finalScore: true, openApiUrl: true, createdAt: true },
+            where,
+            order: { createdAt: 'DESC', id: 'DESC' },
+            skip: (query.page - 1) * query.limit,
+            take: query.limit,
+        });
+
+        return { items, total };
     }
 }

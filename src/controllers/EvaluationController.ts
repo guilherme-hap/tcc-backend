@@ -5,6 +5,8 @@ import type { EvaluationType } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { AuthenticatedRequest } from '../middlewares/optionalAuth.js';
 import type { Evaluation } from '../entities/Evaluation.js';
+import { parseOrThrow } from '../utils/parseOrThrow.js';
+import { listEvaluationsQuerySchema } from '../schemas/evaluation.schema.js';
 
 function toEvaluationResponse(evaluation: Evaluation) {
     return {
@@ -43,7 +45,27 @@ export class EvaluationController {
         res.status(202).json(result);
     };
 
-    public getEvaluation = async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
+    public listEvaluations = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        const query = parseOrThrow(listEvaluationsQuerySchema, req.query);
+        const { items, total } = await this.lifecycle.listByUser(req.userId!, query);
+
+        res.status(200).json({
+            items: items.map((evaluation) => ({
+                id: evaluation.id,
+                evaluationType: evaluation.evaluationType,
+                status: evaluation.status,
+                finalScore: evaluation.finalScore,
+                openApiUrl: evaluation.openApiUrl,
+                createdAt: evaluation.createdAt,
+            })),
+            page: query.page,
+            limit: query.limit,
+            total,
+            totalPages: Math.ceil(total / query.limit),
+        });
+    };
+
+    public getEvaluation =async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
         const evaluation = await this.lifecycle.findById(req.params.id);
         if (!evaluation) {
             throw new AppError('EVALUATION_NOT_FOUND');

@@ -98,6 +98,35 @@ export const fullEvaluationRequestSchema = z
 
 export type FullEvaluationRequestInput = z.infer<typeof fullEvaluationRequestSchema>;
 
+const evaluationTypeEnum = z.enum(['contract', 'performance', 'security', 'full']);
+const evaluationStatusEnum = z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'PARTIAL', 'FAILED']);
+
+export const listEvaluationsQuerySchema = z
+    .object({
+        page: z.coerce.number().int().min(1).default(1),
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+        search: z.string().trim().max(200).optional(),
+        type: evaluationTypeEnum.optional(),
+        status: z
+            .string()
+            .transform((value) => value.split(',').map((item) => item.trim()))
+            .pipe(z.array(evaluationStatusEnum))
+            .optional(),
+        from: z.iso.datetime({ offset: true }).optional(),
+        to: z.iso.datetime({ offset: true }).optional(),
+    })
+    .superRefine((query, ctx) => {
+        if (query.from !== undefined && query.to !== undefined && Date.parse(query.from) >= Date.parse(query.to)) {
+            ctx.addIssue({
+                code: 'custom',
+                path: ['to'],
+                message: 'O fim do período precisa ser posterior ao início.',
+            });
+        }
+    });
+
+export type ListEvaluationsQuery = z.infer<typeof listEvaluationsQuerySchema>;
+
 export const EVALUATION_SCHEMAS: { [T in EvaluationType]: z.ZodType<EvaluationRequestMap[T]> } = {
     contract: contractRequestSchema,
     performance: performanceRequestSchema,

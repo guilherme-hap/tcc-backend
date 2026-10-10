@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { EvaluationController } from '../controllers/EvaluationController.js';
 import { optionalAuth } from '../middlewares/optionalAuth.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
 import { validate } from '../middlewares/validate.js';
 import { validateIdParam } from '../middlewares/validateIdParam.js';
 import {
@@ -416,6 +417,113 @@ const evaluationController = new EvaluationController();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *
+ * /api/evaluations:
+ *   get:
+ *     summary: "Lista as avaliações do usuário autenticado (histórico)"
+ *     description: "Retorna as avaliações criadas com a conta, da mais recente para a mais antiga, com paginação e filtros. Traz só os campos de listagem; o resultado completo fica em GET /api/evaluations/{id}. Avaliações anônimas (criadas sem token) não entram na lista."
+ *     tags: [Evaluation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: "Página, a partir de 1. Página além da última devolve items vazio."
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: "Itens por página."
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           maxLength: 200
+ *         description: "Trecho da URL da especificação (openApiUrl), sem diferenciar maiúsculas de minúsculas."
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [contract, performance, security, full]
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: "Um ou mais status separados por vírgula (PENDING, RUNNING, COMPLETED, PARTIAL, FAILED)."
+ *         example: "PENDING,RUNNING"
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: "Início do período, inclusivo (createdAt >= from). Data e hora ISO 8601 com fuso (Z ou offset)."
+ *         example: "2026-10-10T03:00:00.000Z"
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: "Fim do período, exclusivo (createdAt < to). Precisa ser posterior a from. Para um dia inteiro, use a meia-noite do dia seguinte."
+ *         example: "2026-10-11T03:00:00.000Z"
+ *     responses:
+ *       200:
+ *         description: "Página do histórico."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       evaluationType:
+ *                         type: string
+ *                         enum: [contract, performance, security, full]
+ *                       status:
+ *                         type: string
+ *                         enum: [PENDING, RUNNING, COMPLETED, PARTIAL, FAILED]
+ *                       finalScore:
+ *                         type: number
+ *                         nullable: true
+ *                       openApiUrl:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *                   description: "Total de avaliações que atendem aos filtros."
+ *                 totalPages:
+ *                   type: integer
+ *                   description: "Total de páginas; 0 quando nenhuma avaliação atende aos filtros."
+ *       400:
+ *         description: "Parâmetro de consulta inválido (exemplo: page menor que 1, limit acima de 100, status desconhecido, to anterior ou igual a from)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: "Token ausente, inválido ou expirado."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
  * /api/evaluations/{id}:
  *   get:
  *     summary: "Consulta o status e o resultado detalhado de uma avaliação"
@@ -752,6 +860,7 @@ router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluati
 router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluate('performance'));
 router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluate('security'));
 router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluate('full'));
+router.get('/', requireAuth, evaluationController.listEvaluations);
 router.get('/:id', optionalAuth, validateIdParam('EVALUATION_NOT_FOUND'), evaluationController.getEvaluation);
 
 export default router;
