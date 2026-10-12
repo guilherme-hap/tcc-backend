@@ -7,12 +7,17 @@ function toAppError(err: unknown): AppError {
         return err;
     }
 
-    const type = (err as { type?: unknown } | null)?.type;
+    const { type, status, statusCode } = (err ?? {}) as { type?: unknown; status?: unknown; statusCode?: unknown };
     if (type === 'entity.parse.failed') {
         return new AppError('REQUEST_BODY_MALFORMED');
     }
     if (type === 'entity.too.large') {
         return new AppError('REQUEST_BODY_TOO_LARGE');
+    }
+
+    const httpStatus = status ?? statusCode;
+    if (typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500) {
+        return new AppError('REQUEST_INVALID');
     }
 
     console.error('Unhandled internal server error:', err);

@@ -26,6 +26,10 @@ const ERROR_MESSAGES = {
         status: 413,
         message: () => 'O corpo da requisição excede o tamanho máximo permitido.',
     }),
+    REQUEST_INVALID: entry({
+        status: 400,
+        message: () => 'A requisição não pôde ser interpretada (URL ou cabeçalhos inválidos).',
+    }),
     ROUTE_NOT_FOUND: entry({
         status: 404,
         message: () => 'Rota não encontrada.',
