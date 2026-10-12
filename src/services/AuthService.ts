@@ -4,6 +4,7 @@ import { AppDataSource } from '../config/data-source.js';
 import { User } from '../entities/User.js';
 import { AppError } from '../errors/AppError.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
+import { isUniqueViolation } from '../utils/isUniqueViolation.js';
 
 export class AuthService {
     private get repository() {
@@ -20,7 +21,14 @@ export class AuthService {
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
         const user = this.repository.create({ email, passwordHash });
-        await this.repository.save(user);
+        try {
+            await this.repository.save(user);
+        } catch (error) {
+            if (isUniqueViolation(error)) {
+                throw new AppError('AUTH_EMAIL_IN_USE');
+            }
+            throw error;
+        }
 
         const token = this.generateToken(user);
 

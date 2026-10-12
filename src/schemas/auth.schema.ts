@@ -1,14 +1,14 @@
 import { z } from 'zod';
 
 export const registerSchema = z.object({
-    email: z.email({ error: (issue) => (issue.input === undefined ? undefined : 'E-mail inválido') }),
+    email: z.email({ error: (issue) => (issue.input === undefined ? undefined : 'E-mail inválido') }).toLowerCase(),
     password: z.string().min(8, 'A senha deve ter ao menos 8 caracteres'),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
-    email: z.string().min(1, 'Informe o e-mail'),
+    email: z.string().min(1, 'Informe o e-mail').toLowerCase(),
     password: z.string().min(1, 'Informe a senha'),
 });
 
