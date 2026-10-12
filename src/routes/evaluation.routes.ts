@@ -615,6 +615,21 @@ const evaluationController = new EvaluationController();
  *                     loadTestOptions:
  *                       type: object
  *                       description: "Opções do teste de carga enviadas, sem headers e body."
+ *                     severityWeights:
+ *                       type: object
+ *                       description: "Pesos por severidade enviados no pedido (contract e full)."
+ *                       additionalProperties:
+ *                         type: number
+ *                     weights:
+ *                       type: object
+ *                       description: "Pesos dos pilares enviados no pedido (full)."
+ *                       properties:
+ *                         contract:
+ *                           type: number
+ *                         performance:
+ *                           type: number
+ *                         security:
+ *                           type: number
  *                     minScore:
  *                       type: number
  *                       description: "Nota final mínima enviada no pedido (critério de aprovação)."

@@ -97,6 +97,8 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
 export interface IEvaluationRequestSettings {
     rulesConfig?: Record<string, boolean>;
     loadTestOptions?: Omit<LoadTestOptionsInput, 'headers' | 'body'>;
+    severityWeights?: ContractRequestInput['severityWeights'];
+    weights?: FullEvaluationRequestInput['weights'];
     minScore?: number;
 }
 
