@@ -97,6 +97,7 @@ export type ILoadTestOptions = LoadTestOptionsInput & {
 export interface IEvaluationRequestSettings {
     rulesConfig?: Record<string, boolean>;
     loadTestOptions?: Omit<LoadTestOptionsInput, 'headers' | 'body'>;
+    minScore?: number;
 }
 
 export type FailureCode = ErrorCode | AuditMessageCode;

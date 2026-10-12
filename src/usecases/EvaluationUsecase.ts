@@ -12,6 +12,7 @@ interface PersistedRequestFields {
     targets?: IPerformanceTarget[];
     rulesConfig?: Record<string, boolean>;
     loadTestOptions?: LoadTestOptionsInput;
+    minScore?: number;
 }
 
 function toRequestSettings(request: PersistedRequestFields): IEvaluationRequestSettings | null {
@@ -22,6 +23,7 @@ function toRequestSettings(request: PersistedRequestFields): IEvaluationRequestS
         const { headers: _headers, body: _body, ...loadTestOptions } = request.loadTestOptions;
         settings.loadTestOptions = loadTestOptions;
     }
+    if (request.minScore !== undefined) settings.minScore = request.minScore;
 
     return Object.keys(settings).length > 0 ? settings : null;
 }

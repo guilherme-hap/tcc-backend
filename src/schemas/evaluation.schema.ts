@@ -4,12 +4,13 @@ import { DEFAULT_WEIGHTS } from '../utils/weights.js';
 import { MAX_TARGETS, validateTargetApdexWindow, validateTotalDuration } from '../utils/loadTestLimits.js';
 import { validateTargetMethods } from '../utils/httpMethodUtils.js';
 import { loadTestOptionsSchema, type LoadTestOptionsInput } from './loadTestOptions.schema.js';
-import { httpMethodSchema, httpUrl, rulesConfigSchema, severityWeightsSchema } from './shared.js';
+import { httpMethodSchema, httpUrl, minScoreSchema, rulesConfigSchema, severityWeightsSchema } from './shared.js';
 
 export const contractRequestSchema = z.object({
     openApiUrl: httpUrl,
     rulesConfig: rulesConfigSchema.optional(),
     severityWeights: severityWeightsSchema.optional(),
+    minScore: minScoreSchema.optional(),
 });
 
 export type ContractRequestInput = z.infer<typeof contractRequestSchema>;
@@ -17,6 +18,7 @@ export type ContractRequestInput = z.infer<typeof contractRequestSchema>;
 export const securityRequestSchema = z.object({
     openApiUrl: httpUrl,
     apiBaseUrl: httpUrl.trim().optional(),
+    minScore: minScoreSchema.optional(),
 });
 
 export type SecurityRequestInput = z.infer<typeof securityRequestSchema>;
@@ -44,6 +46,7 @@ export const performanceRequestSchema = z
         apiBaseUrl: httpUrl.trim().optional(),
         targets: z.array(performanceTargetSchema).min(1, 'Informe ao menos um alvo').max(MAX_TARGETS, `São permitidos no máximo ${MAX_TARGETS} alvos`),
         loadTestOptions: loadTestOptionsSchema.optional(),
+        minScore: minScoreSchema.optional(),
     })
     .superRefine(refineTargets);
 
@@ -57,6 +60,7 @@ export const fullEvaluationRequestSchema = z
         rulesConfig: rulesConfigSchema.optional(),
         severityWeights: severityWeightsSchema.optional(),
         loadTestOptions: loadTestOptionsSchema.optional(),
+        minScore: minScoreSchema.optional(),
         weights: z
             .object({
                 contract: z.number().min(0).optional(),

@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../middlewares/optionalAuth.js';
 import type { Evaluation } from '../entities/Evaluation.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { listEvaluationsQuerySchema } from '../schemas/evaluation.schema.js';
+import { evaluationPassed } from '../utils/qualityGate.js';
 
 function toEvaluationResponse(evaluation: Evaluation) {
     return {
@@ -19,6 +20,7 @@ function toEvaluationResponse(evaluation: Evaluation) {
         visibility: evaluation.userId ? 'private' : 'anonymous',
         status: evaluation.status,
         finalScore: evaluation.finalScore,
+        passed: evaluationPassed(evaluation),
         pillarScores: evaluation.pillarScores,
         scoring: evaluation.scoring,
         scoreBreakdown: evaluation.scoreBreakdown,

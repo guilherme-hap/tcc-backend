@@ -14,6 +14,8 @@ export const httpUrl = z.url({ protocol: /^https?$/ });
 
 export const idSchema = z.guid();
 
+export const minScoreSchema = z.number().min(0).max(100);
+
 export const rulesConfigSchema = z.record(z.string(), z.boolean()).superRefine((rules, ctx) => {
     for (const name of Object.keys(rules)) {
         if (!isSpectralRule(name)) {

@@ -71,6 +71,12 @@ const evaluationController = new EvaluationController();
  *                     maximum: 1000
  *                 additionalProperties: false
  *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
+ *               minScore:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 description: "Nota final mínima (0-100) do critério de aprovação, pensado para pipelines de CI/CD. Não altera a execução nem a nota: quando informada, o GET /api/evaluations/{id} devolve passed = true somente se a avaliação terminar COMPLETED com finalScore maior ou igual a ela."
+ *                 example: 70
  *     responses:
  *       202:
  *         description: "Avaliação enfileirada com sucesso."
@@ -193,6 +199,12 @@ const evaluationController = new EvaluationController();
  *                     type: boolean
  *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros que você não controla."
  *                     default: false
+ *               minScore:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 description: "Nota final mínima (0-100) do critério de aprovação, pensado para pipelines de CI/CD. Não altera a execução nem a nota: quando informada, o GET /api/evaluations/{id} devolve passed = true somente se a avaliação terminar COMPLETED com finalScore maior ou igual a ela."
+ *                 example: 70
  *     responses:
  *       202:
  *         description: "Avaliação enfileirada com sucesso."
@@ -358,6 +370,12 @@ const evaluationController = new EvaluationController();
  *                   security:
  *                     type: number
  *                     example: 0.2
+ *               minScore:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 description: "Nota final mínima (0-100) do critério de aprovação, pensado para pipelines de CI/CD. Não altera a execução nem a nota: quando informada, o GET /api/evaluations/{id} devolve passed = true somente se a avaliação terminar COMPLETED com finalScore maior ou igual a ela."
+ *                 example: 70
  *     responses:
  *       202:
  *         description: "Avaliação enfileirada com sucesso."
@@ -405,6 +423,12 @@ const evaluationController = new EvaluationController();
  *                 type: string
  *                 description: "URL raiz opcional para sobrescrever o servidor da API. Caso omitida, será resolvida automaticamente do contrato OpenAPI. Para resultados mais fiéis, prefira omitir este campo para que a auditoria reflita os headers do servidor público real."
  *                 example: "https://petstore.swagger.io/v2"
+ *               minScore:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 description: "Nota final mínima (0-100) do critério de aprovação, pensado para pipelines de CI/CD. Não altera a execução nem a nota: quando informada, o GET /api/evaluations/{id} devolve passed = true somente se a avaliação terminar COMPLETED com finalScore maior ou igual a ela."
+ *                 example: 70
  *     responses:
  *       202:
  *         description: "Avaliação enfileirada com sucesso."
@@ -591,6 +615,9 @@ const evaluationController = new EvaluationController();
  *                     loadTestOptions:
  *                       type: object
  *                       description: "Opções do teste de carga enviadas, sem headers e body."
+ *                     minScore:
+ *                       type: number
+ *                       description: "Nota final mínima enviada no pedido (critério de aprovação)."
  *                 evaluationType:
  *                   type: string
  *                   enum: [contract, performance, security, full]
@@ -605,6 +632,10 @@ const evaluationController = new EvaluationController();
  *                   type: number
  *                   nullable: true
  *                   description: "Nota final (0-100) = soma de pillarScores × scoring.pillarWeights. Nula em PARTIAL e FAILED."
+ *                 passed:
+ *                   type: boolean
+ *                   nullable: true
+ *                   description: "Critério de aprovação do pedido (requestSettings.minScore). true: terminou COMPLETED com finalScore maior ou igual a minScore. false: nota abaixo do mínimo, ou terminou PARTIAL ou FAILED. null: o pedido não informou minScore, ou a avaliação ainda está PENDING ou RUNNING."
  *                 pillarScores:
  *                   type: object
  *                   nullable: true
