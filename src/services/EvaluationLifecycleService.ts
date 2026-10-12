@@ -77,6 +77,17 @@ export class EvaluationLifecycleService {
         } as QueryDeepPartialEntity<Evaluation>);
     }
 
+    async failOrphaned(failure: { message: string; code: FailureCode }): Promise<number> {
+        const result = await this.repository
+            .createQueryBuilder()
+            .update(Evaluation)
+            .set({ status: 'FAILED', errorMessage: failure.message, errorCode: failure.code, finishedAt: new Date() })
+            .where('status IN (:...statuses)', { statuses: ['PENDING', 'RUNNING'] })
+            .andWhere('NOT EXISTS (SELECT 1 FROM evaluation_jobs job WHERE job.evaluation_id = evaluations.id)')
+            .execute();
+        return result.affected ?? 0;
+    }
+
     async findById(evaluationId: string): Promise<Evaluation | null> {
         return this.repository.findOneBy({ id: evaluationId });
     }

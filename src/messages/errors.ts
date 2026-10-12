@@ -114,6 +114,12 @@ const ERROR_MESSAGES = {
         status: 500,
         message: () => 'Erro inesperado durante a execução.',
     }),
+    EXECUTION_INTERRUPTED: entry({
+        status: 500,
+        message: () =>
+            'A execução foi interrompida antes de registrar o resultado (falha ou reinício do auditor) e não será retomada. ' +
+            'Envie a avaliação novamente.',
+    }),
 };
 
 export type ErrorCode = keyof typeof ERROR_MESSAGES;

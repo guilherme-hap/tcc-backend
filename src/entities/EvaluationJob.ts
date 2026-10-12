@@ -4,7 +4,7 @@ import {
 } from 'typeorm';
 import type { EvaluationType } from '../interfaces/evaluation.interface.js';
 
-export type EvaluationJobStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
+export type EvaluationJobStatus = 'PENDING' | 'RUNNING';
 
 @Entity('evaluation_jobs')
 @Index('IDX_evaluation_jobs_poll', ['type', 'status', 'createdAt'])
@@ -23,6 +23,9 @@ export class EvaluationJob {
 
     @Column({ name: 'status', type: 'varchar', default: 'PENDING' })
     status!: EvaluationJobStatus;
+
+    @Column({ name: 'attempts', type: 'int', default: 0 })
+    attempts!: number;
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;

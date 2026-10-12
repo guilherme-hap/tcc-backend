@@ -896,7 +896,7 @@ const evaluationController = new EvaluationController();
  *                 errorCode:
  *                   type: string
  *                   nullable: true
- *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver failedPillars), EVALUATION_ENQUEUE_FAILED ou EXECUTION_FAILED quando a falha ocorreu fora dos pilares."
+ *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver failedPillars), EXECUTION_FAILED quando a falha ocorreu fora dos pilares, EXECUTION_INTERRUPTED quando a execução foi interrompida (falha ou reinício do auditor) e não foi retomada."
  *                   example: "SPEC_FETCH_FAILED"
  *                 startedAt:
  *                   type: string

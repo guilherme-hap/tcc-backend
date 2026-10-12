@@ -1,20 +1,33 @@
 import pg from 'pg';
+import { LessThan } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 import { AppDataSource } from '../config/data-source.js';
 import { dbConnection } from '../config/database.js';
-import { EvaluationJob as EvaluationJobEntity, EvaluationJobStatus } from '../entities/EvaluationJob.js';
+import { EvaluationJob as EvaluationJobEntity } from '../entities/EvaluationJob.js';
 import type { EvaluationJob, EvaluationJobOf, EvaluationType } from '../interfaces/evaluation.interface.js';
 
 type JobHandler = (job: EvaluationJob) => Promise<void>;
+
+type ClaimedJob = EvaluationJob & { id: string; attempts: number };
+
+interface JobRow {
+    id: string;
+    evaluation_id: string;
+    type: EvaluationType;
+    payload: unknown;
+    attempts: number;
+}
 
 export interface QueueConsumer {
     type: EvaluationType;
     concurrency: number;
     handler: JobHandler;
+    onGiveUp: JobHandler;
 }
 
 const IDLE_POLL_INTERVAL_MS = 30_000;
 const LISTEN_MAX_RECONNECT_DELAY_MS = 30_000;
+const MAX_JOB_ATTEMPTS = 3;
 
 function channelOf(type: EvaluationType): string {
     return `evaluation_jobs_${type}`;
@@ -60,16 +73,19 @@ class PostgresEvaluationQueue {
     }
 
     async recoverOrphanedJobs(): Promise<void> {
-        const result = await AppDataSource.getRepository(EvaluationJobEntity)
-            .createQueryBuilder()
-            .update(EvaluationJobEntity)
-            .set({ status: 'PENDING' })
-            .where('status = :status', { status: 'RUNNING' })
-            .execute();
+        const repository = AppDataSource.getRepository(EvaluationJobEntity);
 
-        const count = result.affected ?? 0;
-        if (count > 0) {
-            console.log(`[Queue] Recovered ${count} orphaned jobs on startup`);
+        const requeued = await repository.update(
+            { status: 'RUNNING', attempts: LessThan(MAX_JOB_ATTEMPTS) },
+            { status: 'PENDING' },
+        );
+        const abandoned = await repository.delete({ status: 'RUNNING' });
+
+        if (requeued.affected) {
+            console.log(`[Queue] Recovered ${requeued.affected} orphaned jobs on startup`);
+        }
+        if (abandoned.affected) {
+            console.log(`[Queue] Dropped ${abandoned.affected} orphaned jobs after ${MAX_JOB_ATTEMPTS} attempts`);
         }
     }
 
@@ -80,12 +96,12 @@ class PostgresEvaluationQueue {
 
         await this.connectListener();
 
-        for (const { type, concurrency, handler } of consumers) {
-            const trigger = this.triggers.get(channelOf(type))!;
-            for (let i = 0; i < concurrency; i++) {
-                this.consumerLoop(type, i, trigger, handler);
+        for (const consumer of consumers) {
+            const trigger = this.triggers.get(channelOf(consumer.type))!;
+            for (let i = 0; i < consumer.concurrency; i++) {
+                this.consumerLoop(consumer, i, trigger);
             }
-            console.log(`[Queue][${type}] ${concurrency} consumer loop(s) started`);
+            console.log(`[Queue][${consumer.type}] ${consumer.concurrency} consumer loop(s) started`);
         }
     }
 
@@ -133,27 +149,16 @@ class PostgresEvaluationQueue {
         }
     }
 
-    private async consumerLoop(
-        type: EvaluationType,
-        loopIndex: number,
-        trigger: WakeTrigger,
-        handler: JobHandler,
-    ): Promise<void> {
-        const tag = `[Queue][${type}][loop-${loopIndex}]`;
+    private async consumerLoop(consumer: QueueConsumer, loopIndex: number, trigger: WakeTrigger): Promise<void> {
+        const tag = `[Queue][${consumer.type}][loop-${loopIndex}]`;
 
         while (true) {
             try {
                 const seenGeneration = trigger.generation();
-                const job = await this.claimJob(type);
+                const job = await this.claimJob(consumer.type);
 
                 if (job) {
-                    try {
-                        await handler(job);
-                        await this.finishJob(job.id, 'DONE');
-                    } catch (handlerErr: any) {
-                        console.error(`${tag} Handler error for job ${job.id}:`, handlerErr.message);
-                        await this.finishJob(job.id, 'FAILED');
-                    }
+                    await this.runJob(tag, job, consumer);
                     continue;
                 }
                 await trigger.waitSince(seenGeneration, IDLE_POLL_INTERVAL_MS);
@@ -164,15 +169,30 @@ class PostgresEvaluationQueue {
         }
     }
 
-    private async claimJob(
-        type: EvaluationType,
-    ): Promise<(EvaluationJob & { id: string }) | null> {
+    private async runJob(tag: string, job: ClaimedJob, { handler, onGiveUp }: QueueConsumer): Promise<void> {
+        try {
+            await handler(job);
+        } catch (handlerErr: any) {
+            console.error(
+                `${tag} Handler error for job ${job.id} (attempt ${job.attempts}/${MAX_JOB_ATTEMPTS}):`,
+                handlerErr.message,
+            );
+            if (job.attempts < MAX_JOB_ATTEMPTS) {
+                await this.requeueJob(job.id);
+                return;
+            }
+            await onGiveUp(job);
+        }
+        await this.removeJob(job.id);
+    }
+
+    private async claimJob(type: EvaluationType): Promise<ClaimedJob | null> {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
         try {
-            const rows: EvaluationJobEntity[] = await queryRunner.query(
+            const rows: JobRow[] = await queryRunner.query(
                 `SELECT * FROM evaluation_jobs
                  WHERE status = 'PENDING' AND type = $1
                  ORDER BY created_at
@@ -187,22 +207,22 @@ class PostgresEvaluationQueue {
             }
 
             const row = rows[0];
+            const attempts = row.attempts + 1;
 
             await queryRunner.query(
-                `UPDATE evaluation_jobs SET status = 'RUNNING', updated_at = NOW() WHERE id = $1`,
-                [row.id],
+                `UPDATE evaluation_jobs SET status = 'RUNNING', attempts = $2, updated_at = NOW() WHERE id = $1`,
+                [row.id, attempts],
             );
 
             await queryRunner.commitTransaction();
 
-            const rawRow = row as Record<string, any>;
-
             return {
-                id: rawRow.id as string,
-                evaluationId: (rawRow.evaluation_id ?? rawRow.evaluationId) as string,
-                type: rawRow.type,
-                params: rawRow.payload,
-            } as EvaluationJob & { id: string };
+                id: row.id,
+                evaluationId: row.evaluation_id,
+                type: row.type,
+                params: row.payload,
+                attempts,
+            } as ClaimedJob;
         } catch (err) {
             await queryRunner.rollbackTransaction();
             throw err;
@@ -211,15 +231,15 @@ class PostgresEvaluationQueue {
         }
     }
 
-    private async finishJob(jobId: string, status: Extract<EvaluationJobStatus, 'DONE' | 'FAILED'>): Promise<void> {
+    private async requeueJob(jobId: string): Promise<void> {
         await AppDataSource.query(
-            `UPDATE evaluation_jobs
-             SET status = $2,
-                 payload = payload #- '{loadTestOptions,headers}' #- '{loadTestOptions,body}',
-                 updated_at = NOW()
-             WHERE id = $1`,
-            [jobId, status],
+            `UPDATE evaluation_jobs SET status = 'PENDING', updated_at = NOW() WHERE id = $1`,
+            [jobId],
         );
+    }
+
+    private async removeJob(jobId: string): Promise<void> {
+        await AppDataSource.query(`DELETE FROM evaluation_jobs WHERE id = $1`, [jobId]);
     }
 }
 

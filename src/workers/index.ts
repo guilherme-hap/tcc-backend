@@ -1,6 +1,7 @@
 import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { EvaluationWorker } from './EvaluationWorker.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
+import { AppError } from '../errors/AppError.js';
 import type { EvaluationJob, EvaluationType } from '../interfaces/evaluation.interface.js';
 
 const worker = new EvaluationWorker();
@@ -14,8 +15,17 @@ async function dispatch(job: EvaluationJob): Promise<void> {
     await worker.handle(job);
 }
 
+async function giveUp(job: EvaluationJob): Promise<void> {
+    await lifecycle.fail(job.evaluationId, new AppError('EXECUTION_INTERRUPTED'));
+}
+
 export async function registerWorkers(): Promise<void> {
     await evaluationQueue.recoverOrphanedJobs();
+
+    const orphaned = await lifecycle.failOrphaned(new AppError('EXECUTION_INTERRUPTED'));
+    if (orphaned > 0) {
+        console.log(`[Worker] Failed ${orphaned} evaluations left without a job`);
+    }
 
     const types = ['contract', 'performance', 'security', 'full'] as const satisfies readonly EvaluationType[];
 
@@ -23,5 +33,6 @@ export async function registerWorkers(): Promise<void> {
         type,
         concurrency: Number(process.env[`${type.toUpperCase()}_WORKER_CONCURRENCY`]) || (['contract', 'security'].includes(type) ? 10 : 2),
         handler: dispatch,
+        onGiveUp: giveUp,
     })));
 }

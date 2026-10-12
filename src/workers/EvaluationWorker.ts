@@ -52,11 +52,7 @@ export class EvaluationWorker {
             await this.process(job);
         } catch (error: unknown) {
             console.error(`[Worker] Error processing evaluation ${evaluationId}:`, error);
-            try {
-                await this.lifecycle.fail(evaluationId, error instanceof AppError ? error : new AppError('EXECUTION_FAILED'));
-            } catch (persistError) {
-                console.error(`[Worker] Failed to persist FAILED status for ${evaluationId}:`, persistError);
-            }
+            await this.lifecycle.fail(evaluationId, error instanceof AppError ? error : new AppError('EXECUTION_FAILED'));
         }
     }
 
