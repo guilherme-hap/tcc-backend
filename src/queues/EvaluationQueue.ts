@@ -1,4 +1,5 @@
 import pg from 'pg';
+import type { EntityManager } from 'typeorm';
 import { AppDataSource } from '../config/data-source.js';
 import { dbConnection } from '../config/database.js';
 import { EvaluationJob as EvaluationJobEntity, EvaluationJobStatus } from '../entities/EvaluationJob.js';
@@ -48,25 +49,14 @@ type WakeTrigger = ReturnType<typeof createWakeTrigger>;
 class PostgresEvaluationQueue {
     private triggers = new Map<string, WakeTrigger>();
 
-    async enqueue<T extends EvaluationType>(job: EvaluationJobOf<T>): Promise<void> {
-        const queryRunner = AppDataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-        try {
-            await queryRunner.manager.save(EvaluationJobEntity, {
-                evaluationId: job.evaluationId,
-                type: job.type,
-                payload: job.params,
-                status: 'PENDING' as const,
-            });
-            await queryRunner.query(`NOTIFY ${channelOf(job.type)}`);
-            await queryRunner.commitTransaction();
-        } catch (err) {
-            await queryRunner.rollbackTransaction();
-            throw err;
-        } finally {
-            await queryRunner.release();
-        }
+    async enqueue<T extends EvaluationType>(job: EvaluationJobOf<T>, manager: EntityManager): Promise<void> {
+        await manager.save(EvaluationJobEntity, {
+            evaluationId: job.evaluationId,
+            type: job.type,
+            payload: job.params,
+            status: 'PENDING' as const,
+        });
+        await manager.query(`NOTIFY ${channelOf(job.type)}`);
     }
 
     async recoverOrphanedJobs(): Promise<void> {

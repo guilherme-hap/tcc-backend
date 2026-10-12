@@ -1,5 +1,5 @@
 import { And, ILike, In, LessThan, MoreThanOrEqual } from 'typeorm';
-import type { FindOperator, FindOptionsWhere } from 'typeorm';
+import type { EntityManager, FindOperator, FindOptionsWhere } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
@@ -15,15 +15,19 @@ export class EvaluationLifecycleService {
         return AppDataSource.getRepository(Evaluation);
     }
 
-    async create(data: {
-        openApiUrl: string;
-        apiBaseUrl?: string | null;
-        targets?: IPerformanceTarget[] | null;
-        requestSettings?: IEvaluationRequestSettings | null;
-        evaluationType: EvaluationType;
-        userId?: string | null;
-    }): Promise<Evaluation> {
-        const evaluation = this.repository.create({
+    async create(
+        data: {
+            openApiUrl: string;
+            apiBaseUrl?: string | null;
+            targets?: IPerformanceTarget[] | null;
+            requestSettings?: IEvaluationRequestSettings | null;
+            evaluationType: EvaluationType;
+            userId?: string | null;
+        },
+        manager: EntityManager,
+    ): Promise<Evaluation> {
+        const repository = manager.getRepository(Evaluation);
+        const evaluation = repository.create({
             openApiUrl: data.openApiUrl,
             apiBaseUrl: data.apiBaseUrl || null,
             targets: data.targets || null,
@@ -32,7 +36,7 @@ export class EvaluationLifecycleService {
             userId: data.userId ?? null,
             status: 'PENDING',
         });
-        return this.repository.save(evaluation);
+        return repository.save(evaluation);
     }
 
     async start(evaluationId: string): Promise<boolean> {
