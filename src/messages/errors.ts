@@ -54,6 +54,10 @@ const ERROR_MESSAGES = {
         status: 404,
         message: () => 'API salva não encontrada.',
     }),
+    SAVED_API_ALREADY_EXISTS: entry({
+        status: 409,
+        message: () => 'Você já salvou uma API com esta URL de especificação.',
+    }),
     CUSTOM_RULE_NOT_FOUND: entry({
         status: 404,
         message: () => 'Regra customizada não encontrada.',

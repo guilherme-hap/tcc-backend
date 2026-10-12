@@ -70,6 +70,12 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
+ *       409:
+ *         description: "O usuário já tem uma API salva com a mesma openApiUrl (SAVED_API_ALREADY_EXISTS)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       400:
  *         description: "Erro de validação (campos obrigatórios ausentes, URL sem http/https, rulesConfig não booleano ou com regra fora do catálogo, ou loadTestOptions fora dos limites de carga)."
  *         content:
@@ -145,6 +151,12 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
+ *       409:
+ *         description: "A nova openApiUrl já pertence a outra API salva do usuário (SAVED_API_ALREADY_EXISTS)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       400:
  *         description: "Corpo da requisição vazio ou inválido (mesmas regras da criação)."
  *         content:

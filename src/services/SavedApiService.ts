@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/data-source.js';
 import { SavedApi } from '../entities/SavedApi.js';
 import { AppError } from '../errors/AppError.js';
 import type { CreateSavedApiInput, UpdateSavedApiInput } from '../schemas/savedApi.schema.js';
+import { isUniqueViolation } from '../utils/isUniqueViolation.js';
 
 export class SavedApiService {
     private get repository() {
@@ -16,7 +17,7 @@ export class SavedApiService {
             apiBaseUrl: data.apiBaseUrl || null,
             defaultSettings: data.defaultSettings ?? null,
         });
-        return this.repository.save(savedApi);
+        return this.save(savedApi);
     }
 
     async listByUser(userId: string): Promise<SavedApi[]> {
@@ -42,7 +43,18 @@ export class SavedApiService {
         if (data.apiBaseUrl !== undefined) savedApi.apiBaseUrl = data.apiBaseUrl;
         if (data.defaultSettings !== undefined) savedApi.defaultSettings = data.defaultSettings;
 
-        return this.repository.save(savedApi);
+        return this.save(savedApi);
+    }
+
+    private async save(savedApi: SavedApi): Promise<SavedApi> {
+        try {
+            return await this.repository.save(savedApi);
+        } catch (error) {
+            if (isUniqueViolation(error)) {
+                throw new AppError('SAVED_API_ALREADY_EXISTS');
+            }
+            throw error;
+        }
     }
 
     async delete(id: string, userId: string): Promise<void> {

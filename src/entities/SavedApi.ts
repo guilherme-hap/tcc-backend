@@ -1,12 +1,13 @@
 import {
     Entity, PrimaryGeneratedColumn, Column,
-    CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn,
+    CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Unique,
 } from 'typeorm';
 import type { Relation } from 'typeorm';
 import { User } from './User.js';
 import type { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 
 @Entity('saved_apis')
+@Unique(['userId', 'openApiUrl'])
 export class SavedApi {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
