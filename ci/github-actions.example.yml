@@ -58,7 +58,7 @@ jobs:
           npm ci
           npm run build
           npm start > auditor.log 2>&1 &
-          curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:3000/api/rules > /dev/null
+          curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:3000/api/rules > /dev/null || { cat auditor.log; exit 1; }
 
       - name: Audita a API
         run: >-
