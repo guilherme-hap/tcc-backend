@@ -2,6 +2,7 @@ import {
     Entity, PrimaryGeneratedColumn, Column,
     CreateDateColumn, UpdateDateColumn, OneToMany,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { SavedApi } from './SavedApi.js';
 import { CustomRule } from './CustomRule.js';
 
@@ -17,10 +18,10 @@ export class User {
     passwordHash!: string;
 
     @OneToMany(() => SavedApi, (api) => api.user)
-    savedApis!: SavedApi[];
+    savedApis!: Relation<SavedApi>[];
 
     @OneToMany(() => CustomRule, (rule) => rule.user)
-    customRules!: CustomRule[];
+    customRules!: Relation<CustomRule>[];
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;

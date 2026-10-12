@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import type { Relation } from 'typeorm';
 import type { EvaluationStatus, EvaluationType, IPerformanceTarget, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { FailureCode, IContractResult, IEvaluationRequestSettings, IFailedPillar, IPillarScores, IScoreBreakdown, IScoringParameters, ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
 import { User } from './User.js';
@@ -11,7 +12,7 @@ export class Evaluation {
 
     @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
     @JoinColumn({ name: 'user_id' })
-    user!: User | null;
+    user!: Relation<User> | null;
 
     @Column({ name: 'user_id', type: 'uuid', nullable: true })
     userId!: string | null;

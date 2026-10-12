@@ -2,6 +2,7 @@ import {
     Entity, PrimaryGeneratedColumn, Column,
     CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { User } from './User.js';
 import type { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 
@@ -12,7 +13,7 @@ export class SavedApi {
 
     @ManyToOne(() => User, (user) => user.savedApis, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'user_id' })
-    user!: User;
+    user!: Relation<User>;
 
     @Column({ name: 'user_id', type: 'uuid' })
     userId!: string;

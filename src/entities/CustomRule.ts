@@ -2,6 +2,7 @@ import {
     Entity, PrimaryGeneratedColumn, Column,
     CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn,
 } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { User } from './User.js';
 
 @Entity('custom_rules')
@@ -11,7 +12,7 @@ export class CustomRule {
 
     @ManyToOne(() => User, (user) => user.customRules, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'user_id' })
-    user!: User;
+    user!: Relation<User>;
 
     @Column({ name: 'user_id', type: 'uuid' })
     userId!: string;
