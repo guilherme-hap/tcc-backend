@@ -46,6 +46,8 @@ interface EvaluationResult {
     failedPillars: { pillar: string; error: string }[] | null;
     errorMessage: string | null;
     requestSettings: { minScore?: number } | null;
+    startedAt: string | null;
+    finishedAt: string | null;
 }
 
 class CliFailure extends Error { }
@@ -67,6 +69,13 @@ function pillarScoreRows(evaluation: EvaluationResult): [string, string][] {
 
 function failedPillarRows(evaluation: EvaluationResult): [string, string][] {
     return (evaluation.failedPillars ?? []).map((failed) => [PILLAR_LABELS[failed.pillar] ?? failed.pillar, failed.error]);
+}
+
+function executionTime(evaluation: EvaluationResult): string | null {
+    if (!evaluation.startedAt || !evaluation.finishedAt) return null;
+
+    const seconds = (Date.parse(evaluation.finishedAt) - Date.parse(evaluation.startedAt)) / 1000;
+    return `${seconds.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} s`;
 }
 
 function generalError(evaluation: EvaluationResult): string | null {
@@ -163,6 +172,10 @@ function summarize(evaluation: EvaluationResult, approved: boolean): string[] {
     if (error) {
         lines.push(`Erro: ${error}`);
     }
+    const duration = executionTime(evaluation);
+    if (duration) {
+        lines.push(`Tempo de execução: ${duration}`);
+    }
     lines.push(`Resultado: ${approved ? 'APROVADA' : 'REPROVADA'}`);
     return lines;
 }
@@ -170,11 +183,13 @@ function summarize(evaluation: EvaluationResult, approved: boolean): string[] {
 function toMarkdown(evaluation: EvaluationResult, approved: boolean, resultUrl: string): string {
     const minScore = evaluation.requestSettings?.minScore;
     const error = generalError(evaluation);
+    const duration = executionTime(evaluation);
     const rows = [
         ['Resultado', approved ? 'Aprovada' : 'Reprovada'],
         ['Status', evaluation.status],
         ['Nota final', formatScore(evaluation.finalScore)],
         ['Nota mínima', minScore === undefined ? 'não informada' : formatScore(minScore)],
+        ...(duration ? [['Tempo de execução', duration]] : []),
         ...pillarScoreRows(evaluation),
         ...failedPillarRows(evaluation).map(([pillar, failure]) => [pillar, `não concluído: ${failure}`]),
         ...(error ? [['Erro', error]] : []),
