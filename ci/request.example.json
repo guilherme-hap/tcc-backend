@@ -1,0 +1,12 @@
+{
+  "openApiUrl": "http://localhost:8080/openapi.json",
+  "apiBaseUrl": "http://localhost:8080",
+  "targets": [
+    { "path": "/pets", "method": "GET" }
+  ],
+  "loadTestOptions": {
+    "duration": 10,
+    "connections": 10
+  },
+  "minScore": 70
+}

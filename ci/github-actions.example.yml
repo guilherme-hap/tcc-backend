@@ -1,0 +1,80 @@
+name: Auditoria da API
+
+on:
+  pull_request:
+
+jobs:
+  auditoria:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: auditor
+          POSTGRES_PASSWORD: auditor
+          POSTGRES_DB: auditor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auditor"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Baixa a API avaliada
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Sobe a API avaliada
+        run: |
+          npm ci
+          npm start > api.log 2>&1 &
+          curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:8080/openapi.json > /dev/null
+
+      - name: Baixa o auditor
+        uses: actions/checkout@v4
+        with:
+          repository: guilherme-hap/tcc-backend
+          path: auditor
+
+      - name: Sobe o auditor
+        working-directory: auditor
+        env:
+          PORT: 3000
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: auditor
+          DB_PASSWORD: auditor
+          DB_NAME: auditor
+          DB_AUTO_CREATE: 'false'
+          JWT_SECRET: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          npm ci
+          npm run build
+          npm start > auditor.log 2>&1 &
+          curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:3000/api/rules > /dev/null
+
+      - name: Audita a API
+        run: >-
+          node auditor/dist/cli/audit.js
+          --api http://localhost:3000
+          --type full
+          --request .auditor/request.json
+          --min-score 70
+          --output auditoria.json
+
+      - name: Guarda o resultado
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria
+          path: |
+            auditoria.json
+            auditor/auditor.log
+          if-no-files-found: ignore
