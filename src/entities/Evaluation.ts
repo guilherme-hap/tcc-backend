@@ -65,6 +65,12 @@ export class Evaluation {
     @Column({ name: 'error_code', type: 'varchar', nullable: true })
     errorCode!: FailureCode | null;
 
+    @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
+    startedAt!: Date | null;
+
+    @Column({ name: 'finished_at', type: 'timestamptz', nullable: true })
+    finishedAt!: Date | null;
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
 

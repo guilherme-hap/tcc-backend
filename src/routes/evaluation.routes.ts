@@ -898,6 +898,16 @@ const evaluationController = new EvaluationController();
  *                   nullable: true
  *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver failedPillars), EVALUATION_ENQUEUE_FAILED ou EXECUTION_FAILED quando a falha ocorreu fora dos pilares."
  *                   example: "SPEC_FETCH_FAILED"
+ *                 startedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                   description: "Início da execução (saída da fila); nulo enquanto PENDING. Se a execução foi retomada após uma interrupção, é o início da última tentativa."
+ *                 finishedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                   description: "Fim da execução; nulo enquanto PENDING ou RUNNING. finishedAt − startedAt é o tempo de execução, sem a espera na fila."
  *                 createdAt:
  *                   type: string
  *                   format: date-time

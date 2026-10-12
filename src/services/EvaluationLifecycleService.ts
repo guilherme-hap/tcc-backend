@@ -38,7 +38,7 @@ export class EvaluationLifecycleService {
     async start(evaluationId: string): Promise<boolean> {
         const result = await this.repository.update(
             { id: evaluationId, status: In(['PENDING', 'RUNNING']) },
-            { status: 'RUNNING' },
+            { status: 'RUNNING', startedAt: new Date() },
         );
         return (result.affected ?? 0) > 0;
     }
@@ -47,6 +47,7 @@ export class EvaluationLifecycleService {
         await this.repository.update({ id: evaluationId, status: 'RUNNING' }, {
             ...results,
             status: 'COMPLETED',
+            finishedAt: new Date(),
         } as QueryDeepPartialEntity<Evaluation>);
     }
 
@@ -54,6 +55,7 @@ export class EvaluationLifecycleService {
         await this.repository.update({ id: evaluationId, status: 'RUNNING' }, {
             ...results,
             status: 'PARTIAL',
+            finishedAt: new Date(),
         } as QueryDeepPartialEntity<Evaluation>);
     }
 
@@ -67,6 +69,7 @@ export class EvaluationLifecycleService {
             status: 'FAILED',
             errorMessage: failure.message,
             errorCode: failure.code,
+            finishedAt: new Date(),
         } as QueryDeepPartialEntity<Evaluation>);
     }
 

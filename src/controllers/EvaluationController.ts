@@ -30,6 +30,8 @@ function toEvaluationResponse(evaluation: Evaluation) {
         failedPillars: evaluation.failedPillars,
         errorMessage: evaluation.errorMessage,
         errorCode: evaluation.errorCode,
+        startedAt: evaluation.startedAt,
+        finishedAt: evaluation.finishedAt,
         createdAt: evaluation.createdAt,
         updatedAt: evaluation.updatedAt,
     };
