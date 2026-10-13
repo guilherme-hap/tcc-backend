@@ -41,8 +41,8 @@ const AUDIT_MESSAGES = {
     PERF_MISSING_BODY: entry({
         severity: 'Warning',
         message: () =>
-            'Nenhum body foi enviado: não há payload informado nem schema requestBody (OpenAPI 3) para esta operação ' +
-            '(parâmetros body do Swagger 2.0 não são suportados). Respostas 4xx (ex.: 400/415) provavelmente ' +
+            'Nenhum body foi enviado: não há payload informado nem schema de corpo JSON para esta operação na especificação ' +
+            '(requestBody no OpenAPI 3, parâmetro body no Swagger 2.0). Respostas 4xx (ex.: 400/415) provavelmente ' +
             'decorrem da ausência do body e são excluídas da amostra do Apdex.',
         recommendation: () => 'Informe um payload explícito para este alvo.',
     }),

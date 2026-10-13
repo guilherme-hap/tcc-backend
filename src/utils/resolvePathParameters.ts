@@ -49,9 +49,10 @@ function collectParameterDefs(
 }
 
 function generatePathParamValue(paramDef: any | undefined, paramName: string, spec: any): string {
-    if (paramDef?.schema) {
+    const schema = paramDef?.schema ?? (paramDef?.type ? paramDef : undefined);
+    if (schema) {
         try {
-            const value = sample(paramDef.schema, {}, spec ?? {});
+            const value = sample(schema, {}, spec ?? {});
             if (value !== undefined && value !== null) {
                 return String(value);
             }
