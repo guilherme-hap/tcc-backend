@@ -147,6 +147,12 @@ const evaluationController = new EvaluationController();
  *                     payload:
  *                       description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
  *                       example: { "status": "available" }
+ *                     pathParams:
+ *                       type: object
+ *                       description: "Valores dos parâmetros {nome} do path, por nome (texto ou número). Os informados substituem os valores sintéticos gerados a partir da especificação. Em DELETE é obrigatório informar todos os parâmetros do path, pois valores sintéticos não são gerados. Chave que não corresponde a um parâmetro do path é rejeitada com 400."
+ *                       additionalProperties:
+ *                         type: string
+ *                       example: { "petId": "123" }
  *                 example:
  *                   - path: "/pet/findByStatus"
  *                     method: "GET"
@@ -221,7 +227,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targets ausentes, path vazio, método inválido, método mutante sem allowMutatingMethods, DELETE com path parametrizado ou limite de duração total excedido)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl ou targets ausentes, path vazio, método inválido, método mutante sem allowMutatingMethods, DELETE com parâmetro de path sem valor em pathParams ou limite de duração total excedido)."
  *         content:
  *           application/json:
  *             schema:
@@ -275,6 +281,12 @@ const evaluationController = new EvaluationController();
  *                     payload:
  *                       description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
  *                       example: { "status": "available" }
+ *                     pathParams:
+ *                       type: object
+ *                       description: "Valores dos parâmetros {nome} do path, por nome (texto ou número). Os informados substituem os valores sintéticos gerados a partir da especificação. Em DELETE é obrigatório informar todos os parâmetros do path, pois valores sintéticos não são gerados. Chave que não corresponde a um parâmetro do path é rejeitada com 400."
+ *                       additionalProperties:
+ *                         type: string
+ *                       example: { "petId": "123" }
  *                 example:
  *                   - path: "/pet/findByStatus"
  *                     method: "GET"
@@ -392,7 +404,7 @@ const evaluationController = new EvaluationController();
  *                   type: string
  *                   example: "PENDING"
  *       400:
- *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos, método mutante sem allowMutatingMethods, DELETE com path parametrizado ou limite de duração total excedido)."
+ *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos, método mutante sem allowMutatingMethods, DELETE com parâmetro de path sem valor em pathParams ou limite de duração total excedido)."
  *         content:
  *           application/json:
  *             schema:
@@ -603,6 +615,11 @@ const evaluationController = new EvaluationController();
  *                         type: string
  *                       payload:
  *                         nullable: true
+ *                       pathParams:
+ *                         type: object
+ *                         description: "Valores informados para os parâmetros do path."
+ *                         additionalProperties:
+ *                           type: string
  *                 requestSettings:
  *                   type: object
  *                   nullable: true

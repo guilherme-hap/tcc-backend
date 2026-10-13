@@ -27,6 +27,7 @@ export const performanceTargetSchema = z.object({
     path: z.string().trim().min(1, 'Informe o path do alvo'),
     method: httpMethodSchema.optional(),
     payload: z.any().optional(),
+    pathParams: z.record(z.string(), z.union([z.string().min(1), z.number()]).transform(String)).optional(),
 });
 
 export type PerformanceTargetInput = z.infer<typeof performanceTargetSchema>;

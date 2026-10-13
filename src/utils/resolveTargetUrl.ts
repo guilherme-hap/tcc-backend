@@ -10,11 +10,12 @@ export function resolveTargetUrl(
     baseUrl: string,
     targetPath: string,
     method?: string,
+    pathParams?: Record<string, string>,
 ): string {
     const effectiveMethod = method?.toUpperCase();
     let resolvedPath = targetPath;
-    if (effectiveMethod && effectiveMethod !== 'DELETE' && targetPath.includes('{')) {
-        resolvedPath = resolvePathParameters(targetPath, spec, effectiveMethod);
+    if (effectiveMethod && targetPath.includes('{')) {
+        resolvedPath = resolvePathParameters(targetPath, spec, effectiveMethod, pathParams);
     }
 
     return buildTargetUrl(baseUrl, resolvedPath);

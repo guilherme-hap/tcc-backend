@@ -2,7 +2,7 @@ import type { z } from 'zod';
 
 const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
 
-const TEMPLATED_PATH = /\{[^}]+\}/;
+const PATH_PLACEHOLDER = /\{([^}]+)\}/g;
 
 export function isMutatingMethod(method?: string): boolean {
     if (!method) return false;
@@ -16,7 +16,7 @@ function mutatingMethodMessage(method: string): string {
 
 export function validateTargetMethods(
     data: {
-        targets: { path: string; method?: string }[];
+        targets: { path: string; method?: string; pathParams?: Record<string, string> }[];
         loadTestOptions?: { method?: string; allowMutatingMethods?: boolean };
     },
     ctx: z.RefinementCtx,
@@ -33,12 +33,27 @@ export function validateTargetMethods(
             ctx.addIssue({ code: 'custom', path: ['targets', index, 'method'], message: mutatingMethodMessage(target.method) });
         }
 
-        if ((target.method ?? defaultMethod) === 'DELETE' && TEMPLATED_PATH.test(target.path)) {
+        const placeholders = [...target.path.matchAll(PATH_PLACEHOLDER)].map((match) => match[1]);
+        const informed = Object.keys(target.pathParams ?? {});
+
+        for (const name of informed) {
+            if (!placeholders.includes(name)) {
+                ctx.addIssue({
+                    code: 'custom',
+                    path: ['targets', index, 'pathParams', name],
+                    message: `O path do alvo não tem o parâmetro {${name}}.`,
+                });
+            }
+        }
+
+        const missing = placeholders.filter((name) => !informed.includes(name));
+        if ((target.method ?? defaultMethod) === 'DELETE' && missing.length > 0) {
             ctx.addIssue({
                 code: 'custom',
                 path: ['targets', index, 'path'],
                 message:
-                    `Testes de carga com DELETE exigem um path já resolvido ` +
+                    `Testes de carga com DELETE exigem o valor de cada parâmetro do path: informe ` +
+                    `${missing.map((name) => `{${name}}`).join(', ')} em pathParams ou use um path já resolvido ` +
                     `(ex.: "/pet/123" em vez de "/pet/{petId}"). ` +
                     `Parâmetros de path sintéticos não são gerados para DELETE, ` +
                     `para evitar a exclusão acidental de dados reais.`,

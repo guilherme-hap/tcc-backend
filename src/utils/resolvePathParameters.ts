@@ -7,20 +7,25 @@ export function resolvePathParameters(
     targetPath: string,
     spec: any,
     method: string,
+    pathParams: Record<string, string> = {},
 ): string {
     if (!targetPath.includes('{')) {
         return targetPath;
     }
 
-    const normalizedMethod = method.toLowerCase();
+    const usesSyntheticValues = method.toUpperCase() !== 'DELETE';
+    const paramDefs = usesSyntheticValues
+        ? collectParameterDefs(spec, findMatchingSpecPath(targetPath, spec), method.toLowerCase())
+        : new Map<string, any>();
 
-    const specPath = findMatchingSpecPath(targetPath, spec);
-
-    const paramDefs = collectParameterDefs(spec, specPath, normalizedMethod);
-
-    return targetPath.replace(/\{([^}]+)\}/g, (_match, paramName: string) => {
-        const paramDef = paramDefs.get(paramName);
-        return generatePathParamValue(paramDef, paramName, spec);
+    return targetPath.replace(/\{([^}]+)\}/g, (placeholder, paramName: string) => {
+        if (Object.hasOwn(pathParams, paramName)) {
+            return encodeURIComponent(pathParams[paramName]);
+        }
+        if (!usesSyntheticValues) {
+            return placeholder;
+        }
+        return generatePathParamValue(paramDefs.get(paramName), paramName, spec);
     });
 }
 

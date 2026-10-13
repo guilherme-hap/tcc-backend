@@ -78,6 +78,7 @@ export interface IPerformanceTarget {
     path: string;
     method?: HttpMethod | string;
     payload?: any;
+    pathParams?: Record<string, string>;
 }
 
 export interface IPerformanceTargetResult {

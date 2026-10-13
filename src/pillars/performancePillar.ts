@@ -29,7 +29,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
             ).toUpperCase();
 
             try {
-                const targetUrl = resolveTargetUrl(spec, baseUrl, target.path, effectiveMethod);
+                const targetUrl = resolveTargetUrl(spec, baseUrl, target.path, effectiveMethod, target.pathParams);
 
                 const loadTestOpts = prepareLoadTestOptions({
                     targetMethod: effectiveMethod,
