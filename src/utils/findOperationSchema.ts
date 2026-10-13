@@ -1,4 +1,5 @@
 import { findMatchingSpecPath } from './findMatchingSpecPath.js';
+import { resolveRef } from './specRefs.js';
 
 export function findRequestBodySchema(
     spec: any,
@@ -21,45 +22,7 @@ export function findRequestBodySchema(
         return undefined;
     }
 
-    const requestBody = operation.requestBody;
-    if (!requestBody) {
-        return undefined;
-    }
-
-    const resolvedRequestBody = requestBody.$ref
-        ? resolveRef(spec, requestBody.$ref)
-        : requestBody;
-
-    if (!resolvedRequestBody) {
-        return undefined;
-    }
-
-    const jsonContent =
-        resolvedRequestBody.content?.['application/json'] ??
-        resolvedRequestBody.content?.['*/*'];
-
-    if (!jsonContent?.schema) {
-        return undefined;
-    }
-
-    const rawSchema = jsonContent.schema;
-    const resolvedSchema = rawSchema.$ref
-        ? resolveRef(spec, rawSchema.$ref)
-        : rawSchema;
-
-    return resolvedSchema;
-}
-
-function resolveRef(spec: any, ref: string): any {
-    if (!ref.startsWith('#/')) return undefined;
-
-    const parts = ref.slice(2).split('/');
-    let current = spec;
-
-    for (const part of parts) {
-        current = current?.[part];
-        if (current === undefined) return undefined;
-    }
-
-    return current;
+    const requestBody = resolveRef(spec, operation.requestBody);
+    const jsonContent = requestBody?.content?.['application/json'] ?? requestBody?.content?.['*/*'];
+    return resolveRef(spec, jsonContent?.schema);
 }

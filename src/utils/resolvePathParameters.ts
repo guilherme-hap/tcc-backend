@@ -1,6 +1,7 @@
 import { sample } from 'openapi-sampler';
 import crypto from 'node:crypto';
 import { findMatchingSpecPath } from './findMatchingSpecPath.js';
+import { resolveRef } from './specRefs.js';
 
 export function resolvePathParameters(
     targetPath: string,
@@ -33,18 +34,12 @@ function collectParameterDefs(
 
     const pathItem = spec.paths[specPath];
 
-    if (Array.isArray(pathItem.parameters)) {
-        for (const param of pathItem.parameters) {
-            if (param.in === 'path' && param.name) {
-                params.set(param.name, param);
-            }
-        }
-    }
+    for (const owner of [pathItem, pathItem[method]]) {
+        if (!Array.isArray(owner?.parameters)) continue;
 
-    const operation = pathItem[method];
-    if (operation && Array.isArray(operation.parameters)) {
-        for (const param of operation.parameters) {
-            if (param.in === 'path' && param.name) {
+        for (const rawParam of owner.parameters) {
+            const param = resolveRef(spec, rawParam);
+            if (param?.in === 'path' && param.name) {
                 params.set(param.name, param);
             }
         }
