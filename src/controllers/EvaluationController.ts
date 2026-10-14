@@ -8,6 +8,7 @@ import type { Evaluation } from '../entities/Evaluation.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { listEvaluationsQuerySchema } from '../schemas/evaluation.schema.js';
 import { evaluationPassed } from '../utils/qualityGate.js';
+import { visibleSteps } from '../utils/evaluationSteps.js';
 
 function toEvaluationResponse(evaluation: Evaluation) {
     return {
@@ -27,7 +28,7 @@ function toEvaluationResponse(evaluation: Evaluation) {
         spectralResult: evaluation.spectralResult,
         performanceResults: evaluation.performanceResults,
         securityResult: evaluation.securityResult,
-        failedPillars: evaluation.failedPillars,
+        steps: visibleSteps(evaluation),
         errorMessage: evaluation.errorMessage,
         errorCode: evaluation.errorCode,
         startedAt: evaluation.startedAt,
@@ -72,13 +73,25 @@ export class EvaluationController {
     };
 
     public getEvaluation = async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
-        const evaluation = await this.lifecycle.findById(req.params.id);
-        if (!evaluation) {
-            throw new AppError('EVALUATION_NOT_FOUND');
-        }
-        if (evaluation.userId && evaluation.userId !== req.userId) {
-            throw new AppError('EVALUATION_NOT_FOUND');
-        }
+        const evaluation = assertVisible(await this.lifecycle.findById(req.params.id), req.userId);
         res.status(200).json(toEvaluationResponse(evaluation));
     };
+
+    public getProgress = async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
+        const progress = assertVisible(await this.lifecycle.findProgressById(req.params.id), req.userId);
+        res.status(200).json({
+            id: progress.id,
+            status: progress.status,
+            steps: visibleSteps(progress),
+            pillarScores: progress.pillarScores,
+            updatedAt: progress.updatedAt,
+        });
+    };
+}
+
+function assertVisible<E extends Pick<Evaluation, 'userId'>>(evaluation: E | null, userId?: string): E {
+    if (!evaluation || (evaluation.userId && evaluation.userId !== userId)) {
+        throw new AppError('EVALUATION_NOT_FOUND');
+    }
+    return evaluation;
 }

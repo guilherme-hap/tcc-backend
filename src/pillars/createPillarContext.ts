@@ -1,13 +1,13 @@
 import { fetchOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 import { resolveBaseUrlFromSpec } from '../utils/resolveBaseUrl.js';
-import type { PillarBaseParams, PillarContext } from './types.js';
+import type { PillarBaseParams, PillarResources } from './types.js';
 
 function memoize<T>(load: () => Promise<T>): () => Promise<T> {
     let pending: Promise<T> | undefined;
     return () => (pending ??= load());
 }
 
-export function createPillarContext<P extends PillarBaseParams>(params: P): PillarContext<P> {
+export function createPillarContext<P extends PillarBaseParams>(params: P): PillarResources<P> {
     const spec = memoize(() => fetchOpenApiContent(params.openApiUrl));
 
     const apiBaseUrl = memoize(async () => {

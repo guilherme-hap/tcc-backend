@@ -1,3 +1,4 @@
+import type { EvaluationType, IEvaluationStep } from '../interfaces/evaluation.interface.js';
 import { auditMessage } from '../messages/catalog.js';
 import type { IAuditMessage } from '../messages/catalog.js';
 import { resolveWeights } from '../utils/weights.js';
@@ -31,3 +32,15 @@ export const PIPELINES: Pipelines = {
         precondition: requireValidSpecForLoadTest,
     },
 };
+
+export function initialSteps(type: EvaluationType): IEvaluationStep[] {
+    const stages: readonly (readonly { name: PillarName }[])[] = PIPELINES[type].stages;
+
+    return stages.flatMap((stage, index) => stage.map((pillar): IEvaluationStep => ({
+        pillar: pillar.name,
+        stage: index,
+        status: 'PENDING',
+        startedAt: null,
+        finishedAt: null,
+    })));
+}

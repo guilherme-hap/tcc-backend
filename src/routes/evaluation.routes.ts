@@ -145,7 +145,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/full:
  *   post:
  *     summary: "Executa avaliação completa (Contrato global + Performance pontual + Segurança dos headers)"
- *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Contrato e segurança rodam primeiro; o teste de carga roda depois, sozinho. Se o contrato apontar erro estrutural na especificação (oas2-schema, oas3-schema ou parser com severidade Error, ou documento não reconhecido como OpenAPI, unrecognized-format), o teste de carga não é executado e a avaliação termina como PARTIAL, com failedPillars indicando o código PERF_SKIPPED_INVALID_SPEC. Ao final, pondera as notas individuais dos 3 pilares calculando o score global; em PARTIAL a nota final é nula e pillarScores traz as notas dos pilares que rodaram."
+ *     description: "Executa o linting do Spectral sobre toda a especificação OpenAPI informada em openApiUrl, o teste de carga com Autocannon sequencialmente nas rotas indicadas em targets e a auditoria de segurança dos headers HTTP do servidor. Contrato e segurança rodam primeiro; o teste de carga roda depois, sozinho. Se o contrato apontar erro estrutural na especificação (oas2-schema, oas3-schema ou parser com severidade Error, ou documento não reconhecido como OpenAPI, unrecognized-format), o teste de carga não é executado e a avaliação termina como PARTIAL, com a etapa de performance em steps marcada SKIPPED e o código PERF_SKIPPED_INVALID_SPEC. Ao final, pondera as notas individuais dos 3 pilares calculando o score global; em PARTIAL a nota final é nula e pillarScores traz as notas dos pilares que rodaram."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -391,7 +391,7 @@ const evaluationController = new EvaluationController();
  * /api/evaluations/{id}:
  *   get:
  *     summary: "Consulta o status e o resultado detalhado de uma avaliação"
- *     description: "Retorna o estado atual e os resultados consolidados da auditoria. Quando concluída (COMPLETED), exibe os relatórios de Spectral, Performance, Segurança e nota calculada. Avaliações vinculadas a um usuário autenticado só podem ser acessadas pelo próprio dono."
+ *     description: "Retorna o estado atual e os resultados da auditoria. Os resultados de cada pilar são gravados assim que o pilar termina, ainda durante RUNNING (e os de performance a cada alvo concluído), e steps mostra a linha do tempo das etapas; finalScore só aparece ao final. Para acompanhar uma avaliação em andamento, prefira GET /api/evaluations/{id}/progress, que não traz os relatórios. Avaliações vinculadas a um usuário autenticado só podem ser acessadas pelo próprio dono."
  *     tags: [Evaluation]
  *     security:
  *       - bearerAuth: []
@@ -475,7 +475,7 @@ const evaluationController = new EvaluationController();
  *                 pillarScores:
  *                   type: object
  *                   nullable: true
- *                   description: "Nota (0-100) de cada pilar que concluiu. Em PARTIAL traz só os pilares que rodaram; nulo em FAILED."
+ *                   description: "Nota (0-100) de cada pilar que concluiu, preenchida à medida que cada pilar termina (também durante RUNNING). Em PARTIAL traz só os pilares que concluíram. Em FAILED é nulo quando nenhum pilar concluiu; numa falha fora dos pilares, traz os que concluíram antes dela."
  *                   properties:
  *                     contract:
  *                       type: number
@@ -596,7 +596,7 @@ const evaluationController = new EvaluationController();
  *                 performanceResults:
  *                   type: array
  *                   nullable: true
- *                   description: "Resultados consolidados dos testes de carga para cada endpoint alvo. Disponível em avaliações com status COMPLETED, PARTIAL e também em FAILED quando o teste de performance tiver executado alvos (preservando o detalhe do erro por alvo)."
+ *                   description: "Resultados dos testes de carga, um item por alvo, na ordem de targets. Cresce durante RUNNING: cada alvo entra quando o teste dele termina. Também fica preenchido em PARTIAL e em FAILED quando o teste de performance tiver executado alvos (preservando o detalhe do erro por alvo)."
  *                   items:
  *                     type: object
  *                     properties:
@@ -760,31 +760,20 @@ const evaluationController = new EvaluationController();
  *                         type: object
  *                         nullable: true
  *                         description: "Valores usados na mensagem (ex.: maxAge, header, value, status, origin)."
- *                 failedPillars:
+ *                 steps:
  *                   type: array
  *                   nullable: true
- *                   description: "Pilares que não concluíram, um item por pilar. Preenchido em PARTIAL e em FAILED (nulo em FAILED quando a falha ocorreu fora dos pilares)."
+ *                   description: "Linha do tempo das etapas, uma por pilar, na ordem do pipeline. Criada com todas as etapas em PENDING junto com a avaliação e atualizada a cada transição (e a cada segundo durante o teste de carga). Etapas com error e code são as que não concluíram."
  *                   items:
- *                     type: object
- *                     properties:
- *                       pillar:
- *                         type: string
- *                         enum: [contract, performance, security]
- *                       error:
- *                         type: string
- *                         description: "Mensagem em português. Detalhes vindos da rede ou de bibliotecas (ex.: ECONNREFUSED) aparecem entre parênteses, como recebidos."
- *                       code:
- *                         type: string
- *                         description: "Identificador estável do motivo: código de erro (ex.: SPEC_FETCH_FAILED, SECURITY_TARGET_UNREACHABLE, PERFORMANCE_NO_TARGET_MEASURED) ou, quando o pilar foi pulado por uma pré-condição, código de auditoria (PERF_SKIPPED_INVALID_SPEC)."
- *                         example: "SPEC_FETCH_FAILED"
+ *                     $ref: '#/components/schemas/EvaluationStep'
  *                 errorMessage:
  *                   type: string
  *                   nullable: true
- *                   description: "Motivo do erro, em português, quando o status for FAILED. Com mais de um pilar e causas diferentes, tem o formato 'Nenhum pilar foi concluído. Contrato: ... Segurança: ...' (causa comum, como falha ao baixar a especificação, aparece uma vez só); use failedPillars para tratar cada pilar. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
+ *                   description: "Motivo do erro, em português, quando o status for FAILED. Com mais de um pilar e causas diferentes, tem o formato 'Nenhum pilar foi concluído. Contrato: ... Segurança: ...' (causa comum, como falha ao baixar a especificação, aparece uma vez só); use steps para tratar cada pilar. Quando a falha envolver o pilar de performance, o campo performanceResults também conterá o detalhamento por alvo."
  *                 errorCode:
  *                   type: string
  *                   nullable: true
- *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver failedPillars), EXECUTION_FAILED quando a falha ocorreu fora dos pilares, EXECUTION_INTERRUPTED quando a execução foi interrompida (falha ou reinício do auditor) e não foi retomada."
+ *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver steps), EXECUTION_FAILED quando a falha ocorreu fora dos pilares, EXECUTION_INTERRUPTED quando a execução foi interrompida (falha ou reinício do auditor) e não foi retomada."
  *                   example: "SPEC_FETCH_FAILED"
  *                 startedAt:
  *                   type: string
@@ -810,6 +799,62 @@ const evaluationController = new EvaluationController();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *
+ * /api/evaluations/{id}/progress:
+ *   get:
+ *     summary: "Consulta leve do andamento de uma avaliação"
+ *     description: "Devolve só o status, as etapas e as notas dos pilares já concluídos, sem os relatórios. Feita para ser consultada periodicamente enquanto a avaliação está PENDING ou RUNNING (por exemplo, a cada 1 s durante o teste de carga, quando o progress de performance está em phase RUNNING, e a cada poucos segundos no restante); ao mudar uma etapa para um estado final, ou a avaliação para COMPLETED, PARTIAL ou FAILED, busque os relatórios em GET /api/evaluations/{id}. Mesma regra de acesso do GET da avaliação."
+ *     tags: [Evaluation]
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: "Andamento da avaliação."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   format: uuid
+ *                 status:
+ *                   type: string
+ *                   enum: [PENDING, RUNNING, COMPLETED, PARTIAL, FAILED]
+ *                 steps:
+ *                   type: array
+ *                   nullable: true
+ *                   items:
+ *                     $ref: '#/components/schemas/EvaluationStep'
+ *                 pillarScores:
+ *                   type: object
+ *                   nullable: true
+ *                   description: "Notas dos pilares que já concluíram."
+ *                   properties:
+ *                     contract:
+ *                       type: number
+ *                     performance:
+ *                       type: number
+ *                     security:
+ *                       type: number
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: "Momento da última gravação; muda a cada transição de etapa e a cada segundo do teste de carga."
+ *       404:
+ *         description: "Avaliação não encontrada, pertence a outro usuário ou id que não é UUID."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluate('contract'));
 router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluate('performance'));
@@ -817,5 +862,6 @@ router.post('/security', optionalAuth, validate(securityRequestSchema), evaluati
 router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluate('full'));
 router.get('/', requireAuth, evaluationController.listEvaluations);
 router.get('/:id', optionalAuth, validateIdParam('EVALUATION_NOT_FOUND'), evaluationController.getEvaluation);
+router.get('/:id/progress', optionalAuth, validateIdParam('EVALUATION_NOT_FOUND'), evaluationController.getProgress);
 
 export default router;

@@ -43,7 +43,7 @@ interface EvaluationResult {
     finalScore: number | null;
     passed: boolean | null;
     pillarScores: Record<string, number> | null;
-    failedPillars: { pillar: string; error: string }[] | null;
+    steps: { pillar: string; status: string; error?: string }[] | null;
     errorMessage: string | null;
     requestSettings: { minScore?: number } | null;
     startedAt: string | null;
@@ -67,8 +67,12 @@ function pillarScoreRows(evaluation: EvaluationResult): [string, string][] {
         .map((pillar) => [PILLAR_LABELS[pillar], formatScore(scores[pillar])]);
 }
 
+function failedSteps(evaluation: EvaluationResult): { pillar: string; error: string }[] {
+    return (evaluation.steps ?? []).flatMap((step) => (step.error ? [{ pillar: step.pillar, error: step.error }] : []));
+}
+
 function failedPillarRows(evaluation: EvaluationResult): [string, string][] {
-    return (evaluation.failedPillars ?? []).map((failed) => [PILLAR_LABELS[failed.pillar] ?? failed.pillar, failed.error]);
+    return failedSteps(evaluation).map((failed) => [PILLAR_LABELS[failed.pillar] ?? failed.pillar, failed.error]);
 }
 
 function executionTime(evaluation: EvaluationResult): string | null {
@@ -79,7 +83,7 @@ function executionTime(evaluation: EvaluationResult): string | null {
 }
 
 function generalError(evaluation: EvaluationResult): string | null {
-    const repeated = (evaluation.failedPillars ?? []).some((failed) => failed.error === evaluation.errorMessage);
+    const repeated = failedSteps(evaluation).some((failed) => failed.error === evaluation.errorMessage);
     return repeated ? null : evaluation.errorMessage;
 }
 

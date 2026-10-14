@@ -5,6 +5,7 @@ import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { AppError } from '../errors/AppError.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { EVALUATION_SCHEMAS } from '../schemas/evaluation.schema.js';
+import { initialSteps } from '../pillars/pipelines.js';
 import type { FullEvaluationRequestInput } from '../schemas/evaluation.schema.js';
 import type { EvaluationType, IEvaluationRequestSettings } from '../interfaces/evaluation.interface.js';
 
@@ -46,6 +47,7 @@ export class EvaluationUsecase {
                     requestSettings: toRequestSettings(request),
                     evaluationType: type,
                     userId: userId ?? null,
+                    steps: initialSteps(type),
                 }, manager);
                 await evaluationQueue.enqueue({ evaluationId: created.id, type, params }, manager);
                 return created;

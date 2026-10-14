@@ -1,43 +1,9 @@
 import { AppError } from '../errors/AppError.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { createPillarContext } from '../pillars/createPillarContext.js';
-import { PillarError, PillarSkipped } from '../pillars/PillarError.js';
-import { PIPELINES } from '../pillars/pipelines.js';
-import type { PillarColumn, PillarName, PillarOutcome, PillarResults } from '../pillars/types.js';
-import type {
-    EvaluationJob,
-    EvaluationJobOf,
-    EvaluationType,
-    IFailedPillar,
-    IPillarScores,
-    IScoreBreakdown,
-    IScoringParameters,
-} from '../interfaces/evaluation.interface.js';
-import { round } from '../utils/round.js';
-import { scorePart } from '../utils/scorePart.js';
-
-interface PillarRun {
-    pillar: { name: PillarName; column: PillarColumn };
-    settled: PromiseSettledResult<PillarOutcome>;
-}
-
-function storeResult<C extends PillarColumn>(results: Partial<PillarResults>, column: C, value: PillarResults[C]): void {
-    results[column] = value;
-}
-
-function toFailure(evaluationId: string, pillar: PillarName, reason: unknown): AppError {
-    if (reason instanceof AppError) {
-        return reason;
-    }
-    console.error(`[Worker] Unexpected error in the ${pillar} pillar of evaluation ${evaluationId}:`, reason);
-    return new AppError('EXECUTION_FAILED');
-}
-
-const PILLAR_LABELS: Record<PillarName, string> = {
-    contract: 'Contrato',
-    performance: 'Performance',
-    security: 'Segurança',
-};
+import { initialSteps, PIPELINES } from '../pillars/pipelines.js';
+import type { EvaluationJob, EvaluationJobOf, EvaluationType } from '../interfaces/evaluation.interface.js';
+import { EvaluationRun } from './EvaluationRun.js';
 
 export class EvaluationWorker {
     private lifecycle = new EvaluationLifecycleService();
@@ -55,92 +21,25 @@ export class EvaluationWorker {
 
     private async process<T extends EvaluationType>(job: EvaluationJobOf<T>): Promise<void> {
         const pipeline = PIPELINES[job.type];
-        const ctx = createPillarContext<EvaluationJobOf<T>['params']>(job.params);
-        const runs: PillarRun[] = [];
-        const results: Partial<PillarResults> = {};
+        const resources = createPillarContext<EvaluationJobOf<T>['params']>(job.params);
+        const run = new EvaluationRun(job.evaluationId, this.lifecycle, initialSteps(job.type), pipeline.weights(job.params));
 
         for (const stage of pipeline.stages) {
-            const settledStage = await Promise.allSettled(stage.map(async (pillar) => {
-                const blocked = pipeline.precondition?.(pillar.name, results);
+            await Promise.all(stage.map(async (pillar) => {
+                const blocked = pipeline.precondition?.(pillar.name, run.results);
                 if (blocked) {
-                    throw new PillarSkipped(blocked);
+                    run.skip(pillar, blocked);
+                    return;
                 }
-                return pillar.run(ctx);
+                run.begin(pillar);
+                try {
+                    run.succeed(pillar, await pillar.run({ ...resources, report: (update) => run.report(pillar, update) }));
+                } catch (reason: unknown) {
+                    run.fail(pillar, reason);
+                }
             }));
-            settledStage.forEach((settled, index) => {
-                const pillar = stage[index];
-                if (settled.status === 'fulfilled') {
-                    storeResult(results, pillar.column, settled.value.result);
-                }
-                runs.push({ pillar, settled });
-            });
         }
 
-        await this.conclude(job.evaluationId, runs, results, pipeline.weights(job.params));
-    }
-
-    private async conclude(
-        evaluationId: string,
-        runs: PillarRun[],
-        results: Partial<PillarResults>,
-        pillarWeights: IPillarScores,
-    ): Promise<void> {
-        const failedPillars: IFailedPillar[] = [];
-        const pillarScores: IPillarScores = {};
-        const scoring: IScoringParameters = { pillarWeights };
-        const scoreBreakdown: IScoreBreakdown = {};
-        let weightedSum = 0;
-
-        for (const { pillar, settled } of runs) {
-            if (settled.status === 'fulfilled') {
-                pillarScores[pillar.name] = settled.value.score;
-                scoreBreakdown[pillar.name] = settled.value.breakdown;
-                Object.assign(scoring, settled.value.scoring);
-                weightedSum += settled.value.score * (pillarWeights[pillar.name] ?? 0);
-                continue;
-            }
-            const reason: unknown = settled.reason;
-            if (reason instanceof PillarError) {
-                Object.assign(results, reason.partialResults);
-            }
-            const failure = reason instanceof PillarSkipped ? reason.audit : toFailure(evaluationId, pillar.name, reason);
-            failedPillars.push({ pillar: pillar.name, error: failure.message, code: failure.code });
-        }
-
-        if (failedPillars.length === 0) {
-            await this.lifecycle.complete(evaluationId, {
-                ...results,
-                finalScore: round(weightedSum, 2),
-                pillarScores,
-                scoring,
-                scoreBreakdown: {
-                    final: (Object.keys(pillarWeights) as PillarName[]).map((name) => (
-                        scorePart(name, pillarWeights[name] ?? 0, pillarScores[name] ?? 0)
-                    )),
-                    ...scoreBreakdown,
-                },
-            });
-            return;
-        }
-
-        if (failedPillars.length < runs.length) {
-            await this.lifecycle.partial(evaluationId, {
-                ...results,
-                finalScore: null,
-                failedPillars,
-                pillarScores,
-                scoring,
-                scoreBreakdown,
-            });
-            return;
-        }
-
-        const sharedCause = failedPillars.every((fp) => fp.error === failedPillars[0].error);
-        const failure = sharedCause
-            ? { message: failedPillars[0].error, code: failedPillars[0].code }
-            : new AppError('EVALUATION_PILLARS_FAILED', {
-                details: failedPillars.map((fp) => `${PILLAR_LABELS[fp.pillar]}: ${fp.error}`).join(' '),
-            });
-        await this.lifecycle.fail(evaluationId, failure, { ...results, failedPillars });
+        await run.conclude();
     }
 }

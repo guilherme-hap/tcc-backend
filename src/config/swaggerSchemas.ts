@@ -15,7 +15,7 @@ export const SWAGGER_SCHEMAS = {
             code: {
                 type: 'string',
                 enum: ERROR_CODES,
-                description: 'Identificador estável do erro. Os mesmos códigos aparecem em errorCode, failedPillars[].code e performanceResults[].code no GET /api/evaluations/{id}.',
+                description: 'Identificador estável do erro. Os mesmos códigos aparecem em errorCode, steps[].code e performanceResults[].code no GET /api/evaluations/{id}.',
                 example: 'VALIDATION_FAILED',
             },
             issues: {
@@ -82,6 +82,96 @@ export const SWAGGER_SCHEMAS = {
                 description: 'Valores dos parâmetros {nome} do path, por nome (texto ou número). Os informados substituem os valores sintéticos gerados a partir da especificação. Em DELETE é obrigatório informar todos os parâmetros do path, pois valores sintéticos não são gerados. Chave que não corresponde a um parâmetro do path é rejeitada com 400.',
                 additionalProperties: { type: 'string' },
                 example: { petId: '123' },
+            },
+        },
+    },
+    EvaluationStep: {
+        type: 'object',
+        required: ['pillar', 'stage', 'status', 'startedAt', 'finishedAt'],
+        description: 'Uma etapa da avaliação: um pilar. Etapas com o mesmo stage rodam em paralelo; stages diferentes rodam em sequência (no full: 0 = contrato e segurança, 1 = performance).',
+        properties: {
+            pillar: {
+                type: 'string',
+                enum: ['contract', 'performance', 'security'],
+            },
+            stage: {
+                type: 'integer',
+                example: 0,
+            },
+            status: {
+                type: 'string',
+                enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED', 'INTERRUPTED'],
+                description: 'PENDING: ainda não começou. RUNNING: em execução. COMPLETED: concluída, com nota em pillarScores. FAILED: falhou (ver error e code). SKIPPED: pulada por uma pré-condição (ver error e code). INTERRUPTED: a avaliação terminou antes desta etapa terminar (falha fora dos pilares ou execução interrompida); só aparece em avaliação finalizada.',
+            },
+            startedAt: {
+                type: 'string',
+                format: 'date-time',
+                nullable: true,
+            },
+            finishedAt: {
+                type: 'string',
+                format: 'date-time',
+                nullable: true,
+            },
+            error: {
+                type: 'string',
+                description: 'Presente em FAILED e SKIPPED: motivo em português. Detalhes vindos da rede ou de bibliotecas (ex.: ECONNREFUSED) aparecem entre parênteses, como recebidos.',
+            },
+            code: {
+                type: 'string',
+                description: 'Presente junto com error: código de erro (ex.: SPEC_FETCH_FAILED, SECURITY_TARGET_UNREACHABLE, PERFORMANCE_NO_TARGET_MEASURED) ou, em SKIPPED, código de auditoria (PERF_SKIPPED_INVALID_SPEC).',
+                example: 'SPEC_FETCH_FAILED',
+            },
+            progress: {
+                type: 'object',
+                description: 'Só na etapa de performance enquanto ela está RUNNING: o alvo em andamento. Atualizado a cada segundo durante o teste de carga.',
+                properties: {
+                    targetIndex: {
+                        type: 'integer',
+                        description: 'Índice do alvo em targets, a partir de 0.',
+                    },
+                    totalTargets: {
+                        type: 'integer',
+                    },
+                    phase: {
+                        type: 'string',
+                        enum: ['QUEUED', 'RUNNING'],
+                        description: 'QUEUED: aguardando a vez, porque o auditor roda um teste de carga por vez (e nenhuma análise de contrato durante a carga). RUNNING: teste de carga em andamento.',
+                    },
+                    startedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        nullable: true,
+                        description: 'Início do teste de carga do alvo; nulo em QUEUED.',
+                    },
+                    expectedDurationSeconds: {
+                        type: 'number',
+                        description: 'Duração configurada do teste do alvo. Com maxRequests o teste pode acabar antes.',
+                    },
+                    elapsedSeconds: {
+                        type: 'integer',
+                        description: 'Segundos já medidos do teste do alvo.',
+                    },
+                    responses: {
+                        type: 'integer',
+                        description: 'Respostas recebidas até agora (inclusive 4xx).',
+                    },
+                    errors: {
+                        type: 'integer',
+                        description: 'Respostas 5xx mais erros de conexão e timeouts até agora.',
+                    },
+                    lastSecond: {
+                        type: 'object',
+                        nullable: true,
+                        description: 'Último segundo medido, no mesmo formato de um ponto de performanceResults[].result.series. Nulo antes do primeiro segundo.',
+                        properties: {
+                            second: { type: 'integer' },
+                            responses: { type: 'integer' },
+                            meanLatency: { type: 'number', nullable: true },
+                            errors: { type: 'integer' },
+                        },
+                    },
+                },
             },
         },
     },

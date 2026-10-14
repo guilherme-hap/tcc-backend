@@ -1,6 +1,7 @@
 import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { EvaluationWorker } from './EvaluationWorker.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
+import { initialSteps } from '../pillars/pipelines.js';
 import { AppError } from '../errors/AppError.js';
 import { EVALUATION_TYPES } from '../interfaces/evaluation.interface.js';
 import type { EvaluationJob } from '../interfaces/evaluation.interface.js';
@@ -9,7 +10,7 @@ const worker = new EvaluationWorker();
 const lifecycle = new EvaluationLifecycleService();
 
 async function dispatch(job: EvaluationJob): Promise<void> {
-    if (!(await lifecycle.start(job.evaluationId))) {
+    if (!(await lifecycle.start(job.evaluationId, initialSteps(job.type)))) {
         console.log(`[Worker] Skipping job for evaluation ${job.evaluationId}: already finished`);
         return;
     }

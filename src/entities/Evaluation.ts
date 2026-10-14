@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import type { Relation } from 'typeorm';
 import type { EvaluationStatus, EvaluationType, IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { PerformanceTargetInput } from '../schemas/evaluation.schema.js';
-import type { FailureCode, IContractResult, IEvaluationRequestSettings, IFailedPillar, IPillarScores, IScoreBreakdown, IScoringParameters, ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
+import type { FailureCode, IContractResult, IEvaluationRequestSettings, IEvaluationStep, IPillarScores, IScoreBreakdown, IScoringParameters, ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
 import { User } from './User.js';
 
 @Entity('evaluations')
@@ -48,8 +48,8 @@ export class Evaluation {
     @Column({ name: 'final_score', type: 'float', nullable: true })
     finalScore!: number | null;
 
-    @Column({ name: 'failed_pillars', type: 'jsonb', nullable: true })
-    failedPillars!: IFailedPillar[] | null;
+    @Column({ name: 'steps', type: 'jsonb', nullable: true })
+    steps!: IEvaluationStep[] | null;
 
     @Column({ name: 'pillar_scores', type: 'jsonb', nullable: true })
     pillarScores!: IPillarScores | null;

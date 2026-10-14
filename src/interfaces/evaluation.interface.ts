@@ -115,10 +115,33 @@ export type IEvaluationRequestSettings =
 
 export type FailureCode = ErrorCode | AuditMessageCode;
 
-export interface IFailedPillar {
+export type EvaluationStepStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED' | 'INTERRUPTED';
+
+export interface IStepProgress {
+    targetIndex: number;
+    totalTargets: number;
+    phase: 'QUEUED' | 'RUNNING';
+    startedAt: string | null;
+    expectedDurationSeconds: number;
+    elapsedSeconds: number;
+    responses: number;
+    errors: number;
+    lastSecond: IPerformanceSeriesPoint | null;
+}
+
+export type ILoadTestTick = Pick<IStepProgress, 'elapsedSeconds' | 'responses' | 'errors'> & {
+    lastSecond: IPerformanceSeriesPoint;
+};
+
+export interface IEvaluationStep {
     pillar: keyof EvaluationWeights;
-    error: string;
-    code: FailureCode;
+    stage: number;
+    status: EvaluationStepStatus;
+    startedAt: string | null;
+    finishedAt: string | null;
+    error?: string;
+    code?: FailureCode;
+    progress?: IStepProgress;
 }
 
 export type IPillarScores = Partial<Record<keyof EvaluationWeights, number>>;

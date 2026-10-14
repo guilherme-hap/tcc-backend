@@ -7,6 +7,7 @@ import type {
     IPillarScoring,
     IScorePart,
     ISecurityCheckResult,
+    IStepProgress,
 } from '../interfaces/evaluation.interface.js';
 import type { IAuditMessage } from '../messages/catalog.js';
 import type { ParsedOpenApiContent } from '../utils/fetchOpenApiSpec.js';
@@ -27,10 +28,19 @@ export interface PillarBaseParams {
     apiBaseUrl?: string | null;
 }
 
-export interface PillarContext<P extends PillarBaseParams> {
+export interface PillarResources<P extends PillarBaseParams> {
     params: P;
     spec: () => Promise<ParsedOpenApiContent>;
     apiBaseUrl: () => Promise<string>;
+}
+
+export interface PillarProgressUpdate<C extends PillarColumn = PillarColumn> {
+    result?: PillarResults[C];
+    progress?: IStepProgress;
+}
+
+export interface PillarContext<P extends PillarBaseParams, C extends PillarColumn = PillarColumn> extends PillarResources<P> {
+    report: (update: PillarProgressUpdate<C>) => void;
 }
 
 export interface PillarOutcome<C extends PillarColumn = PillarColumn> {
@@ -43,7 +53,7 @@ export interface PillarOutcome<C extends PillarColumn = PillarColumn> {
 export interface Pillar<P extends PillarBaseParams, C extends PillarColumn = PillarColumn> {
     name: PillarName;
     column: C;
-    run: (ctx: PillarContext<P>) => Promise<PillarOutcome<C>>;
+    run: (ctx: PillarContext<P, C>) => Promise<PillarOutcome<C>>;
 }
 
 export interface Pipeline<P extends PillarBaseParams> {
