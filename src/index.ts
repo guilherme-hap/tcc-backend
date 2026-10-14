@@ -21,7 +21,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').spli
 
 app.disable('x-powered-by');
 app.use(securityHeaders);
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: allowedOrigins, maxAge: 600 }));
 
 app.use(express.json());
 
