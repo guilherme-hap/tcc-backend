@@ -1,4 +1,5 @@
 import type { IScorePart, ISecurityCheckResult, SecurityLayer } from '../interfaces/evaluation.interface.js';
+import { round } from './round.js';
 import { scorePart } from './scorePart.js';
 
 export const SECURITY_LAYER_WEIGHTS: Record<SecurityLayer, number> = {
@@ -33,7 +34,7 @@ export function calculateSecurityScore(results: ISecurityCheckResult[]): { score
 
     if (totalWeight === 0) return { score: 0, breakdown: [] };
     return {
-        score: Math.round((100 * weightedSum / totalWeight) * 100) / 100,
+        score: round(100 * weightedSum / totalWeight, 2),
         breakdown: layers.map(({ layer, weight, score }) => scorePart(layer, weight / totalWeight, 100 * score)),
     };
 }

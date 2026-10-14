@@ -3,6 +3,7 @@ import { IAutocannonResult, ILoadTestOptions } from '../interfaces/evaluation.in
 import { AppError } from '../errors/AppError.js';
 import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_TARGET_LATENCY_MS, FRUSTRATED_LATENCY_MULTIPLIER, defaultDurationFor } from '../utils/loadTestLimits.js';
+import { round } from '../utils/round.js';
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
 const MIN_SAMPLE_SIZE = 100;
@@ -157,10 +158,8 @@ export class AutocannonService {
             unanswered: counts.unanswered,
             errorRate: totalAttempts === 0
                 ? 0
-                : Math.round(((counts.serverErrors + errors + counts.unanswered) / totalAttempts) * 10000) / 10000,
-            averageLatency: counts.measured === 0
-                ? 0
-                : Math.round((counts.latencySum / counts.measured) * 100) / 100,
+                : round((counts.serverErrors + errors + counts.unanswered) / totalAttempts, 4),
+            averageLatency: counts.measured === 0 ? 0 : round(counts.latencySum / counts.measured, 2),
             totalRequests: result.requests?.sent ?? 0,
             errors,
             timeouts: result.timeouts ?? 0,

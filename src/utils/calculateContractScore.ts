@@ -1,5 +1,6 @@
 import type { Severity } from '../types/severity.js';
 import type { IContractResult, IScorePart, ISpectralAnalysis, ISpectralIssue, ISpectralRule } from '../interfaces/evaluation.interface.js';
+import { round } from './round.js';
 import { scorePart } from './scorePart.js';
 
 export const SEVERITY_WEIGHTS: Record<Severity, number> = {
@@ -96,7 +97,7 @@ export function calculateContractScore(
     }
 
     return {
-        score: Math.round(Math.max(0, Math.min(100, score)) * 100) / 100,
+        score: round(Math.max(0, Math.min(100, score)), 2),
         breakdown,
     };
 }

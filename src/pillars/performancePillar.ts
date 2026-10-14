@@ -3,6 +3,7 @@ import { AutocannonService } from '../services/AutocannonService.js';
 import { DEFAULT_TARGET_LATENCY_MS } from '../utils/loadTestLimits.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { withMeasurementLock } from '../utils/measurementLock.js';
+import { round } from '../utils/round.js';
 import { scorePart } from '../utils/scorePart.js';
 import type { IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
 import type { PerformanceRequestInput } from '../schemas/evaluation.schema.js';
@@ -67,7 +68,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
             .filter((target) => target.counts);
         const totalScore = counted.reduce((sum, target) => sum + target.score, 0);
         const score = counted.length > 0
-            ? Math.round((totalScore / counted.length) * 100) / 100
+            ? round(totalScore / counted.length, 2)
             : 0;
 
         return {

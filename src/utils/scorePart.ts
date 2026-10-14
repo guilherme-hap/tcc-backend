@@ -1,9 +1,5 @@
 import type { IScorePart } from '../interfaces/evaluation.interface.js';
-
-function round(value: number, digits: number): number {
-    const factor = 10 ** digits;
-    return Math.round(value * factor) / factor;
-}
+import { round } from './round.js';
 
 export function scorePart(id: string, weight: number, score: number): IScorePart {
     return {

@@ -13,6 +13,7 @@ import type {
     IScoreBreakdown,
     IScoringParameters,
 } from '../interfaces/evaluation.interface.js';
+import { round } from '../utils/round.js';
 import { scorePart } from '../utils/scorePart.js';
 
 interface PillarRun {
@@ -22,10 +23,6 @@ interface PillarRun {
 
 function storeResult<C extends PillarColumn>(results: Partial<PillarResults>, column: C, value: PillarResults[C]): void {
     results[column] = value;
-}
-
-function round2(value: number): number {
-    return Math.round(value * 100) / 100;
 }
 
 function toFailure(evaluationId: string, pillar: PillarName, reason: unknown): AppError {
@@ -113,7 +110,7 @@ export class EvaluationWorker {
         if (failedPillars.length === 0) {
             await this.lifecycle.complete(evaluationId, {
                 ...results,
-                finalScore: round2(weightedSum),
+                finalScore: round(weightedSum, 2),
                 pillarScores,
                 scoring,
                 scoreBreakdown: {
