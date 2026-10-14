@@ -93,6 +93,12 @@ const ERROR_MESSAGES = {
             `A especificação OpenAPI deve ter um objeto na raiz (recebido: ${received}). ` +
             'Confira se a URL informada aponta para o arquivo da especificação.',
     }),
+    SPEC_NOT_OPENAPI: entry({
+        status: 400,
+        message: () =>
+            'O documento não declara a versão do OpenAPI (campo openapi) nem do Swagger (campo swagger). ' +
+            'Confira se a URL informada aponta para o arquivo da especificação.',
+    }),
     SECURITY_TARGET_UNREACHABLE: entry<{ detail: string }>({
         status: 502,
         message: ({ detail }) => `Não foi possível acessar o alvo da auditoria de segurança (${detail}).`,

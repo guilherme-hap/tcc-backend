@@ -2,7 +2,7 @@ import { buildTargetUrl } from './resolveBaseUrl.js';
 import { resolvePathParameters } from './resolvePathParameters.js';
 import { findRequestBodySchema } from './findOperationSchema.js';
 import { generateSyntheticPayload } from './generateSyntheticPayload.js';
-import { isMutatingMethod } from './httpMethodUtils.js';
+import { acceptsRequestBody } from './httpMethodUtils.js';
 import type { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 import type { HttpMethod } from '../schemas/shared.js';
@@ -27,7 +27,7 @@ export function prepareLoadTestOptions(params: {
     const { method, payload, loadTestOptions, spec, targetPath } = params;
     const { body: globalBody, ...restOptions } = loadTestOptions ?? {};
 
-    const canHaveBody = isMutatingMethod(method) && method !== 'DELETE';
+    const canHaveBody = acceptsRequestBody(method);
 
     let body: string | undefined;
     if (payload !== undefined && payload !== null) {

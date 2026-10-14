@@ -29,7 +29,7 @@ export function resolvePathParameters(
     });
 }
 
-function collectParameterDefs(
+export function collectParameterDefs(
     spec: any,
     specPath: string | undefined,
     method: string,

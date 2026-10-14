@@ -8,6 +8,14 @@ export function isMutatingMethod(method?: string): boolean {
     return method !== undefined && MUTATING_METHODS.includes(method);
 }
 
+export function acceptsRequestBody(method?: string): boolean {
+    return isMutatingMethod(method) && method !== 'DELETE';
+}
+
+export function pathPlaceholders(path: string): string[] {
+    return [...new Set([...path.matchAll(PATH_PLACEHOLDER)].map((match) => match[1]))];
+}
+
 function mutatingMethodMessage(method: string): string {
     return `O teste de carga com o método ${method} exige autorização explícita para métodos que alteram dados ` +
         `(allowMutatingMethods), pois pode criar ou apagar dados reais na API alvo.`;
@@ -32,7 +40,7 @@ export function validateTargetMethods(
             ctx.addIssue({ code: 'custom', path: ['targets', index, 'method'], message: mutatingMethodMessage(target.method) });
         }
 
-        const placeholders = [...target.path.matchAll(PATH_PLACEHOLDER)].map((match) => match[1]);
+        const placeholders = pathPlaceholders(target.path);
         const informed = Object.keys(target.pathParams ?? {});
 
         for (const name of informed) {
