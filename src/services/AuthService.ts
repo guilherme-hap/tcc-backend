@@ -5,13 +5,19 @@ import { User } from '../entities/User.js';
 import { AppError } from '../errors/AppError.js';
 import type { LoginInput, RegisterInput } from '../schemas/auth.schema.js';
 import { isUniqueViolation } from '../utils/isUniqueViolation.js';
+import { jwtSecret } from '../utils/jwtSecret.js';
+
+interface AuthResult {
+    user: { id: string; email: string };
+    token: string;
+}
 
 export class AuthService {
     private get repository() {
         return AppDataSource.getRepository(User);
     }
 
-    async register({ email, password }: RegisterInput): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
+    async register({ email, password }: RegisterInput): Promise<AuthResult> {
         const existing = await this.repository.findOneBy({ email });
         if (existing) {
             throw new AppError('AUTH_EMAIL_IN_USE');
@@ -30,13 +36,10 @@ export class AuthService {
             throw error;
         }
 
-        const token = this.generateToken(user);
-
-        const { passwordHash: _, ...userWithoutPassword } = user;
-        return { user: userWithoutPassword as Omit<User, 'passwordHash'>, token };
+        return this.toAuthResult(user);
     }
 
-    async login({ email, password }: LoginInput): Promise<{ user: Omit<User, 'passwordHash'>; token: string }> {
+    async login({ email, password }: LoginInput): Promise<AuthResult> {
         const user = await this.repository.findOneBy({ email });
         if (!user) {
             throw new AppError('AUTH_INVALID_CREDENTIALS');
@@ -47,10 +50,7 @@ export class AuthService {
             throw new AppError('AUTH_INVALID_CREDENTIALS');
         }
 
-        const token = this.generateToken(user);
-
-        const { passwordHash: _, ...userWithoutPassword } = user;
-        return { user: userWithoutPassword as Omit<User, 'passwordHash'>, token };
+        return this.toAuthResult(user);
     }
 
     async getById(userId: string): Promise<{ id: string; email: string }> {
@@ -62,17 +62,10 @@ export class AuthService {
         return { id: user.id, email: user.email };
     }
 
-    private generateToken(user: User): string {
-        if (!process.env.JWT_SECRET) {
-            throw new AppError('INTERNAL_ERROR');
-        }
-
+    private toAuthResult(user: User): AuthResult {
         const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
+        const token = jwt.sign({ sub: user.id, email: user.email }, jwtSecret(), { expiresIn });
 
-        return jwt.sign(
-            { sub: user.id, email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn },
-        );
+        return { user: { id: user.id, email: user.email }, token };
     }
 }

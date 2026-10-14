@@ -4,14 +4,12 @@ import pg from 'pg';
 import { AppDataSource } from './data-source.js';
 import { dbConnection } from './database.js';
 import { registerWorkers } from '../workers/index.js';
+import { jwtSecret } from '../utils/jwtSecret.js';
 
 export async function bootstrap(app: Express, port: number | string) {
-    if (!process.env.JWT_SECRET?.trim()) {
-        console.error('FATAL: JWT_SECRET environment variable is not configured');
-        process.exit(1);
-    }
-
     try {
+        jwtSecret();
+
         const autoCreate = process.env.DB_AUTO_CREATE !== 'false';
 
         if (autoCreate) {

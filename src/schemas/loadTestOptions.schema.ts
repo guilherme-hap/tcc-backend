@@ -4,21 +4,10 @@ import { httpMethodSchema } from './shared.js';
 import {
     DEFAULT_LOAD_LIMITS,
     ELEVATED_LOAD_LIMITS,
-    MAX_TARGETS,
-    MAX_TOTAL_DURATION_SECONDS,
-    DEFAULT_DURATION_SECONDS,
     DEFAULT_TARGET_LATENCY_MS,
     apdexWindowIssue,
     defaultDurationFor,
 } from '../utils/loadTestLimits.js';
-
-export {
-    DEFAULT_LOAD_LIMITS,
-    ELEVATED_LOAD_LIMITS,
-    MAX_TARGETS,
-    MAX_TOTAL_DURATION_SECONDS,
-    DEFAULT_DURATION_SECONDS,
-};
 
 const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 const HEADER_VALUE_FORBIDDEN_PATTERN = /[\r\n\0]/;
@@ -41,7 +30,7 @@ const headersSchema = z.record(z.string(), z.string()).superRefine((headers, ctx
     }
 });
 
-export const loadTestOptionsShape = {
+const baseLoadTestOptionsSchema = z.object({
     duration: z.number().positive().optional(),
     connections: z.number().int().positive().optional(),
     targetLatency: z.number().positive().optional(),
@@ -52,9 +41,8 @@ export const loadTestOptionsShape = {
     body: z.string().optional(),
     allowMutatingMethods: z.boolean().optional(),
     allowHighLoad: z.boolean().optional(),
-};
+});
 
-const baseLoadTestOptionsSchema = z.object(loadTestOptionsShape);
 type RawLoadTestOptions = z.infer<typeof baseLoadTestOptionsSchema>;
 
 type LimitedNumericField = {

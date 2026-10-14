@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { AppError } from '../errors/AppError.js';
+import { jwtSecret } from './jwtSecret.js';
 
 export interface TokenPayload {
     sub: string;
@@ -14,12 +15,7 @@ export function verifyToken(authHeader: string | undefined): TokenPayload | null
     }
 
     const token = authHeader.slice(7);
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-        console.error('FATAL: JWT_SECRET environment variable is not configured');
-        throw new AppError('INTERNAL_ERROR');
-    }
+    const secret = jwtSecret();
 
     try {
         return jwt.verify(token, secret) as TokenPayload;

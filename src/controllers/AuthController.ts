@@ -13,19 +13,13 @@ export class AuthController {
     register = async (req: Request, res: Response): Promise<void> => {
         const result = await this.authService.register(req.body as RegisterInput);
 
-        res.status(201).json({
-            user: { id: result.user.id, email: result.user.email },
-            token: result.token,
-        });
+        res.status(201).json(result);
     };
 
     login = async (req: Request, res: Response): Promise<void> => {
         const result = await this.authService.login(req.body as LoginInput);
 
-        res.status(200).json({
-            user: { id: result.user.id, email: result.user.email },
-            token: result.token,
-        });
+        res.status(200).json(result);
     };
 
     me = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
