@@ -50,19 +50,9 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *                 description: "Preferências de configuração padrão. Ao atualizar, o objeto é substituído por completo (sem merge com o valor anterior)."
  *                 properties:
  *                   rulesConfig:
- *                     type: object
- *                     description: "Liga (true) ou desliga (false) regras do Spectral; nomes válidos em GET /api/rules."
- *                     example: { "operation-tags": true }
+ *                     $ref: '#/components/schemas/RulesConfig'
  *                   loadTestOptions:
- *                     type: object
- *                     description: "Opções padrão de teste de carga."
- *                     properties:
- *                       duration:
- *                         type: number
- *                         example: 10
- *                       connections:
- *                         type: number
- *                         example: 10
+ *                     $ref: '#/components/schemas/LoadTestOptions'
  *     responses:
  *       201:
  *         description: "API salva com sucesso."

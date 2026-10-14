@@ -37,16 +37,12 @@ const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
  *                 description: "Nome amigável para identificar o conjunto de regras."
  *                 example: "Regras rigorosas"
  *               rulesConfig:
- *                 type: object
- *                 description: "Mapa de regras Spectral (chave: nome da regra, valor: boolean habilitado/desabilitado). Todos os valores devem ser booleanos e os nomes devem existir no catálogo (GET /api/rules)."
- *                 additionalProperties:
- *                   type: boolean
- *                 example: { "operation-tags": true, "info-contact": false }
+ *                 $ref: '#/components/schemas/RulesConfig'
  *               severityWeights:
  *                 type: object
  *                 nullable: true
- *                 description: "Pesos customizados para cada nível de severidade. Chaves válidas: Error, Warning, Info, Hint, Unknown. Valores devem ser numéricos de 0 a 1000 (só a proporção entre eles importa). Chaves omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
- *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
+ *                 allOf:
+ *                   - $ref: '#/components/schemas/SeverityWeights'
  *     responses:
  *       201:
  *         description: "Regra customizada criada com sucesso."
@@ -114,14 +110,15 @@ const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
  *               name:
  *                 type: string
  *               rulesConfig:
- *                 type: object
  *                 description: "Substituição completa do mapa de regras. Todos os valores devem ser booleanos."
- *                 additionalProperties:
- *                   type: boolean
+ *                 allOf:
+ *                   - $ref: '#/components/schemas/RulesConfig'
  *               severityWeights:
  *                 type: object
  *                 nullable: true
  *                 description: "Substituição completa dos pesos de severidade."
+ *                 allOf:
+ *                   - $ref: '#/components/schemas/SeverityWeights'
  *     responses:
  *       200:
  *         description: "Regra atualizada com sucesso."
@@ -199,12 +196,12 @@ const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
  *         name:
  *           type: string
  *         rulesConfig:
- *           type: object
- *           additionalProperties:
- *             type: boolean
+ *           $ref: '#/components/schemas/RulesConfig'
  *         severityWeights:
  *           type: object
  *           nullable: true
+ *           allOf:
+ *             - $ref: '#/components/schemas/SeverityWeights'
  *         createdAt:
  *           type: string
  *           format: date-time

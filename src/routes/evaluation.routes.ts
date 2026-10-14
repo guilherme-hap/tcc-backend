@@ -42,35 +42,9 @@ const evaluationController = new EvaluationController();
  *                 description: "URL direta para o arquivo JSON ou YAML da especificação OpenAPI/Swagger (não utilize o link da interface HTML do Swagger UI)."
  *                 example: "https://petstore.swagger.io/v2/swagger.json"
  *               rulesConfig:
- *                 type: object
- *                 description: "Liga (true) ou desliga (false) regras do Spectral; as omitidas ficam no estado padrão. Os nomes válidos e o estado padrão de cada regra estão em GET /api/rules; nome fora do catálogo é rejeitado com 400."
- *                 example: { "operation-tags": true }
+ *                 $ref: '#/components/schemas/RulesConfig'
  *               severityWeights:
- *                 type: object
- *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos de 0 a 1000 (só a proporção entre eles importa). Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
- *                 properties:
- *                   Error:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Warning:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Info:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Hint:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Unknown:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                 additionalProperties: false
- *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
+ *                 $ref: '#/components/schemas/SeverityWeights'
  *               minScore:
  *                 type: number
  *                 minimum: 0
@@ -131,28 +105,7 @@ const evaluationController = new EvaluationController();
  *                 minItems: 1
  *                 maxItems: 20
  *                 items:
- *                   type: object
- *                   required:
- *                     - path
- *                   properties:
- *                     path:
- *                       type: string
- *                       description: "Rota específica da API a ser testada pelo Autocannon."
- *                       example: "/pet/findByStatus"
- *                     method:
- *                       type: string
- *                       description: "Método HTTP a ser utilizado pelo teste de carga."
- *                       enum: [GET, POST, PUT, DELETE, PATCH]
- *                       example: "GET"
- *                     payload:
- *                       description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
- *                       example: { "status": "available" }
- *                     pathParams:
- *                       type: object
- *                       description: "Valores dos parâmetros {nome} do path, por nome (texto ou número). Os informados substituem os valores sintéticos gerados a partir da especificação. Em DELETE é obrigatório informar todos os parâmetros do path, pois valores sintéticos não são gerados. Chave que não corresponde a um parâmetro do path é rejeitada com 400."
- *                       additionalProperties:
- *                         type: string
- *                       example: { "petId": "123" }
+ *                   $ref: '#/components/schemas/PerformanceTarget'
  *                 example:
  *                   - path: "/pet/findByStatus"
  *                     method: "GET"
@@ -160,51 +113,7 @@ const evaluationController = new EvaluationController();
  *                     method: "POST"
  *                     payload: { "name": "doggie", "photoUrls": [] }
  *               loadTestOptions:
- *                 type: object
- *                 description: "Opções adicionais e avançadas de configuração do Autocannon. Limites padrão (default): duration ≤ 60s, connections ≤ 50, maxRequests ≤ 100.000, requestsPerSecond ≤ 1.000. Com allowHighLoad=true: duration ≤ 300s, connections ≤ 500, maxRequests ≤ 1.000.000, requestsPerSecond ≤ 10.000."
- *                 properties:
- *                   duration:
- *                     type: number
- *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300). Padrão 10 (5 para métodos mutantes). Precisa ser maior que 4 × targetLatency, para que um alvo que não responde seja contado como frustrado."
- *                     example: 10
- *                   connections:
- *                     type: number
- *                     description: "Número de conexões concorrentes simultâneas (padrão máx. 50; com allowHighLoad máx. 500)."
- *                     example: 10
- *                   targetLatency:
- *                     type: number
- *                     description: "Latência alvo T em milissegundos para o Apdex (padrão 1000). Respostas 2xx/3xx com latência ≤ T são satisfeitas, ≤ 4T toleradas e acima disso frustradas; 5xx, timeouts e erros de conexão também são frustrados."
- *                     example: 1000
- *                   maxRequests:
- *                     type: number
- *                     description: "Quantidade máxima de requisições por alvo (padrão máx. 100.000; com allowHighLoad máx. 1.000.000). O teste termina ao atingir maxRequests ou duration, o que ocorrer primeiro. Não pode ser menor que connections."
- *                     example: 1000
- *                   requestsPerSecond:
- *                     type: number
- *                     description: "Taxa máxima de requisições por segundo (padrão máx. 1.000; com allowHighLoad máx. 10.000)."
- *                     example: 100
- *                   method:
- *                     type: string
- *                     description: "Método HTTP padrão global para o teste de carga. É sobrescrito pelo method definido individualmente no alvo (target.method tem precedência)."
- *                     enum: [GET, POST, PUT, DELETE, PATCH]
- *                     example: "GET"
- *                   headers:
- *                     type: object
- *                     additionalProperties:
- *                       type: string
- *                     description: "Headers HTTP customizados a serem enviados em todas as requisições do teste de carga."
- *                     example: { "Authorization": "Bearer token", "X-Custom-Header": "value" }
- *                   allowMutatingMethods:
- *                     type: boolean
- *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga. Obrigatório quando o método for mutante."
- *                     default: false
- *                   body:
- *                     type: string
- *                     description: "Corpo padrão global em formato string/JSON. Aplicado exclusivamente a alvos com métodos mutantes (POST, PUT, PATCH) que não possuam payload próprio; ignorado em métodos não mutantes (GET, DELETE)."
- *                   allowHighLoad:
- *                     type: boolean
- *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros que você não controla."
- *                     default: false
+ *                 $ref: '#/components/schemas/LoadTestOptions'
  *               minScore:
  *                 type: number
  *                 minimum: 0
@@ -265,28 +174,7 @@ const evaluationController = new EvaluationController();
  *                 minItems: 1
  *                 maxItems: 20
  *                 items:
- *                   type: object
- *                   required:
- *                     - path
- *                   properties:
- *                     path:
- *                       type: string
- *                       description: "Rota específica da API a ser testada pelo Autocannon."
- *                       example: "/pet/findByStatus"
- *                     method:
- *                       type: string
- *                       description: "Método HTTP para o teste de carga."
- *                       enum: [GET, POST, PUT, DELETE, PATCH]
- *                       example: "GET"
- *                     payload:
- *                       description: "Corpo (payload) da requisição para testes de estresse em métodos como POST ou PUT."
- *                       example: { "status": "available" }
- *                     pathParams:
- *                       type: object
- *                       description: "Valores dos parâmetros {nome} do path, por nome (texto ou número). Os informados substituem os valores sintéticos gerados a partir da especificação. Em DELETE é obrigatório informar todos os parâmetros do path, pois valores sintéticos não são gerados. Chave que não corresponde a um parâmetro do path é rejeitada com 400."
- *                       additionalProperties:
- *                         type: string
- *                       example: { "petId": "123" }
+ *                   $ref: '#/components/schemas/PerformanceTarget'
  *                 example:
  *                   - path: "/pet/findByStatus"
  *                     method: "GET"
@@ -294,81 +182,11 @@ const evaluationController = new EvaluationController();
  *                     method: "POST"
  *                     payload: { "name": "doggie", "photoUrls": [] }
  *               rulesConfig:
- *                 type: object
- *                 description: "Liga (true) ou desliga (false) regras do Spectral; as omitidas ficam no estado padrão. Os nomes válidos e o estado padrão de cada regra estão em GET /api/rules; nome fora do catálogo é rejeitado com 400."
- *                 example: { "operation-tags": true }
+ *                 $ref: '#/components/schemas/RulesConfig'
  *               severityWeights:
- *                 type: object
- *                 description: "Pesos por severidade usados na nota do contrato. Chaves válidas: Error, Warning, Info, Hint, Unknown; valores numéricos de 0 a 1000 (só a proporção entre eles importa). Cada chave informada sobrescreve o peso padrão correspondente; as omitidas usam o padrão: Error 0.5208, Warning 0.2708, Info 0.1458, Hint 0.0625, Unknown 0."
- *                 properties:
- *                   Error:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Warning:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Info:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Hint:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                   Unknown:
- *                     type: number
- *                     minimum: 0
- *                     maximum: 1000
- *                 additionalProperties: false
- *                 example: { "Error": 0.6, "Warning": 0.3, "Info": 0.1 }
+ *                 $ref: '#/components/schemas/SeverityWeights'
  *               loadTestOptions:
- *                 type: object
- *                 description: "Opções adicionais de teste do Autocannon. Limites padrão (default): duration ≤ 60s, connections ≤ 50, maxRequests ≤ 100.000, requestsPerSecond ≤ 1.000. Com allowHighLoad=true: duration ≤ 300s, connections ≤ 500, maxRequests ≤ 1.000.000, requestsPerSecond ≤ 10.000."
- *                 properties:
- *                   duration:
- *                     type: number
- *                     description: "Duração do teste em segundos (padrão máx. 60; com allowHighLoad máx. 300). Padrão 10 (5 para métodos mutantes). Precisa ser maior que 4 × targetLatency, para que um alvo que não responde seja contado como frustrado."
- *                     example: 10
- *                   connections:
- *                     type: number
- *                     description: "Número de conexões concorrentes simultâneas (padrão máx. 50; com allowHighLoad máx. 500)."
- *                     example: 10
- *                   targetLatency:
- *                     type: number
- *                     description: "Latência alvo T em milissegundos para o Apdex (padrão 1000). Respostas 2xx/3xx com latência ≤ T são satisfeitas, ≤ 4T toleradas e acima disso frustradas; 5xx, timeouts e erros de conexão também são frustrados."
- *                     example: 1000
- *                   maxRequests:
- *                     type: number
- *                     description: "Quantidade máxima de requisições por alvo (padrão máx. 100.000; com allowHighLoad máx. 1.000.000). O teste termina ao atingir maxRequests ou duration, o que ocorrer primeiro. Não pode ser menor que connections."
- *                     example: 1000
- *                   requestsPerSecond:
- *                     type: number
- *                     description: "Taxa máxima de requisições por segundo (padrão máx. 1.000; com allowHighLoad máx. 10.000)."
- *                     example: 100
- *                   method:
- *                     type: string
- *                     description: "Método HTTP padrão global para o teste de carga. É sobrescrito pelo method definido individualmente no alvo (target.method tem precedência)."
- *                     enum: [GET, POST, PUT, DELETE, PATCH]
- *                     example: "GET"
- *                   headers:
- *                     type: object
- *                     additionalProperties:
- *                       type: string
- *                     description: "Headers HTTP customizados a serem enviados em todas as requisições do teste de carga."
- *                     example: { "Authorization": "Bearer token", "X-Custom-Header": "value" }
- *                   allowMutatingMethods:
- *                     type: boolean
- *                     description: "Opt-in explícito para permitir métodos HTTP mutantes (POST, PUT, DELETE, PATCH) no teste de carga."
- *                     default: false
- *                   body:
- *                     type: string
- *                     description: "Corpo padrão global em formato string/JSON. Aplicado exclusivamente a alvos com métodos mutantes (POST, PUT, PATCH) que não possuam payload próprio; ignorado em métodos não mutantes (GET, DELETE)."
- *                   allowHighLoad:
- *                     type: boolean
- *                     description: "Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros."
- *                     default: false
+ *                 $ref: '#/components/schemas/LoadTestOptions'
  *               weights:
  *                 type: object
  *                 description: "Pesos opcionais para o cálculo da nota final. A soma dos 3 pilares deve ser igual a 1. Valores omitidos assumem automaticamente o default de 1/3 (0.333...) e contam para a soma. Padrão 1/3 para cada pilar."
@@ -607,36 +425,22 @@ const evaluationController = new EvaluationController();
  *                   nullable: true
  *                   description: "Lista de alvos configurados para o teste de performance."
  *                   items:
- *                     type: object
- *                     properties:
- *                       path:
- *                         type: string
- *                       method:
- *                         type: string
- *                       payload:
- *                         nullable: true
- *                       pathParams:
- *                         type: object
- *                         description: "Valores informados para os parâmetros do path."
- *                         additionalProperties:
- *                           type: string
+ *                     $ref: '#/components/schemas/PerformanceTarget'
  *                 requestSettings:
  *                   type: object
  *                   nullable: true
  *                   description: "Configurações do pedido, como foram enviadas (sem os padrões), para salvar a API ou repetir a avaliação. Difere de scoring, que traz os valores efetivos já com os padrões aplicados (targetLatency pode aparecer nos dois). Os cabeçalhos e o body de loadTestOptions não são guardados. Nulo quando o pedido não trouxe rulesConfig nem loadTestOptions."
  *                   properties:
  *                     rulesConfig:
- *                       type: object
- *                       additionalProperties:
- *                         type: boolean
+ *                       $ref: '#/components/schemas/RulesConfig'
  *                     loadTestOptions:
- *                       type: object
  *                       description: "Opções do teste de carga enviadas, sem headers e body."
+ *                       allOf:
+ *                         - $ref: '#/components/schemas/LoadTestOptions'
  *                     severityWeights:
- *                       type: object
  *                       description: "Pesos por severidade enviados no pedido (contract e full)."
- *                       additionalProperties:
- *                         type: number
+ *                       allOf:
+ *                         - $ref: '#/components/schemas/SeverityWeights'
  *                     weights:
  *                       type: object
  *                       description: "Pesos dos pilares enviados no pedido (full)."
