@@ -42,7 +42,7 @@ export function prepareLoadTestOptions(params: {
         if (schema) {
             payloadFactory = () => {
                 const syntheticPayload = generateSyntheticPayload(schema, spec);
-                return syntheticPayload ? JSON.stringify(syntheticPayload) : undefined;
+                return syntheticPayload !== undefined && syntheticPayload !== null ? JSON.stringify(syntheticPayload) : undefined;
             };
         }
     }

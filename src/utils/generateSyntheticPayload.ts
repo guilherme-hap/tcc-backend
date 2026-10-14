@@ -77,23 +77,14 @@ function transformProperties(payload: Record<string, any>, schema: any, spec: an
 export function generateSyntheticPayload(
     operationSchema: any,
     fullSpec: any,
-): Record<string, any> | undefined {
+): any {
     if (!operationSchema) {
         return undefined;
     }
 
-    if (operationSchema.example !== undefined) {
-        return transformPayload(operationSchema.example, operationSchema, fullSpec);
-    }
-    if (operationSchema.examples && typeof operationSchema.examples === 'object') {
-        const firstKey = Object.keys(operationSchema.examples)[0];
-        if (firstKey !== undefined) {
-            const exampleEntry = operationSchema.examples[firstKey];
-            const value = exampleEntry?.value ?? exampleEntry;
-            if (value !== undefined) {
-                return transformPayload(value, operationSchema, fullSpec);
-            }
-        }
+    const example = firstExample(operationSchema);
+    if (example !== undefined) {
+        return transformPayload(example, operationSchema, fullSpec);
     }
 
     try {
@@ -108,7 +99,21 @@ export function generateSyntheticPayload(
     return undefined;
 }
 
-function transformPayload(value: any, schema: any, spec: any): Record<string, any> {
+function firstExample(schema: any): any {
+    if (schema.example !== undefined) {
+        return schema.example;
+    }
+    if (Array.isArray(schema.examples)) {
+        return schema.examples[0];
+    }
+    if (schema.examples && typeof schema.examples === 'object') {
+        const entry: any = Object.values(schema.examples)[0];
+        return entry?.value ?? entry;
+    }
+    return undefined;
+}
+
+function transformPayload(value: any, schema: any, spec: any): any {
     const cloned = JSON.parse(JSON.stringify(value));
 
     if (Array.isArray(cloned)) {
