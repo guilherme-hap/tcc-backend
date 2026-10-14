@@ -28,6 +28,6 @@ export class SavedApiController {
 
     public delete = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
         await this.service.delete(req.params.id as string, req.userId!);
-        res.status(200).json({ message: 'Saved API deleted successfully' });
+        res.status(200).json({ message: 'API salva removida.' });
     };
 }

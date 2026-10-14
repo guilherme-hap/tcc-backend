@@ -171,7 +171,7 @@ const validateCustomRuleId = validateIdParam('CUSTOM_RULE_NOT_FOUND');
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Custom rule deleted successfully"
+ *                   example: "Regra customizada removida."
  *       401:
  *         description: "Autenticação obrigatória."
  *         content:

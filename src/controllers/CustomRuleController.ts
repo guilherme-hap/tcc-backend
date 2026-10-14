@@ -28,6 +28,6 @@ export class CustomRuleController {
 
     public delete = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
         await this.service.delete(req.params.id as string, req.userId!);
-        res.status(200).json({ message: 'Custom rule deleted successfully' });
+        res.status(200).json({ message: 'Regra customizada removida.' });
     };
 }

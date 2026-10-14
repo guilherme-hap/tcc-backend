@@ -199,7 +199,7 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Saved API deleted successfully"
+ *                   example: "API salva removida."
  *       401:
  *         description: "Autenticação obrigatória."
  *         content:
