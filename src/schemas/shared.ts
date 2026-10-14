@@ -14,6 +14,12 @@ export const httpUrl = z.url({ protocol: /^https?$/ });
 
 export const idSchema = z.guid();
 
+export function atLeastOneField<T extends z.ZodObject>(schema: T) {
+    return schema.refine((data) => Object.values(data).some((value) => value !== undefined), {
+        message: 'Informe ao menos um campo para atualizar',
+    });
+}
+
 export const minScoreSchema = z.number().min(0).max(100);
 
 export const rulesConfigSchema = z.record(z.string(), z.boolean()).superRefine((rules, ctx) => {

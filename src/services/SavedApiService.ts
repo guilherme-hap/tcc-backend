@@ -14,7 +14,7 @@ export class SavedApiService {
             userId,
             name: data.name,
             openApiUrl: data.openApiUrl,
-            apiBaseUrl: data.apiBaseUrl || null,
+            apiBaseUrl: data.apiBaseUrl ?? null,
             defaultSettings: data.defaultSettings ?? null,
         });
         return this.save(savedApi);
