@@ -30,18 +30,19 @@ export class AutocannonService {
         }
 
         const duration = options.duration ?? defaultDurationFor(method);
-        const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
-        const connections = Math.min(options.connections ?? (isMutating ? 2 : 10), maxRequests ?? Infinity);
-        const { targetLatency = DEFAULT_TARGET_LATENCY_MS, requestsPerSecond, body, payloadFactory } = options;
+        const targetLatency = options.targetLatency ?? DEFAULT_TARGET_LATENCY_MS;
+        const runOptions = this.buildRunOptions(targetUrl, options, duration, targetLatency);
 
-        const headers: Record<string, string> = { ...options.headers };
-        const hasBody = !!body || !!payloadFactory;
-        if (hasBody && !headers['content-type'] && !headers['Content-Type']) {
-            headers['content-type'] = 'application/json';
-        }
+        const { result, counts } = await this.run(runOptions, duration, targetLatency);
 
+        return this.summarize(result, counts, targetLatency, this.buildWarnings(options));
+    }
+
+    private buildWarnings(options: ILoadTestOptions): IAuditMessage[] {
+        const { method, body, payloadFactory } = options;
         const warnings: IAuditMessage[] = [];
-        if (isMutating) {
+
+        if (isMutatingMethod(method)) {
             warnings.push(auditMessage('PERF_MUTATING_METHOD', { method }));
             if (method === 'PUT' || method === 'PATCH') {
                 warnings.push(auditMessage('PERF_SYNTHETIC_PATH_IDS'));
@@ -49,13 +50,32 @@ export class AutocannonService {
             if (payloadFactory) {
                 warnings.push(auditMessage('PERF_SYNTHETIC_UNIQUE_FIELDS'));
             }
-            if (method !== 'DELETE' && !hasBody) {
+            if (method !== 'DELETE' && !body && !payloadFactory) {
                 warnings.push(auditMessage('PERF_MISSING_BODY'));
             }
         }
 
         if (options.allowHighLoad) {
             warnings.push(auditMessage('PERF_HIGH_LOAD'));
+        }
+
+        return warnings;
+    }
+
+    private buildRunOptions(
+        targetUrl: string,
+        options: ILoadTestOptions,
+        duration: number,
+        targetLatency: number,
+    ): autocannon.Options {
+        const { method, requestsPerSecond, body, payloadFactory } = options;
+        const isMutating = isMutatingMethod(method);
+        const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
+        const connections = Math.min(options.connections ?? (isMutating ? 2 : 10), maxRequests ?? Infinity);
+
+        const headers: Record<string, string> = { ...options.headers };
+        if ((body || payloadFactory) && !headers['content-type'] && !headers['Content-Type']) {
+            headers['content-type'] = 'application/json';
         }
 
         const limits = {
@@ -69,42 +89,39 @@ export class AutocannonService {
             ...(requestsPerSecond && { overallRate: requestsPerSecond }),
         };
 
-        let runOptions: autocannon.Options;
-        if (payloadFactory) {
-            const parsedUrl = new URL(targetUrl);
-            const basePath = parsedUrl.pathname || '/';
-
-            runOptions = {
-                ...limits,
-                url: `${parsedUrl.protocol}//${parsedUrl.host}`,
-                requests: [
-                    {
-                        method,
-                        path: `${basePath}${parsedUrl.search}`,
-                        headers,
-                        setupRequest: (req: autocannon.Request) => {
-                            const generatedBody = payloadFactory();
-                            if (generatedBody !== undefined) {
-                                req.body = generatedBody;
-                            }
-
-                            return req;
-                        },
-                    },
-                ],
-            };
-        } else {
-            runOptions = {
-                ...limits,
-                url: targetUrl,
-                method,
-                headers,
-                ...(body && { body }),
-            };
+        if (!payloadFactory) {
+            return { ...limits, url: targetUrl, method, headers, ...(body && { body }) };
         }
 
-        const { result, counts } = await this.run(runOptions, duration, targetLatency);
+        const parsedUrl = new URL(targetUrl);
 
+        return {
+            ...limits,
+            url: `${parsedUrl.protocol}//${parsedUrl.host}`,
+            requests: [
+                {
+                    method,
+                    path: `${parsedUrl.pathname || '/'}${parsedUrl.search}`,
+                    headers,
+                    setupRequest: (req: autocannon.Request) => {
+                        const generatedBody = payloadFactory();
+                        if (generatedBody !== undefined) {
+                            req.body = generatedBody;
+                        }
+
+                        return req;
+                    },
+                },
+            ],
+        };
+    }
+
+    private summarize(
+        result: autocannon.Result,
+        counts: ResponseCounts,
+        targetLatency: number,
+        warnings: IAuditMessage[],
+    ): IAutocannonResult {
         const errors = result.errors ?? 0;
         const satisfied = counts.satisfied;
         const tolerating = counts.tolerating;
