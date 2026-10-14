@@ -1,5 +1,10 @@
 import autocannon from 'autocannon';
-import { IAutocannonResult, ILoadTestOptions } from '../interfaces/evaluation.interface.js';
+import {
+    IAutocannonResult,
+    ILatencySummary,
+    ILoadTestOptions,
+    IPerformanceSeriesPoint,
+} from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
 import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_TARGET_LATENCY_MS, FRUSTRATED_LATENCY_MULTIPLIER, defaultDurationFor } from '../utils/loadTestLimits.js';
@@ -8,6 +13,17 @@ import { auditMessage, IAuditMessage } from '../messages/catalog.js';
 
 const MIN_SAMPLE_SIZE = 100;
 const MIN_RESPONSE_TIMEOUT_SECONDS = 10;
+const P95_MIN_SAMPLE_SIZE = 20;
+const P99_MIN_SAMPLE_SIZE = 100;
+const P99_9_MIN_SAMPLE_SIZE = 1000;
+const MIN_TICK_INTERVAL_MS = 500;
+
+interface SecondCounts {
+    responses: number;
+    measured: number;
+    latencySum: number;
+    errors: number;
+}
 
 interface ResponseCounts {
     satisfied: number;
@@ -19,6 +35,15 @@ interface ResponseCounts {
     unanswered: number;
     measured: number;
     latencySum: number;
+    latencyHistogram: Uint32Array;
+    currentSecond: SecondCounts;
+    seconds: SecondCounts[];
+}
+
+interface LoadTestRun {
+    result: autocannon.Result;
+    counts: ResponseCounts;
+    elapsedMs: number;
 }
 
 export class AutocannonService {
@@ -34,9 +59,9 @@ export class AutocannonService {
         const targetLatency = options.targetLatency ?? DEFAULT_TARGET_LATENCY_MS;
         const runOptions = this.buildRunOptions(targetUrl, options, duration, targetLatency);
 
-        const { result, counts } = await this.run(runOptions, duration, targetLatency);
+        const run = await this.run(runOptions, duration, targetLatency);
 
-        return this.summarize(result, counts, targetLatency, this.buildWarnings(options));
+        return this.summarize(run, targetLatency, this.buildWarnings(options));
     }
 
     private buildWarnings(options: ILoadTestOptions): IAuditMessage[] {
@@ -82,10 +107,7 @@ export class AutocannonService {
         const limits = {
             duration,
             connections,
-            timeout: Math.max(
-                MIN_RESPONSE_TIMEOUT_SECONDS,
-                Math.ceil((FRUSTRATED_LATENCY_MULTIPLIER * targetLatency) / 1000),
-            ),
+            timeout: this.responseTimeoutSeconds(targetLatency),
             ...(maxRequests && { amount: maxRequests }),
             ...(requestsPerSecond && { overallRate: requestsPerSecond }),
         };
@@ -117,9 +139,15 @@ export class AutocannonService {
         };
     }
 
+    private responseTimeoutSeconds(targetLatency: number): number {
+        return Math.max(
+            MIN_RESPONSE_TIMEOUT_SECONDS,
+            Math.ceil((FRUSTRATED_LATENCY_MULTIPLIER * targetLatency) / 1000),
+        );
+    }
+
     private summarize(
-        result: autocannon.Result,
-        counts: ResponseCounts,
+        { result, counts, elapsedMs }: LoadTestRun,
         targetLatency: number,
         warnings: IAuditMessage[],
     ): IAutocannonResult {
@@ -159,7 +187,12 @@ export class AutocannonService {
             errorRate: totalAttempts === 0
                 ? 0
                 : round((counts.serverErrors + errors + counts.unanswered) / totalAttempts, 4),
-            averageLatency: counts.measured === 0 ? 0 : round(counts.latencySum / counts.measured, 2),
+            latency: this.summarizeLatency(counts),
+            requestsPerSecond: elapsedMs > 0 ? round(counts.responses / (elapsedMs / 1000), 2) : 0,
+            statusCodes: Object.fromEntries(
+                Object.entries(result.statusCodeStats ?? {}).map(([code, stats]) => [code, stats.count ?? 0]),
+            ),
+            series: counts.seconds.map((second, index) => this.summarizeSecond(second, index + 1)),
             totalRequests: result.requests?.sent ?? 0,
             errors,
             timeouts: result.timeouts ?? 0,
@@ -167,13 +200,56 @@ export class AutocannonService {
         };
     }
 
+    private summarizeLatency(counts: ResponseCounts): ILatencySummary | null {
+        const { measured, latencyHistogram } = counts;
+        if (measured === 0) return null;
+
+        const percentile = (perMille: number): number =>
+            this.latencyAtRank(latencyHistogram, Math.ceil((measured * perMille) / 1000));
+
+        return {
+            min: this.latencyAtRank(latencyHistogram, 1),
+            mean: round(counts.latencySum / measured, 2),
+            p50: percentile(500),
+            p95: measured >= P95_MIN_SAMPLE_SIZE ? percentile(950) : null,
+            p99: measured >= P99_MIN_SAMPLE_SIZE ? percentile(990) : null,
+            p99_9: measured >= P99_9_MIN_SAMPLE_SIZE ? percentile(999) : null,
+            max: this.latencyAtRank(latencyHistogram, measured),
+        };
+    }
+
+    private latencyAtRank(histogram: Uint32Array, rank: number): number {
+        let cumulative = 0;
+
+        for (let ms = 0; ms < histogram.length; ms++) {
+            cumulative += histogram[ms];
+            if (cumulative >= rank) return ms;
+        }
+
+        return histogram.length - 1;
+    }
+
+    private summarizeSecond(counts: SecondCounts, second: number): IPerformanceSeriesPoint {
+        return {
+            second,
+            responses: counts.responses,
+            meanLatency: counts.measured === 0 ? null : round(counts.latencySum / counts.measured, 2),
+            errors: counts.errors,
+        };
+    }
+
+    private emptySecond(): SecondCounts {
+        return { responses: 0, measured: 0, latencySum: 0, errors: 0 };
+    }
+
     private run(
         options: autocannon.Options,
         durationSeconds: number,
         targetLatency: number,
-    ): Promise<{ result: autocannon.Result; counts: ResponseCounts }> {
+    ): Promise<LoadTestRun> {
         return new Promise((resolve, reject) => {
             let stopTimer: NodeJS.Timeout | undefined;
+            let lastClientDoneAt: number | undefined;
             const counts: ResponseCounts = {
                 satisfied: 0,
                 tolerating: 0,
@@ -184,6 +260,9 @@ export class AutocannonService {
                 unanswered: 0,
                 measured: 0,
                 latencySum: 0,
+                latencyHistogram: new Uint32Array(this.responseTimeoutSeconds(targetLatency) * 1000 + 1),
+                currentSecond: this.emptySecond(),
+                seconds: [],
             };
             const sentAtByClient = new Map<autocannon.Client, number>();
             const setupClient = (client: autocannon.Client) => {
@@ -192,7 +271,12 @@ export class AutocannonService {
                 for (const event of ['response', 'timeout', 'connError']) {
                     emitter.on(event, () => sentAtByClient.delete(client));
                 }
+                emitter.on('done', () => {
+                    lastClientDoneAt = performance.now();
+                });
             };
+            const startedAt = performance.now();
+            let lastTickAt = startedAt;
             const instance = autocannon({ ...options, setupClient }, (err, res) => {
                 clearTimeout(stopTimer);
                 if (err) {
@@ -204,10 +288,23 @@ export class AutocannonService {
                         counts.unanswered++;
                     }
                 }
-                resolve({ result: res, counts });
+                if (counts.currentSecond.responses + counts.currentSecond.errors > 0) {
+                    counts.seconds.push(counts.currentSecond);
+                }
+                resolve({ result: res, counts, elapsedMs: (lastClientDoneAt ?? performance.now()) - startedAt });
             });
             instance.on('response', (_client, statusCode, _resBytes, responseTime) => {
                 this.classifyResponse(counts, statusCode, responseTime, targetLatency);
+            });
+            instance.on('reqError', () => {
+                counts.currentSecond.errors++;
+            });
+            instance.on('tick', () => {
+                const now = performance.now();
+                if (now - lastTickAt < MIN_TICK_INTERVAL_MS) return;
+                lastTickAt = now;
+                counts.seconds.push(counts.currentSecond);
+                counts.currentSecond = this.emptySecond();
             });
             if (options.amount) {
                 stopTimer = setTimeout(() => instance.stop(), durationSeconds * 1000);
@@ -217,17 +314,24 @@ export class AutocannonService {
 
     private classifyResponse(counts: ResponseCounts, statusCode: number, responseTime: number, T: number): void {
         if (statusCode < 200) return;
+        const second = counts.currentSecond;
         counts.responses++;
+        second.responses++;
 
         if (statusCode >= 400 && statusCode < 500) {
             counts.excluded4xx++;
             return;
         }
 
+        const slot = Math.min(Math.round(responseTime), counts.latencyHistogram.length - 1);
         counts.measured++;
         counts.latencySum += responseTime;
+        counts.latencyHistogram[slot]++;
+        second.measured++;
+        second.latencySum += responseTime;
 
         if (statusCode >= 500) {
+            second.errors++;
             counts.serverErrors++;
             counts.frustrated++;
         } else if (responseTime <= T) {

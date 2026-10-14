@@ -49,6 +49,23 @@ export interface IContractResult {
     summary: IContractSummary;
 }
 
+export interface ILatencySummary {
+    min: number;
+    mean: number;
+    p50: number;
+    p95: number | null;
+    p99: number | null;
+    p99_9: number | null;
+    max: number;
+}
+
+export interface IPerformanceSeriesPoint {
+    second: number;
+    responses: number;
+    meanLatency: number | null;
+    errors: number;
+}
+
 export interface IAutocannonResult {
     score: number | null;
     targetLatency: number;
@@ -60,7 +77,10 @@ export interface IAutocannonResult {
     serverErrors: number;
     unanswered: number;
     errorRate: number;
-    averageLatency: number;
+    latency: ILatencySummary | null;
+    requestsPerSecond: number;
+    statusCodes: Record<string, number>;
+    series: IPerformanceSeriesPoint[];
     totalRequests: number;
     errors: number;
     timeouts: number;

@@ -641,9 +641,61 @@ const evaluationController = new EvaluationController();
  *                           errorRate:
  *                             type: number
  *                             description: "(5xx + erros de conexão e timeouts + sem resposta) / (respostas + erros + sem resposta), de 0 a 1. Apenas diagnóstico; não entra na nota."
- *                           averageLatency:
+ *                           latency:
+ *                             type: object
+ *                             nullable: true
+ *                             description: "Latência (ms) das respostas não 4xx, a mesma amostra de respostas do Apdex; timeouts e erros de conexão não têm latência e não entram. Apenas diagnóstico; não entra na nota. min, percentis e max têm resolução de 1 ms; mean usa os tempos exatos. Nulo quando nenhuma resposta não 4xx foi recebida. Os valores são do alvo: não há agregação entre alvos."
+ *                             properties:
+ *                               min:
+ *                                 type: number
+ *                               mean:
+ *                                 type: number
+ *                                 description: "Média, com 2 casas decimais."
+ *                               p50:
+ *                                 type: number
+ *                                 description: "Mediana."
+ *                               p95:
+ *                                 type: number
+ *                                 nullable: true
+ *                                 description: "Percentil 95. Nulo com menos de 20 respostas medidas."
+ *                               p99:
+ *                                 type: number
+ *                                 nullable: true
+ *                                 description: "Percentil 99. Nulo com menos de 100 respostas medidas."
+ *                               p99_9:
+ *                                 type: number
+ *                                 nullable: true
+ *                                 description: "Percentil 99,9. Nulo com menos de 1.000 respostas medidas."
+ *                               max:
+ *                                 type: number
+ *                           requestsPerSecond:
  *                             type: number
- *                             description: "Latência média (ms) das respostas não 4xx."
+ *                             description: "Vazão média: respostas recebidas (inclusive 4xx, sem 1xx) dividida pela duração medida do teste, em segundos (até a última conexão encerrar). Apenas diagnóstico; depende das conexões e da latência, não é a capacidade da API."
+ *                           statusCodes:
+ *                             type: object
+ *                             description: "Quantidade de respostas por código de status HTTP."
+ *                             additionalProperties:
+ *                               type: integer
+ *                             example: { "200": 960, "404": 12 }
+ *                           series:
+ *                             type: array
+ *                             description: "Série temporal do teste, um ponto por segundo. O último ponto pode cobrir menos de um segundo."
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 second:
+ *                                   type: integer
+ *                                   description: "Segundo do teste, a partir de 1."
+ *                                 responses:
+ *                                   type: integer
+ *                                   description: "Respostas recebidas no segundo (inclusive 4xx, sem 1xx)."
+ *                                 meanLatency:
+ *                                   type: number
+ *                                   nullable: true
+ *                                   description: "Latência média (ms) das respostas não 4xx do segundo. Nulo quando não houve nenhuma."
+ *                                 errors:
+ *                                   type: integer
+ *                                   description: "Respostas 5xx mais erros de conexão e timeouts do segundo."
  *                           totalRequests:
  *                             type: number
  *                           errors:
