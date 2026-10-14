@@ -1,9 +1,9 @@
 import net from 'node:net';
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
-import { auditMessage } from '../messages/catalog.js';
+import { auditMessage, type IAuditMessage } from '../messages/catalog.js';
 import { AppError } from '../errors/AppError.js';
-import type { ISecurityCheckResult } from '../interfaces/evaluation.interface.js';
+import type { ISecurityCheckResult, SecurityLayer } from '../interfaces/evaluation.interface.js';
 
 type Headers = Record<string, string | undefined>;
 
@@ -19,6 +19,12 @@ const CONNECT_PROBE_TIMEOUT_MS = 3_000;
 const CORS_PROBE_TIMEOUT_MS = 10_000;
 const CORS_PROBE_ATTEMPTS = 2;
 const FORGED_ORIGIN = 'https://origem-forjada.auditor.invalid';
+
+function checkOf(layer: SecurityLayer, header: string) {
+    return (status: ISecurityCheckResult['status'], audit: IAuditMessage): ISecurityCheckResult => (
+        { layer, header, status, ...audit }
+    );
+}
 
 export class SecurityService {
     public async analyze(targetUrl: string): Promise<ISecurityCheckResult[]> {
@@ -38,8 +44,8 @@ export class SecurityService {
             cors,
             this.checkXContentTypeOptions(headers),
             this.checkFramingProtection(headers),
-            this.checkServerHeader(headers),
-            this.checkXPoweredBy(headers),
+            this.checkFingerprintHeader(headers, 'Server'),
+            this.checkFingerprintHeader(headers, 'X-Powered-By'),
         ];
     }
 
@@ -80,22 +86,20 @@ export class SecurityService {
     }
 
     private checkHttps(targetUrl: string): ISecurityCheckResult {
-        const header = 'HTTPS';
-        const layer = 'transport';
+        const result = checkOf('transport', 'HTTPS');
 
         const url = new URL(targetUrl);
         if (url.protocol !== 'https:') {
             return this.isLocalAddress(url)
-                ? { layer, header, status: 'error', ...auditMessage('SEC_TRANSPORT_NOT_HTTPS_LOCAL', { host: url.hostname }) }
-                : { layer, header, status: 'error', ...auditMessage('SEC_TRANSPORT_NOT_HTTPS') };
+                ? result('error', auditMessage('SEC_TRANSPORT_NOT_HTTPS_LOCAL', { host: url.hostname }))
+                : result('error', auditMessage('SEC_TRANSPORT_NOT_HTTPS'));
         }
 
-        return { layer, header, status: 'pass', ...auditMessage('SEC_TRANSPORT_HTTPS_OK') };
+        return result('pass', auditMessage('SEC_TRANSPORT_HTTPS_OK'));
     }
 
     private async checkHttpsRedirect(targetUrl: string): Promise<ISecurityCheckResult> {
-        const header = 'HTTP-to-HTTPS Redirect';
-        const layer = 'transport';
+        const result = checkOf('transport', 'HTTP-to-HTTPS Redirect');
 
         const probeUrl = new URL(targetUrl);
         const probesTlsPort = probeUrl.protocol === 'https:' && probeUrl.port !== '';
@@ -111,33 +115,28 @@ export class SecurityService {
             if (status >= 300 && status < 400) {
                 const location = this.getHeader(response.headers as Headers, 'location')?.trim();
                 if (location && /^https:\/\//i.test(location)) {
-                    return { layer, header, status: 'pass', ...auditMessage('SEC_TRANSPORT_REDIRECT_OK') };
+                    return result('pass', auditMessage('SEC_TRANSPORT_REDIRECT_OK'));
                 }
-                return {
-                    layer,
-                    header,
-                    status: 'error',
-                    ...auditMessage('SEC_TRANSPORT_REDIRECT_NOT_HTTPS', { status, location: location || '(ausente)' }),
-                };
+                return result('error', auditMessage('SEC_TRANSPORT_REDIRECT_NOT_HTTPS', { status, location: location || '(ausente)' }));
             }
 
             if (status === 426 || (status === 400 && probesTlsPort)) {
-                return { layer, header, status: 'pass', ...auditMessage('SEC_TRANSPORT_HTTP_REFUSED') };
+                return result('pass', auditMessage('SEC_TRANSPORT_HTTP_REFUSED'));
             }
 
-            return { layer, header, status: 'error', ...auditMessage('SEC_TRANSPORT_HTTP_SERVED', { status }) };
+            return result('error', auditMessage('SEC_TRANSPORT_HTTP_SERVED', { status }));
         } catch (error) {
             const code = axios.isAxiosError(error) ? error.code : undefined;
             if (code === 'ETIMEDOUT') {
-                return { layer, header, status: 'pass', ...auditMessage('SEC_TRANSPORT_HTTP_TIMEOUT') };
+                return result('pass', auditMessage('SEC_TRANSPORT_HTTP_TIMEOUT'));
             }
             if (code !== 'ECONNABORTED') {
-                return { layer, header, status: 'pass', ...auditMessage('SEC_TRANSPORT_HTTP_REFUSED') };
+                return result('pass', auditMessage('SEC_TRANSPORT_HTTP_REFUSED'));
             }
             if (await this.acceptsConnection(probeUrl)) {
-                return { layer, header, status: 'warning', ...auditMessage('SEC_TRANSPORT_HTTP_NO_RESPONSE') };
+                return result('warning', auditMessage('SEC_TRANSPORT_HTTP_NO_RESPONSE'));
             }
-            return { layer, header, status: 'pass', ...auditMessage('SEC_TRANSPORT_HTTP_TIMEOUT') };
+            return result('pass', auditMessage('SEC_TRANSPORT_HTTP_TIMEOUT'));
         }
     }
 
@@ -179,65 +178,58 @@ export class SecurityService {
     }
 
     private checkStrictTransportSecurity(headers: Headers, receivedOverHttps: boolean): ISecurityCheckResult {
-        const header = 'Strict-Transport-Security';
-        const layer = 'transport';
+        const result = checkOf('transport', 'Strict-Transport-Security');
 
         if (!receivedOverHttps) {
-            return { layer, header, status: 'missing', ...auditMessage('SEC_HSTS_REQUIRES_HTTPS') };
+            return result('missing', auditMessage('SEC_HSTS_REQUIRES_HTTPS'));
         }
 
         const value = this.getHeader(headers, 'strict-transport-security');
 
         if (!value) {
-            return { layer, header, status: 'missing', ...auditMessage('SEC_HSTS_MISSING') };
+            return result('missing', auditMessage('SEC_HSTS_MISSING'));
         }
 
         const maxAgeMatch = value.match(/max-age\s*=\s*(\d+)/i);
         if (maxAgeMatch) {
             const maxAge = parseInt(maxAgeMatch[1], 10);
             if (maxAge < 15_768_000) {
-                return { layer, header, status: 'warning', ...auditMessage('SEC_HSTS_SHORT_MAX_AGE', { maxAge }) };
+                return result('warning', auditMessage('SEC_HSTS_SHORT_MAX_AGE', { maxAge }));
             }
         }
 
-        return { layer, header, status: 'pass', ...auditMessage('SEC_HSTS_OK') };
+        return result('pass', auditMessage('SEC_HSTS_OK'));
     }
 
     private async checkCors(targetUrl: string): Promise<ISecurityCheckResult> {
-        const header = 'Access-Control-Allow-Origin';
-        const layer = 'access';
+        const result = checkOf('access', 'Access-Control-Allow-Origin');
 
         const headers = (await this.probeCors(targetUrl)).headers as Headers;
 
         const allowOrigin = this.getHeader(headers, 'access-control-allow-origin')?.trim();
         if (!allowOrigin) {
-            return { layer, header, status: 'pass', ...auditMessage('SEC_CORS_NOT_CONFIGURED') };
+            return result('pass', auditMessage('SEC_CORS_NOT_CONFIGURED'));
         }
 
         const allowCredentials = this.getHeader(headers, 'access-control-allow-credentials')?.trim().toLowerCase() === 'true';
 
         if (allowOrigin === '*') {
             return allowCredentials
-                ? { layer, header, status: 'warning', ...auditMessage('SEC_CORS_WILDCARD_WITH_CREDENTIALS') }
-                : { layer, header, status: 'pass', ...auditMessage('SEC_CORS_WILDCARD') };
+                ? result('warning', auditMessage('SEC_CORS_WILDCARD_WITH_CREDENTIALS'))
+                : result('pass', auditMessage('SEC_CORS_WILDCARD'));
         }
 
         if (allowOrigin.toLowerCase() === 'null' && allowCredentials) {
-            return { layer, header, status: 'error', ...auditMessage('SEC_CORS_NULL_ORIGIN_WITH_CREDENTIALS') };
+            return result('error', auditMessage('SEC_CORS_NULL_ORIGIN_WITH_CREDENTIALS'));
         }
 
         if (allowOrigin.toLowerCase() === FORGED_ORIGIN) {
             return allowCredentials
-                ? { layer, header, status: 'error', ...auditMessage('SEC_CORS_REFLECTED_ORIGIN', { origin: FORGED_ORIGIN }) }
-                : {
-                    layer,
-                    header,
-                    status: 'pass',
-                    ...auditMessage('SEC_CORS_REFLECTED_ORIGIN_NO_CREDENTIALS', { origin: FORGED_ORIGIN }),
-                };
+                ? result('error', auditMessage('SEC_CORS_REFLECTED_ORIGIN', { origin: FORGED_ORIGIN }))
+                : result('pass', auditMessage('SEC_CORS_REFLECTED_ORIGIN_NO_CREDENTIALS', { origin: FORGED_ORIGIN }));
         }
 
-        return { layer, header, status: 'pass', ...auditMessage('SEC_CORS_EXPLICIT_ORIGIN', { origin: allowOrigin }) };
+        return result('pass', auditMessage('SEC_CORS_EXPLICIT_ORIGIN', { origin: allowOrigin }));
     }
 
     private async probeCors(targetUrl: string): Promise<AxiosResponse> {
@@ -257,24 +249,22 @@ export class SecurityService {
     }
 
     private checkXContentTypeOptions(headers: Headers): ISecurityCheckResult {
-        const header = 'X-Content-Type-Options';
-        const layer = 'content';
+        const result = checkOf('content', 'X-Content-Type-Options');
         const value = this.getHeader(headers, 'x-content-type-options');
 
         if (!value) {
-            return { layer, header, status: 'missing', ...auditMessage('SEC_XCTO_MISSING') };
+            return result('missing', auditMessage('SEC_XCTO_MISSING'));
         }
 
         if (value.trim().toLowerCase() !== 'nosniff') {
-            return { layer, header, status: 'warning', ...auditMessage('SEC_XCTO_INVALID', { value }) };
+            return result('warning', auditMessage('SEC_XCTO_INVALID', { value }));
         }
 
-        return { layer, header, status: 'pass', ...auditMessage('SEC_XCTO_OK') };
+        return result('pass', auditMessage('SEC_XCTO_OK'));
     }
 
     private checkFramingProtection(headers: Headers): ISecurityCheckResult {
-        const header = 'Content-Security-Policy / X-Frame-Options';
-        const layer = 'content';
+        const result = checkOf('content', 'Content-Security-Policy / X-Frame-Options');
 
         const csp = this.getHeader(headers, 'content-security-policy');
         const frameAncestors = csp ? this.extractFrameAncestors(csp) : undefined;
@@ -284,9 +274,9 @@ export class SecurityService {
             const value = `frame-ancestors ${frameAncestors}`.trim();
             const tokens = frameAncestors.split(/\s+/).filter(Boolean);
             if (tokens.length === 0 || tokens.includes('*')) {
-                return { layer, header, status: 'warning', ...auditMessage('SEC_FRAMING_WEAK', { source, value }) };
+                return result('warning', auditMessage('SEC_FRAMING_WEAK', { source, value }));
             }
-            return { layer, header, status: 'pass', ...auditMessage('SEC_FRAMING_OK', { source, value }) };
+            return result('pass', auditMessage('SEC_FRAMING_OK', { source, value }));
         }
 
         const frameOptions = this.getHeader(headers, 'x-frame-options');
@@ -295,12 +285,12 @@ export class SecurityService {
             const value = frameOptions.trim();
             const directive = value.split(',')[0].trim().toUpperCase();
             if (directive === 'DENY' || directive === 'SAMEORIGIN') {
-                return { layer, header, status: 'pass', ...auditMessage('SEC_FRAMING_OK', { source, value }) };
+                return result('pass', auditMessage('SEC_FRAMING_OK', { source, value }));
             }
-            return { layer, header, status: 'warning', ...auditMessage('SEC_FRAMING_WEAK', { source, value }) };
+            return result('warning', auditMessage('SEC_FRAMING_WEAK', { source, value }));
         }
 
-        return { layer, header, status: 'missing', ...auditMessage('SEC_FRAMING_MISSING') };
+        return result('missing', auditMessage('SEC_FRAMING_MISSING'));
     }
 
     private extractFrameAncestors(cspValue: string): string | undefined {
@@ -313,28 +303,19 @@ export class SecurityService {
         return undefined;
     }
 
-    private checkServerHeader(headers: Headers): ISecurityCheckResult {
-        return this.checkFingerprintHeader(headers, 'Server', 'server');
-    }
-
-    private checkXPoweredBy(headers: Headers): ISecurityCheckResult {
-        return this.checkFingerprintHeader(headers, 'X-Powered-By', 'x-powered-by');
-    }
-
-    private checkFingerprintHeader(headers: Headers, displayName: string, headerKey: string): ISecurityCheckResult {
-        const header = displayName;
-        const layer = 'leakage';
-        const value = this.getHeader(headers, headerKey);
+    private checkFingerprintHeader(headers: Headers, header: string): ISecurityCheckResult {
+        const result = checkOf('leakage', header);
+        const value = this.getHeader(headers, header);
 
         if (!value) {
-            return { layer, header, status: 'pass', ...auditMessage('SEC_FINGERPRINT_ABSENT', { header }) };
+            return result('pass', auditMessage('SEC_FINGERPRINT_ABSENT', { header }));
         }
 
         if (/\d+\.\d+/.test(value)) {
-            return { layer, header, status: 'error', ...auditMessage('SEC_FINGERPRINT_VERSION_EXPOSED', { header, value }) };
+            return result('error', auditMessage('SEC_FINGERPRINT_VERSION_EXPOSED', { header, value }));
         }
 
-        return { layer, header, status: 'pass', ...auditMessage('SEC_FINGERPRINT_PRESENT', { header, value }) };
+        return result('pass', auditMessage('SEC_FINGERPRINT_PRESENT', { header, value }));
     }
 
     private getHeader(headers: Headers, name: string): string | undefined {
