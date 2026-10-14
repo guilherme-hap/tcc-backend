@@ -1,12 +1,11 @@
 import type { z } from 'zod';
 
-const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
+const MUTATING_METHODS: readonly string[] = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 const PATH_PLACEHOLDER = /\{([^}]+)\}/g;
 
 export function isMutatingMethod(method?: string): boolean {
-    if (!method) return false;
-    return MUTATING_METHODS.includes(method.toUpperCase() as typeof MUTATING_METHODS[number]);
+    return method !== undefined && MUTATING_METHODS.includes(method);
 }
 
 function mutatingMethodMessage(method: string): string {

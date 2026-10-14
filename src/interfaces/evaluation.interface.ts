@@ -91,7 +91,8 @@ export interface IPerformanceTargetResult {
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
-export type ILoadTestOptions = LoadTestOptionsInput & {
+export type ILoadTestOptions = Omit<LoadTestOptionsInput, 'method'> & {
+    method: HttpMethod;
     payloadFactory?: () => string | undefined;
 };
 

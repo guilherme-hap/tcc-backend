@@ -22,17 +22,13 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
         const performanceResults: IPerformanceTargetResult[] = [];
 
         for (const target of targets) {
-            const effectiveMethod = (
-                target.method ||
-                loadTestOptions?.method ||
-                'GET'
-            ).toUpperCase();
+            const method = target.method ?? loadTestOptions?.method ?? 'GET';
 
             try {
-                const targetUrl = resolveTargetUrl(spec, baseUrl, target.path, effectiveMethod, target.pathParams);
+                const targetUrl = resolveTargetUrl(spec, baseUrl, target.path, method, target.pathParams);
 
                 const loadTestOpts = prepareLoadTestOptions({
-                    targetMethod: effectiveMethod,
+                    method,
                     payload: target.payload,
                     loadTestOptions,
                     spec,
@@ -43,14 +39,14 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
 
                 performanceResults.push({
                     path: target.path,
-                    method: effectiveMethod,
+                    method,
                     result,
                 });
             } catch (err: unknown) {
                 const failure = AppError.from(err, 'LOAD_TEST_FAILED');
                 performanceResults.push({
                     path: target.path,
-                    method: effectiveMethod,
+                    method,
                     result: null,
                     error: failure.message,
                     code: failure.code,

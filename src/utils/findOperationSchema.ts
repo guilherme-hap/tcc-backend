@@ -22,7 +22,7 @@ export function findRequestBodySchema(
 
     if (!operation) {
         console.warn(
-            `[PayloadGen] Operation ${method.toUpperCase()} ${path} not found in OpenAPI spec — skipping synthetic payload generation`,
+            `[PayloadGen] Operation ${method} ${path} not found in OpenAPI spec — skipping synthetic payload generation`,
         );
         return undefined;
     }

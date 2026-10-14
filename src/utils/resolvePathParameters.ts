@@ -13,7 +13,7 @@ export function resolvePathParameters(
         return targetPath;
     }
 
-    const usesSyntheticValues = method.toUpperCase() !== 'DELETE';
+    const usesSyntheticValues = method !== 'DELETE';
     const paramDefs = usesSyntheticValues
         ? collectParameterDefs(spec, findMatchingSpecPath(targetPath, spec), method.toLowerCase())
         : new Map<string, any>();

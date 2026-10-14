@@ -21,11 +21,11 @@ interface ResponseCounts {
 }
 
 export class AutocannonService {
-    public async runLoadTest(targetUrl: string, options: ILoadTestOptions = {}): Promise<IAutocannonResult> {
-        const method = options.method?.toUpperCase();
+    public async runLoadTest(targetUrl: string, options: ILoadTestOptions): Promise<IAutocannonResult> {
+        const { method } = options;
         const isMutating = isMutatingMethod(method);
 
-        if (isMutating && method && !options.allowMutatingMethods) {
+        if (isMutating && !options.allowMutatingMethods) {
             throw new AppError('LOAD_TEST_MUTATING_NOT_ALLOWED', { method });
         }
 
@@ -41,7 +41,7 @@ export class AutocannonService {
         }
 
         const warnings: IAuditMessage[] = [];
-        if (isMutating && method) {
+        if (isMutating) {
             warnings.push(auditMessage('PERF_MUTATING_METHOD', { method }));
             if (method === 'PUT' || method === 'PATCH') {
                 warnings.push(auditMessage('PERF_SYNTHETIC_PATH_IDS'));
@@ -79,7 +79,7 @@ export class AutocannonService {
                 url: `${parsedUrl.protocol}//${parsedUrl.host}`,
                 requests: [
                     {
-                        method: method as NonNullable<autocannon.Request["method"]>,
+                        method,
                         path: `${basePath}${parsedUrl.search}`,
                         headers,
                         setupRequest: (req: autocannon.Request) => {
@@ -97,7 +97,7 @@ export class AutocannonService {
             runOptions = {
                 ...limits,
                 url: targetUrl,
-                ...(method && { method: method as NonNullable<autocannon.Request["method"]> }),
+                method,
                 headers,
                 ...(body && { body }),
             };

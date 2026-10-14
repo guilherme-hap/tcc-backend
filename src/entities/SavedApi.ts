@@ -4,7 +4,7 @@ import {
 } from 'typeorm';
 import type { Relation } from 'typeorm';
 import { User } from './User.js';
-import type { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
+import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 
 @Entity('saved_apis')
 @Unique(['userId', 'openApiUrl'])
@@ -31,7 +31,7 @@ export class SavedApi {
     @Column({ name: 'default_settings', type: 'jsonb', nullable: true })
     defaultSettings!: {
         rulesConfig?: Record<string, boolean>;
-        loadTestOptions?: Partial<ILoadTestOptions>;
+        loadTestOptions?: LoadTestOptionsInput;
     } | null;
 
     @CreateDateColumn({ name: 'created_at' })
