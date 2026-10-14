@@ -2,6 +2,7 @@ import type { Severity } from '../types/severity.js';
 import type { AuditMessageCode, IAuditMessage } from '../messages/catalog.js';
 import type { ErrorCode } from '../messages/errors.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
+import type { HttpMethod } from '../schemas/shared.js';
 import type { EvaluationWeights } from '../utils/weights.js';
 import type {
     ContractRequestInput,
@@ -74,13 +75,6 @@ export interface ISecurityCheckResult extends IAuditMessage {
     status: 'pass' | 'warning' | 'missing' | 'error';
 }
 
-export interface IPerformanceTarget {
-    path: string;
-    method?: HttpMethod | string;
-    payload?: any;
-    pathParams?: Record<string, string>;
-}
-
 export interface IPerformanceTargetResult {
     path: string;
     method: string;
@@ -89,20 +83,15 @@ export interface IPerformanceTargetResult {
     code?: ErrorCode;
 }
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-
 export type ILoadTestOptions = Omit<LoadTestOptionsInput, 'method'> & {
     method: HttpMethod;
     payloadFactory?: () => string | undefined;
 };
 
-export interface IEvaluationRequestSettings {
-    rulesConfig?: Record<string, boolean>;
-    loadTestOptions?: Omit<LoadTestOptionsInput, 'headers' | 'body'>;
-    severityWeights?: ContractRequestInput['severityWeights'];
-    weights?: FullEvaluationRequestInput['weights'];
-    minScore?: number;
-}
+export type IEvaluationRequestSettings =
+    Pick<FullEvaluationRequestInput, 'rulesConfig' | 'severityWeights' | 'weights' | 'minScore'> & {
+        loadTestOptions?: Omit<LoadTestOptionsInput, 'headers' | 'body'>;
+    };
 
 export type FailureCode = ErrorCode | AuditMessageCode;
 
@@ -142,9 +131,13 @@ export interface IScorePart {
 
 export type IScoreBreakdown = Partial<Record<keyof EvaluationWeights | 'final', IScorePart[]>>;
 
-export type EvaluationStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
+export const EVALUATION_STATUSES = ['PENDING', 'RUNNING', 'COMPLETED', 'PARTIAL', 'FAILED'] as const;
 
-export type EvaluationType = 'contract' | 'performance' | 'security' | 'full';
+export type EvaluationStatus = typeof EVALUATION_STATUSES[number];
+
+export const EVALUATION_TYPES = ['contract', 'performance', 'security', 'full'] as const;
+
+export type EvaluationType = typeof EVALUATION_TYPES[number];
 
 export interface EvaluationRequestMap {
     contract: ContractRequestInput;

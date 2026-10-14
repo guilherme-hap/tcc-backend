@@ -3,8 +3,8 @@ import type { EntityManager, FindOperator, FindOptionsWhere } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
 import { AppDataSource } from '../config/data-source.js';
 import { Evaluation } from '../entities/Evaluation.js';
-import { EvaluationType, FailureCode, IEvaluationRequestSettings, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
-import type { ListEvaluationsQuery } from '../schemas/evaluation.schema.js';
+import type { EvaluationType, FailureCode, IEvaluationRequestSettings } from '../interfaces/evaluation.interface.js';
+import type { ListEvaluationsQuery, PerformanceTargetInput } from '../schemas/evaluation.schema.js';
 
 function escapeLikePattern(term: string): string {
     return term.replace(/[\\%_]/g, '\\$&');
@@ -19,7 +19,7 @@ export class EvaluationLifecycleService {
         data: {
             openApiUrl: string;
             apiBaseUrl?: string | null;
-            targets?: IPerformanceTarget[] | null;
+            targets?: PerformanceTargetInput[] | null;
             requestSettings?: IEvaluationRequestSettings | null;
             evaluationType: EvaluationType;
             userId?: string | null;

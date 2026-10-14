@@ -5,3 +5,11 @@ export const DEFAULT_WEIGHTS = {
 } as const;
 
 export type EvaluationWeights = typeof DEFAULT_WEIGHTS;
+
+export function resolveWeights(weights?: Partial<EvaluationWeights>): EvaluationWeights {
+    return {
+        contract: weights?.contract ?? DEFAULT_WEIGHTS.contract,
+        performance: weights?.performance ?? DEFAULT_WEIGHTS.performance,
+        security: weights?.security ?? DEFAULT_WEIGHTS.security,
+    };
+}

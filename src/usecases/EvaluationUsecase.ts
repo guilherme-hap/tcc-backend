@@ -5,19 +5,10 @@ import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { AppError } from '../errors/AppError.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { EVALUATION_SCHEMAS } from '../schemas/evaluation.schema.js';
-import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
-import type { EvaluationType, IEvaluationRequestSettings, IPerformanceTarget } from '../interfaces/evaluation.interface.js';
+import type { FullEvaluationRequestInput } from '../schemas/evaluation.schema.js';
+import type { EvaluationType, IEvaluationRequestSettings } from '../interfaces/evaluation.interface.js';
 
-interface PersistedRequestFields {
-    openApiUrl: string;
-    apiBaseUrl?: string;
-    targets?: IPerformanceTarget[];
-    rulesConfig?: Record<string, boolean>;
-    loadTestOptions?: LoadTestOptionsInput;
-    severityWeights?: IEvaluationRequestSettings['severityWeights'];
-    weights?: IEvaluationRequestSettings['weights'];
-    minScore?: number;
-}
+type PersistedRequestFields = Pick<FullEvaluationRequestInput, 'openApiUrl'> & Partial<FullEvaluationRequestInput>;
 
 function toRequestSettings(request: PersistedRequestFields): IEvaluationRequestSettings | null {
     const settings: IEvaluationRequestSettings = {};

@@ -1,5 +1,4 @@
 import type { z } from 'zod';
-import type { IPerformanceTarget } from '../interfaces/evaluation.interface.js';
 import { isMutatingMethod } from './httpMethodUtils.js';
 
 export const DEFAULT_LOAD_LIMITS = {
@@ -63,7 +62,7 @@ export function validateTargetApdexWindow(
 }
 
 export function validateTotalDuration(
-    data: { targets?: IPerformanceTarget[]; loadTestOptions?: { duration?: number } },
+    data: { targets?: unknown[]; loadTestOptions?: { duration?: number } },
     ctx: z.RefinementCtx,
 ): void {
     if (!data.targets || data.targets.length === 0) return;

@@ -2,7 +2,8 @@ import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { EvaluationWorker } from './EvaluationWorker.js';
 import { EvaluationLifecycleService } from '../services/EvaluationLifecycleService.js';
 import { AppError } from '../errors/AppError.js';
-import type { EvaluationJob, EvaluationType } from '../interfaces/evaluation.interface.js';
+import { EVALUATION_TYPES } from '../interfaces/evaluation.interface.js';
+import type { EvaluationJob } from '../interfaces/evaluation.interface.js';
 
 const worker = new EvaluationWorker();
 const lifecycle = new EvaluationLifecycleService();
@@ -27,9 +28,7 @@ export async function registerWorkers(): Promise<void> {
         console.log(`[Worker] Failed ${orphaned} evaluations left without a job`);
     }
 
-    const types = ['contract', 'performance', 'security', 'full'] as const satisfies readonly EvaluationType[];
-
-    await evaluationQueue.start(types.map((type) => ({
+    await evaluationQueue.start(EVALUATION_TYPES.map((type) => ({
         type,
         concurrency: Number(process.env[`${type.toUpperCase()}_WORKER_CONCURRENCY`]) || (['contract', 'security'].includes(type) ? 10 : 2),
         handler: dispatch,

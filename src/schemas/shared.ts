@@ -8,7 +8,7 @@ export const httpMethodSchema = z
     .transform((v) => v.toUpperCase())
     .pipe(httpMethodEnum);
 
-export type HttpMethodInput = z.infer<typeof httpMethodSchema>;
+export type HttpMethod = z.infer<typeof httpMethodEnum>;
 
 export const httpUrl = z.url({ protocol: /^https?$/ });
 

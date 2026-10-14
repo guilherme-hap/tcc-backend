@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { EVALUATION_STATUSES, EVALUATION_TYPES } from '../interfaces/evaluation.interface.js';
 import type { EvaluationRequestMap, EvaluationType } from '../interfaces/evaluation.interface.js';
-import { DEFAULT_WEIGHTS } from '../utils/weights.js';
+import { resolveWeights } from '../utils/weights.js';
 import { MAX_TARGETS, validateTargetApdexWindow, validateTotalDuration } from '../utils/loadTestLimits.js';
 import { validateTargetMethods } from '../utils/httpMethodUtils.js';
 import { loadTestOptionsSchema, type LoadTestOptionsInput } from './loadTestOptions.schema.js';
@@ -78,11 +79,8 @@ export const fullEvaluationRequestSchema = z
 
                 if (!hasContract && !hasPerformance && !hasSecurity) return;
 
-                const contractWeight = weights.contract ?? DEFAULT_WEIGHTS.contract;
-                const performanceWeight = weights.performance ?? DEFAULT_WEIGHTS.performance;
-                const securityWeight = weights.security ?? DEFAULT_WEIGHTS.security;
-
-                const sum = contractWeight + performanceWeight + securityWeight;
+                const resolved = resolveWeights(weights);
+                const sum = resolved.contract + resolved.performance + resolved.security;
                 if (Math.abs(sum - 1) > 0.001) {
                     const formatWeight = (val: number, isExplicit: boolean) =>
                         isExplicit ? `${val}` : `${Number(val.toFixed(4))} (padrão 1/3)`;
@@ -94,7 +92,7 @@ export const fullEvaluationRequestSchema = z
 
                     ctx.addIssue({
                         code: 'custom',
-                        message: `Os pesos devem somar 1. Recebido: contrato=${formatWeight(contractWeight, hasContract)}, performance=${formatWeight(performanceWeight, hasPerformance)}, segurança=${formatWeight(securityWeight, hasSecurity)} (soma=${Number(sum.toFixed(4))}).${note}`,
+                        message: `Os pesos devem somar 1. Recebido: contrato=${formatWeight(resolved.contract, hasContract)}, performance=${formatWeight(resolved.performance, hasPerformance)}, segurança=${formatWeight(resolved.security, hasSecurity)} (soma=${Number(sum.toFixed(4))}).${note}`,
                     });
                 }
             }),
@@ -103,8 +101,8 @@ export const fullEvaluationRequestSchema = z
 
 export type FullEvaluationRequestInput = z.infer<typeof fullEvaluationRequestSchema>;
 
-const evaluationTypeEnum = z.enum(['contract', 'performance', 'security', 'full']);
-const evaluationStatusEnum = z.enum(['PENDING', 'RUNNING', 'COMPLETED', 'PARTIAL', 'FAILED']);
+const evaluationTypeEnum = z.enum(EVALUATION_TYPES);
+const evaluationStatusEnum = z.enum(EVALUATION_STATUSES);
 
 export const listEvaluationsQuerySchema = z
     .object({

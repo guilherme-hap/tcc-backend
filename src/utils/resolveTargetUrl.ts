@@ -3,8 +3,9 @@ import { resolvePathParameters } from './resolvePathParameters.js';
 import { findRequestBodySchema } from './findOperationSchema.js';
 import { generateSyntheticPayload } from './generateSyntheticPayload.js';
 import { isMutatingMethod } from './httpMethodUtils.js';
-import type { HttpMethod, ILoadTestOptions } from '../interfaces/evaluation.interface.js';
+import type { ILoadTestOptions } from '../interfaces/evaluation.interface.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
+import type { HttpMethod } from '../schemas/shared.js';
 
 export function resolveTargetUrl(
     spec: any,
