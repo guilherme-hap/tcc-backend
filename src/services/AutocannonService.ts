@@ -3,6 +3,7 @@ import {
     IAutocannonResult,
     ILatencySummary,
     ILoadTestOptions,
+    ILoadTestTick,
     IPerformanceSeriesPoint,
 } from '../interfaces/evaluation.interface.js';
 import { AppError } from '../errors/AppError.js';
@@ -47,7 +48,11 @@ interface LoadTestRun {
 }
 
 export class AutocannonService {
-    public async runLoadTest(targetUrl: string, options: ILoadTestOptions): Promise<IAutocannonResult> {
+    public async runLoadTest(
+        targetUrl: string,
+        options: ILoadTestOptions,
+        onTick?: (tick: ILoadTestTick) => void,
+    ): Promise<IAutocannonResult> {
         const { method } = options;
         const isMutating = isMutatingMethod(method);
 
@@ -59,7 +64,7 @@ export class AutocannonService {
         const targetLatency = options.targetLatency ?? DEFAULT_TARGET_LATENCY_MS;
         const runOptions = this.buildRunOptions(targetUrl, options, duration, targetLatency);
 
-        const run = await this.run(runOptions, duration, targetLatency);
+        const run = await this.run(runOptions, duration, targetLatency, onTick);
 
         return this.summarize(run, targetLatency, this.buildWarnings(options));
     }
@@ -246,10 +251,12 @@ export class AutocannonService {
         options: autocannon.Options,
         durationSeconds: number,
         targetLatency: number,
+        onTick?: (tick: ILoadTestTick) => void,
     ): Promise<LoadTestRun> {
         return new Promise((resolve, reject) => {
             let stopTimer: NodeJS.Timeout | undefined;
             let lastClientDoneAt: number | undefined;
+            let errorsSoFar = 0;
             const counts: ResponseCounts = {
                 satisfied: 0,
                 tolerating: 0,
@@ -303,8 +310,16 @@ export class AutocannonService {
                 const now = performance.now();
                 if (now - lastTickAt < MIN_TICK_INTERVAL_MS) return;
                 lastTickAt = now;
-                counts.seconds.push(counts.currentSecond);
+                const finished = counts.currentSecond;
+                counts.seconds.push(finished);
                 counts.currentSecond = this.emptySecond();
+                errorsSoFar += finished.errors;
+                onTick?.({
+                    elapsedSeconds: counts.seconds.length,
+                    responses: counts.responses,
+                    errors: errorsSoFar,
+                    lastSecond: this.summarizeSecond(finished, counts.seconds.length),
+                });
             });
             if (options.amount) {
                 stopTimer = setTimeout(() => instance.stop(), durationSeconds * 1000);

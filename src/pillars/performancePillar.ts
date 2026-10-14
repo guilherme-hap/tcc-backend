@@ -1,11 +1,11 @@
 import { AppError } from '../errors/AppError.js';
 import { AutocannonService } from '../services/AutocannonService.js';
-import { DEFAULT_TARGET_LATENCY_MS } from '../utils/loadTestLimits.js';
+import { DEFAULT_TARGET_LATENCY_MS, defaultDurationFor } from '../utils/loadTestLimits.js';
 import { resolveTargetUrl, prepareLoadTestOptions } from '../utils/resolveTargetUrl.js';
 import { withMeasurementLock } from '../utils/measurementLock.js';
 import { round } from '../utils/round.js';
 import { scorePart } from '../utils/scorePart.js';
-import type { IPerformanceTargetResult } from '../interfaces/evaluation.interface.js';
+import type { IPerformanceTargetResult, IStepProgress } from '../interfaces/evaluation.interface.js';
 import type { PerformanceRequestInput } from '../schemas/evaluation.schema.js';
 import { PillarError } from './PillarError.js';
 import type { Pillar } from './types.js';
@@ -22,7 +22,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
 
         const performanceResults: IPerformanceTargetResult[] = [];
 
-        for (const target of targets) {
+        for (const [targetIndex, target] of targets.entries()) {
             const method = target.method ?? loadTestOptions?.method ?? 'GET';
 
             try {
@@ -36,7 +36,28 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                     targetPath: target.path,
                 });
 
-                const result = await withMeasurementLock(() => autocannonService.runLoadTest(targetUrl, loadTestOpts));
+                const queued: IStepProgress = {
+                    targetIndex,
+                    totalTargets: targets.length,
+                    phase: 'QUEUED',
+                    startedAt: null,
+                    expectedDurationSeconds: loadTestOpts.duration ?? defaultDurationFor(method),
+                    elapsedSeconds: 0,
+                    responses: 0,
+                    errors: 0,
+                    lastSecond: null,
+                };
+                ctx.report({ progress: queued });
+
+                const result = await withMeasurementLock(() => {
+                    const running: IStepProgress = { ...queued, phase: 'RUNNING', startedAt: new Date().toISOString() };
+                    ctx.report({ progress: running });
+                    return autocannonService.runLoadTest(
+                        targetUrl,
+                        loadTestOpts,
+                        (tick) => ctx.report({ progress: { ...running, ...tick } }),
+                    );
+                });
 
                 performanceResults.push({
                     path: target.path,
@@ -53,6 +74,8 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                     code: failure.code,
                 });
             }
+
+            ctx.report({ result: [...performanceResults] });
         }
 
         const hasMeasured = performanceResults.some((r) => r.result?.score != null);
