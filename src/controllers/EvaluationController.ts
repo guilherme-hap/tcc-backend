@@ -71,7 +71,7 @@ export class EvaluationController {
         });
     };
 
-    public getEvaluation =async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
+    public getEvaluation = async (req: AuthenticatedRequest & { params: { id: string } }, res: Response): Promise<void> => {
         const evaluation = await this.lifecycle.findById(req.params.id);
         if (!evaluation) {
             throw new AppError('EVALUATION_NOT_FOUND');
