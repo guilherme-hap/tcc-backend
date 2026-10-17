@@ -24,6 +24,14 @@ const OAS_VERSION_SAMPLES: Record<OasVersion, object> = {
 
 const OAS_VERSIONS = Object.keys(OAS_VERSION_SAMPLES) as OasVersion[];
 
+const OPENAPI_RULES_PAGE = 'https://meta.stoplight.io/docs/spectral/4dec24461f3af-open-api-rules';
+
+function documentationUrlOf(rule: { name: string; documentationUrl?: string | null }): string | null {
+    if (!rule.documentationUrl) return null;
+
+    return `${OPENAPI_RULES_PAGE}#${rule.name.toLowerCase().replace(/[^a-z0-9_-]/g, '')}`;
+}
+
 function createRefResolver() {
     let deadline: AbortSignal | undefined;
 
@@ -67,7 +75,7 @@ export function listSpectralRules(): ISpectralCatalogRule[] {
             enabledByDefault: rule.enabled,
             oasVersions: OAS_VERSIONS.filter((version) =>
                 !rule.formats || [...rule.formats].some((format) => format(OAS_VERSION_SAMPLES[version], null))),
-            documentationUrl: rule.documentationUrl,
+            documentationUrl: documentationUrlOf(rule),
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
