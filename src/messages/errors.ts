@@ -103,10 +103,6 @@ const ERROR_MESSAGES = {
         status: 502,
         message: ({ detail }) => `Não foi possível acessar o alvo da auditoria de segurança (${detail}).`,
     }),
-    SECURITY_CORS_PROBE_FAILED: entry<{ attempts: number; detail: string }>({
-        status: 502,
-        message: ({ attempts, detail }) => `A sonda de CORS falhou após ${attempts} tentativas (${detail}).`,
-    }),
     LOAD_TEST_MUTATING_NOT_ALLOWED: entry<{ method: string }>({
         status: 400,
         message: ({ method }) =>

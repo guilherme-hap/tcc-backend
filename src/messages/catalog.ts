@@ -194,6 +194,16 @@ const AUDIT_MESSAGES = {
         message: () =>
             'Uma origem não autorizada não recebeu Access-Control-Allow-Origin (CORS ausente ou restrito — seguro por padrão).',
     }),
+    SEC_CORS_PROBE_UNANSWERED: entry<{ attempts: number; detail: string }>({
+        severity: 'Warning',
+        message: ({ attempts, detail }) =>
+            `A sonda com uma origem não autorizada não obteve resposta após ${attempts} tentativas (${detail}). ` +
+            'Na requisição sem Origin o servidor não enviou Access-Control-Allow-Origin, então o comportamento para ' +
+            'origens externas não foi verificado.',
+        recommendation: () =>
+            'Confira se um firewall ou proxy derruba conexões com cabeçalho Origin desconhecido e, se for o caso, ' +
+            'responda 403 em vez de cortar a conexão.',
+    }),
     SEC_CORS_REFLECTED_ORIGIN: entry<{ origin: string }>({
         severity: 'Error',
         message: ({ origin }) =>

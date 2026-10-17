@@ -13,6 +13,8 @@ interface ProbeOptions {
     headers?: Record<string, string>;
 }
 
+type CorsProbe = { headers: Headers } | { failure: { attempts: number; detail: string } };
+
 const REQUEST_TIMEOUT_MS = 10_000;
 const REDIRECT_PROBE_TIMEOUT_MS = 5_000;
 const CONNECT_PROBE_TIMEOUT_MS = 3_000;
@@ -34,7 +36,7 @@ export class SecurityService {
 
         const [redirect, cors] = await Promise.all([
             this.checkHttpsRedirect(targetUrl),
-            this.checkCors(targetUrl),
+            this.checkCors(targetUrl, headers),
         ]);
 
         return [
@@ -201,14 +203,17 @@ export class SecurityService {
         return result('pass', auditMessage('SEC_HSTS_OK'));
     }
 
-    private async checkCors(targetUrl: string): Promise<ISecurityCheckResult> {
+    private async checkCors(targetUrl: string, requestHeaders: Headers): Promise<ISecurityCheckResult> {
         const result = checkOf('access', 'Access-Control-Allow-Origin');
 
-        const headers = (await this.probeCors(targetUrl)).headers as Headers;
+        const probe = await this.probeCors(targetUrl);
+        const headers = 'failure' in probe ? requestHeaders : probe.headers;
 
         const allowOrigin = this.getHeader(headers, 'access-control-allow-origin')?.trim();
         if (!allowOrigin) {
-            return result('pass', auditMessage('SEC_CORS_NOT_CONFIGURED'));
+            return 'failure' in probe
+                ? result('warning', auditMessage('SEC_CORS_PROBE_UNANSWERED', probe.failure))
+                : result('pass', auditMessage('SEC_CORS_NOT_CONFIGURED'));
         }
 
         const allowCredentials = this.getHeader(headers, 'access-control-allow-credentials')?.trim().toLowerCase() === 'true';
@@ -232,20 +237,21 @@ export class SecurityService {
         return result('pass', auditMessage('SEC_CORS_EXPLICIT_ORIGIN', { origin: allowOrigin }));
     }
 
-    private async probeCors(targetUrl: string): Promise<AxiosResponse> {
+    private async probeCors(targetUrl: string): Promise<CorsProbe> {
         let lastError: unknown;
         for (let attempt = 1; attempt <= CORS_PROBE_ATTEMPTS; attempt++) {
             try {
-                return await this.probeRequest(targetUrl, {
+                const response = await this.probeRequest(targetUrl, {
                     timeout: CORS_PROBE_TIMEOUT_MS,
                     headers: { Origin: FORGED_ORIGIN },
                 });
+                return { headers: response.headers as Headers };
             } catch (error) {
                 lastError = error;
             }
         }
         const detail = lastError instanceof Error ? lastError.message : String(lastError);
-        throw new AppError('SECURITY_CORS_PROBE_FAILED', { attempts: CORS_PROBE_ATTEMPTS, detail });
+        return { failure: { attempts: CORS_PROBE_ATTEMPTS, detail } };
     }
 
     private checkXContentTypeOptions(headers: Headers): ISecurityCheckResult {
