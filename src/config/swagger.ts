@@ -36,7 +36,7 @@ const options = {
             schemas: SWAGGER_SCHEMAS,
         },
     },
-    apis: ['./src/routes/*.ts'],
+    apis: [`${import.meta.dirname.replaceAll('\\', '/')}/../routes/*.routes.{ts,js}`],
 };
 
 const swaggerSpec = swaggerJSDoc(options);
