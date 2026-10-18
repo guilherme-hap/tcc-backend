@@ -15,13 +15,13 @@ const PILLAR_LABELS: Record<string, string> = {
 
 const USAGE = `Uso: node dist/cli/audit.js --request <arquivo.json> [opções]
 
-Envia uma avaliação ao auditor, aguarda o resultado e encerra com:
+Envia uma avaliação ao Specping, aguarda o resultado e encerra com:
   0  aprovada   1  reprovada   2  erro de execução (uso, rede, validação ou tempo esgotado)
 
 Opções:
   --request <arquivo>   corpo do pedido em JSON, igual ao do POST /api/evaluations/{tipo} (obrigatório)
   --type <tipo>         contract | performance | security | full (padrão: full)
-  --api <url>           endereço do auditor (padrão: variável AUDITOR_URL ou http://localhost:3000)
+  --api <url>           endereço do Specping (padrão: variável AUDITOR_URL ou http://localhost:3000)
   --min-score <nota>    nota final mínima (0-100); substitui o minScore do arquivo
   --timeout <segundos>  tempo máximo de espera pelo resultado (padrão: 900)
   --interval <segundos> intervalo entre consultas (padrão: 3)
@@ -140,20 +140,20 @@ async function callApi(url: string, init?: RequestInit): Promise<{ status: numbe
         response = await fetch(url, { ...init, headers: { ...init?.headers, connection: 'close' } });
     } catch (error) {
         const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : String(error);
-        fail(`não foi possível acessar o auditor em ${url} (${cause}).`);
+        fail(`não foi possível acessar o Specping em ${url} (${cause}).`);
     }
 
     const text = await response.text();
     try {
         return { status: response.status, body: JSON.parse(text) };
     } catch {
-        fail(`resposta inesperada do auditor em ${url} (HTTP ${response.status}).`);
+        fail(`resposta inesperada do Specping em ${url} (HTTP ${response.status}).`);
     }
 }
 
 function describeApiError(status: number, body: unknown): string {
     const { error, code, issues } = body as ApiError;
-    const lines = [`o auditor recusou o pedido (HTTP ${status}${code ? `, ${code}` : ''}): ${error ?? 'sem detalhes'}`];
+    const lines = [`o Specping recusou o pedido (HTTP ${status}${code ? `, ${code}` : ''}): ${error ?? 'sem detalhes'}`];
     for (const issue of issues ?? []) {
         lines.push(`  - ${issue.path || '(corpo)'}: ${issue.message}`);
     }
@@ -199,7 +199,7 @@ function toMarkdown(evaluation: EvaluationResult, approved: boolean, resultUrl: 
         ...(error ? [['Erro', error]] : []),
     ];
     return [
-        `### Auditoria da API (${evaluation.evaluationType})`,
+        `### Specping · auditoria da API (${evaluation.evaluationType})`,
         '',
         '| Item | Valor |',
         '| --- | --- |',
@@ -269,7 +269,7 @@ async function run(): Promise<number> {
             break;
         }
         if (Date.now() + intervalMs > deadline) {
-            fail(`tempo esgotado após ${timeoutMs / 1000} s; a avaliação continua em andamento no auditor (${resultUrl}).`);
+            fail(`tempo esgotado após ${timeoutMs / 1000} s; a avaliação continua em andamento no Specping (${resultUrl}).`);
         }
         await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }

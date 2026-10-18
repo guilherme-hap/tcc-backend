@@ -1,4 +1,4 @@
-name: Auditoria da API
+name: Specping - auditoria da API
 
 on:
   pull_request:
@@ -37,13 +37,13 @@ jobs:
           npm start > api.log 2>&1 &
           curl --retry 30 --retry-delay 2 --retry-connrefused -fsS http://localhost:8080/openapi.json > /dev/null
 
-      - name: Baixa o auditor
+      - name: Baixa o Specping
         uses: actions/checkout@v4
         with:
           repository: guilherme-hap/tcc-backend
           path: auditor
 
-      - name: Sobe o auditor
+      - name: Sobe o Specping
         working-directory: auditor
         env:
           PORT: 3000

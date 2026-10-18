@@ -21,7 +21,7 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'API de Avaliação - TCC',
+            title: 'Specping - API de Avaliação',
             version: '1.0.0',
         },
         components: {
@@ -42,5 +42,10 @@ const options = {
 const swaggerSpec = swaggerJSDoc(options);
 
 export const setupSwagger = (app: Express) => {
-    app.use('/api-docs', swaggerUiCsp, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.use(
+        '/api-docs',
+        swaggerUiCsp,
+        swaggerUi.serve,
+        swaggerUi.setup(swaggerSpec, { customSiteTitle: 'API · Specping' }),
+    );
 };
