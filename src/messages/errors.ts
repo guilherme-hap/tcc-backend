@@ -60,7 +60,7 @@ const ERROR_MESSAGES = {
     }),
     SAVED_API_ALREADY_EXISTS: entry({
         status: 409,
-        message: () => 'Você já salvou uma API com esta URL de especificação.',
+        message: () => 'Você já tem uma API salva com este nome.',
     }),
     CUSTOM_RULE_NOT_FOUND: entry({
         status: 404,

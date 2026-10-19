@@ -61,7 +61,7 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
  *       409:
- *         description: "O usuário já tem uma API salva com a mesma openApiUrl (SAVED_API_ALREADY_EXISTS)."
+ *         description: "O usuário já tem uma API salva com o mesmo nome (SAVED_API_ALREADY_EXISTS)."
  *         content:
  *           application/json:
  *             schema:
@@ -142,7 +142,7 @@ const validateSavedApiId = validateIdParam('SAVED_API_NOT_FOUND');
  *             schema:
  *               $ref: '#/components/schemas/SavedApi'
  *       409:
- *         description: "A nova openApiUrl já pertence a outra API salva do usuário (SAVED_API_ALREADY_EXISTS)."
+ *         description: "O novo nome já pertence a outra API salva do usuário (SAVED_API_ALREADY_EXISTS)."
  *         content:
  *           application/json:
  *             schema:

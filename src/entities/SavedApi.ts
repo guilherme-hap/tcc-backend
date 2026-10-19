@@ -7,7 +7,7 @@ import { User } from './User.js';
 import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
 
 @Entity('saved_apis')
-@Unique(['userId', 'openApiUrl'])
+@Unique(['userId', 'name'])
 export class SavedApi {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
