@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { LessThan } from 'typeorm';
+import { In, LessThan } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 import { AppDataSource } from '../config/data-source.js';
 import { dbConnection } from '../config/database.js';
@@ -19,7 +19,7 @@ interface JobRow {
 }
 
 export interface QueueConsumer {
-    type: EvaluationType;
+    types: EvaluationType[];
     concurrency: number;
     handler: JobHandler;
     onGiveUp: JobHandler;
@@ -60,7 +60,7 @@ function createWakeTrigger() {
 type WakeTrigger = ReturnType<typeof createWakeTrigger>;
 
 class PostgresEvaluationQueue {
-    private triggers = new Map<string, WakeTrigger>();
+    private triggers = new Map<string, WakeTrigger[]>();
 
     async enqueue<T extends EvaluationType>(job: EvaluationJobOf<T>, manager: EntityManager): Promise<void> {
         await manager.save(EvaluationJobEntity, {
@@ -72,14 +72,14 @@ class PostgresEvaluationQueue {
         await manager.query(`NOTIFY ${channelOf(job.type)}`);
     }
 
-    async recoverOrphanedJobs(): Promise<void> {
+    async recoverOrphanedJobs(types: EvaluationType[]): Promise<void> {
         const repository = AppDataSource.getRepository(EvaluationJobEntity);
 
         const requeued = await repository.update(
-            { status: 'RUNNING', attempts: LessThan(MAX_JOB_ATTEMPTS) },
+            { status: 'RUNNING', type: In(types), attempts: LessThan(MAX_JOB_ATTEMPTS) },
             { status: 'PENDING' },
         );
-        const abandoned = await repository.delete({ status: 'RUNNING' });
+        const abandoned = await repository.delete({ status: 'RUNNING', type: In(types) });
 
         if (requeued.affected) {
             console.log(`[Queue] Recovered ${requeued.affected} orphaned jobs on startup`);
@@ -90,19 +90,23 @@ class PostgresEvaluationQueue {
     }
 
     async start(consumers: QueueConsumer[]): Promise<void> {
-        for (const { type } of consumers) {
-            this.triggers.set(channelOf(type), createWakeTrigger());
-        }
+        const consumerTriggers = consumers.map((consumer) => {
+            const trigger = createWakeTrigger();
+            for (const type of consumer.types) {
+                const channel = channelOf(type);
+                this.triggers.set(channel, [...(this.triggers.get(channel) ?? []), trigger]);
+            }
+            return trigger;
+        });
 
         await this.connectListener();
 
-        for (const consumer of consumers) {
-            const trigger = this.triggers.get(channelOf(consumer.type))!;
+        consumers.forEach((consumer, index) => {
             for (let i = 0; i < consumer.concurrency; i++) {
-                this.consumerLoop(consumer, i, trigger);
+                this.consumerLoop(consumer, i, consumerTriggers[index]);
             }
-            console.log(`[Queue][${consumer.type}] ${consumer.concurrency} consumer loop(s) started`);
-        }
+            console.log(`[Queue][${consumer.types.join('+')}] ${consumer.concurrency} consumer loop(s) started`);
+        });
     }
 
     private async connectListener(): Promise<void> {
@@ -116,7 +120,7 @@ class PostgresEvaluationQueue {
             client.end().catch(() => {});
             this.reconnectListener();
         });
-        client.on('notification', (msg) => this.triggers.get(msg.channel)?.wake());
+        client.on('notification', (msg) => this.triggers.get(msg.channel)?.forEach((trigger) => trigger.wake()));
 
         try {
             await client.connect();
@@ -140,7 +144,7 @@ class PostgresEvaluationQueue {
                 console.log(`[Queue] Reconnecting LISTEN in ${delay}ms…`);
                 await new Promise((r) => setTimeout(r, delay));
                 await this.connectListener();
-                for (const trigger of this.triggers.values()) trigger.wake();
+                for (const trigger of this.triggers.values()) trigger.forEach((t) => t.wake());
                 return;
             } catch (err: any) {
                 console.error('[Queue] Reconnection failed:', err.message);
@@ -150,12 +154,12 @@ class PostgresEvaluationQueue {
     }
 
     private async consumerLoop(consumer: QueueConsumer, loopIndex: number, trigger: WakeTrigger): Promise<void> {
-        const tag = `[Queue][${consumer.type}][loop-${loopIndex}]`;
+        const tag = `[Queue][${consumer.types.join('+')}][loop-${loopIndex}]`;
 
         while (true) {
             try {
                 const seenGeneration = trigger.generation();
-                const job = await this.claimJob(consumer.type);
+                const job = await this.claimJob(consumer.types);
 
                 if (job) {
                     await this.runJob(tag, job, consumer);
@@ -186,7 +190,7 @@ class PostgresEvaluationQueue {
         await this.removeJob(job.id);
     }
 
-    private async claimJob(type: EvaluationType): Promise<ClaimedJob | null> {
+    private async claimJob(types: EvaluationType[]): Promise<ClaimedJob | null> {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -194,11 +198,11 @@ class PostgresEvaluationQueue {
         try {
             const rows: JobRow[] = await queryRunner.query(
                 `SELECT * FROM evaluation_jobs
-                 WHERE status = 'PENDING' AND type = $1
+                 WHERE status = 'PENDING' AND type = ANY($1)
                  ORDER BY created_at
                  LIMIT 1
                  FOR UPDATE SKIP LOCKED`,
-                [type],
+                [types],
             );
 
             if (rows.length === 0) {

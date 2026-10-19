@@ -3,6 +3,7 @@ import { EvaluationLifecycleService } from '../services/EvaluationLifecycleServi
 import { createPillarContext } from '../pillars/createPillarContext.js';
 import { initialSteps, PIPELINES } from '../pillars/pipelines.js';
 import type { EvaluationJob, EvaluationJobOf, EvaluationType } from '../interfaces/evaluation.interface.js';
+import { loadGate } from '../utils/loadGate.js';
 import { EvaluationRun } from './EvaluationRun.js';
 
 export class EvaluationWorker {
@@ -31,12 +32,15 @@ export class EvaluationWorker {
                     run.skip(pillar, blocked);
                     return;
                 }
-                run.begin(pillar);
-                try {
-                    run.succeed(pillar, await pillar.run({ ...resources, report: (update) => run.report(pillar, update) }));
-                } catch (reason: unknown) {
-                    run.fail(pillar, reason);
-                }
+                const execute = async () => {
+                    run.begin(pillar);
+                    try {
+                        run.succeed(pillar, await pillar.run({ ...resources, report: (update) => run.report(pillar, update) }));
+                    } catch (reason: unknown) {
+                        run.fail(pillar, reason);
+                    }
+                };
+                await (pillar.name === 'performance' ? execute() : loadGate.runPhaseOne(execute));
             }));
         }
 
