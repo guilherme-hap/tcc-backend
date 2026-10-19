@@ -523,6 +523,94 @@ const evaluationController = new EvaluationController();
  *                         targetLatency:
  *                           type: number
  *                           description: "Latência alvo T (ms) do Apdex; a zona frustrada começa em 4T."
+ *                         mode:
+ *                           type: string
+ *                           enum: [complete, quick]
+ *                         repetitions:
+ *                           type: integer
+ *                           description: "Execuções do teste de carga por avaliação."
+ *                         restIntervalSeconds:
+ *                           type: number
+ *                         thresholds:
+ *                           type: object
+ *                           description: "Limiares usados. status 'provisional': ainda não calibrados com uma API de referência."
+ *                           properties:
+ *                             status:
+ *                               type: string
+ *                               enum: [provisional]
+ *                             maxCpuUsage:
+ *                               type: number
+ *                               description: "Fração de um núcleo."
+ *                             maxEventLoopDelayMs:
+ *                               type: number
+ *                             stabilityThreshold:
+ *                               type: number
+ *                               description: "Coeficiente de variação máximo da nota do pilar entre execuções."
+ *                         execution:
+ *                           type: object
+ *                           description: "Onde o teste de carga rodou."
+ *                           properties:
+ *                             host:
+ *                               type: string
+ *                             pid:
+ *                               type: integer
+ *                             workerMode:
+ *                               type: string
+ *                               enum: [embedded, external]
+ *                             apiHost:
+ *                               type: string
+ *                               description: "Host da API avaliada."
+ *                             sameMachine:
+ *                               type: string
+ *                               enum: [shared, separate, unverified]
+ *                               description: "shared: o gerador de carga e a API avaliada resolvem para a mesma máquina (loopback ou endereço de interface). unverified: o DNS não resolveu."
+ *                         runScores:
+ *                           type: array
+ *                           description: "Nota do pilar em cada execução (média dos alvos medidos naquela execução); nulo quando nenhum alvo teve amostra válida. Base do desvio e do coeficiente de variação."
+ *                           items:
+ *                             type: number
+ *                             nullable: true
+ *                         stability:
+ *                           type: object
+ *                           properties:
+ *                             status:
+ *                               type: string
+ *                               enum: [stable, low, not_measured]
+ *                               description: "low: o coeficiente de variação passou do limiar. not_measured: menos de duas execuções com nota."
+ *                             coefficientOfVariation:
+ *                               type: number
+ *                               nullable: true
+ *                             runsCounted:
+ *                               type: integer
+ *                             dispersion:
+ *                               type: object
+ *                               nullable: true
+ *                               description: "Desvio padrão amostral, mínimo e máximo de runScores."
+ *                               properties:
+ *                                 stddev:
+ *                                   type: number
+ *                                 min:
+ *                                   type: number
+ *                                 max:
+ *                                   type: number
+ *                         warnings:
+ *                           type: array
+ *                           description: "Avisos do pilar (baixa estabilidade, estabilidade não medida, mesma máquina)."
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               code:
+ *                                 type: string
+ *                               severity:
+ *                                 type: string
+ *                               message:
+ *                                 type: string
+ *                               recommendation:
+ *                                 type: string
+ *                                 nullable: true
+ *                               params:
+ *                                 type: object
+ *                                 nullable: true
  *                     security:
  *                       type: object
  *                       properties:
@@ -609,11 +697,59 @@ const evaluationController = new EvaluationController();
  *                       result:
  *                         type: object
  *                         nullable: true
+ *                         description: "Agregado das execuções do alvo (runs). score é a média do Apdex das execuções; as latências são a média dos percentis de cada execução; as contagens (satisfied, tolerating, frustrated, sampleSize, excluded4xx, serverErrors, unanswered, totalRequests, errors, timeouts, statusCodes) são a soma das execuções, só descritiva; errorRate e requestsPerSecond são a média; series é a da primeira execução; firstFailure é o da primeira execução que tiver amostra. Avaliações antigas, sem runCount, são de execução única."
  *                         properties:
+ *                           runCount:
+ *                             type: integer
+ *                             description: "Execuções realizadas (loadTestOptions.repetitions)."
+ *                           runsCounted:
+ *                             type: integer
+ *                             description: "Execuções que entraram na média: as sem requisição válida ficam de fora; as que falharam entram com nota 0."
+ *                           dispersion:
+ *                             type: object
+ *                             nullable: true
+ *                             description: "Desvio padrão amostral, mínimo e máximo do Apdex entre as execuções contadas. Nulo com menos de duas."
+ *                             properties:
+ *                               stddev:
+ *                                 type: number
+ *                               min:
+ *                                 type: number
+ *                               max:
+ *                                 type: number
+ *                           runs:
+ *                             type: array
+ *                             description: "Cada execução, no formato de result (sem os campos de agregação), mais saturation. Um erro da execução vem em error e code, com result nulo."
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 run:
+ *                                   type: integer
+ *                                 result:
+ *                                   type: object
+ *                                   nullable: true
+ *                                   description: "Mesmos campos do resultado agregado, medidos nesta execução, mais saturation."
+ *                                   properties:
+ *                                     saturation:
+ *                                       type: object
+ *                                       description: "Medido no processo que gera a carga durante a execução. A CPU cobre o processo inteiro (inclusive threads de trabalho), então é um limite superior do consumo do gerador."
+ *                                       properties:
+ *                                         cpuUsage:
+ *                                           type: number
+ *                                           description: "Fração de um núcleo."
+ *                                         eventLoopDelayP99Ms:
+ *                                           type: number
+ *                                           description: "Atraso p99 do event loop, em ms, descontada a resolução da medição."
+ *                                         exceeded:
+ *                                           type: boolean
+ *                                           description: "Passou de um dos limiares: possível viés do cliente. A nota não é alterada."
+ *                                 error:
+ *                                   type: string
+ *                                 code:
+ *                                   type: string
  *                           score:
  *                             type: number
  *                             nullable: true
- *                             description: "Nota Apdex do alvo (0-100) = (satisfeitas + toleradas/2) / amostra x 100. Nulo quando não há amostra válida (alvo não medido, fora da média do pilar)."
+ *                             description: "Nota Apdex do alvo (0-100) = média, entre as execuções, de (satisfeitas + toleradas/2) / amostra x 100 de cada execução. Nulo quando nenhuma execução teve amostra válida (alvo não medido, fora da média do pilar)."
  *                           targetLatency:
  *                             type: number
  *                             description: "Latência alvo T (ms) usada no cálculo."
@@ -702,6 +838,26 @@ const evaluationController = new EvaluationController();
  *                             type: number
  *                           timeouts:
  *                             type: number
+ *                           firstFailure:
+ *                             type: object
+ *                             nullable: true
+ *                             description: "Amostra do primeiro erro observado na execução, para indicar o que conferir na API. Diagnóstico apenas: não entra na nota nem altera a carga do teste. Nulo quando a execução não teve 5xx, erro de conexão nem timeout; ausente em avaliações antigas (equivale a nulo). No agregado, vem da primeira execução que tiver amostra."
+ *                             properties:
+ *                               statusCode:
+ *                                 type: integer
+ *                                 nullable: true
+ *                                 description: "Status do primeiro 5xx recebido. Nulo se não houve 5xx."
+ *                                 example: 500
+ *                               errorCode:
+ *                                 type: string
+ *                                 nullable: true
+ *                                 description: "Código do primeiro erro de conexão (ex.: ECONNRESET, ECONNREFUSED, ENOTFOUND), ou TIMEOUT quando a requisição estourou o tempo limite de resposta (UNKNOWN se o erro não trouxe código). Nulo se não houve erro de conexão nem timeout."
+ *                                 example: null
+ *                               bodySnippet:
+ *                                 type: string
+ *                                 nullable: true
+ *                                 description: "Início do corpo da resposta de erro (até 300 caracteres, terminado em … se truncado), obtido por uma única requisição de sondagem feita após o teste, com os mesmos cabeçalhos, e só se ela também devolver 5xx. Valores dos cabeçalhos de pedido são omitidos do texto. Nulo para métodos que alteram dados (POST, PUT, PATCH, DELETE: não há sondagem), corpo vazio ou binário, sondagem sem 5xx ou sem resposta, e quando não houve 5xx."
+ *                                 example: "{\"error\":\"db down\"}"
  *                           warnings:
  *                             type: array
  *                             description: "Avisos estruturados sobre a execução do teste (ex.: método mutante, body ausente). Use code para identificar o aviso."

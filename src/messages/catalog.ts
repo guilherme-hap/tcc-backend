@@ -76,6 +76,50 @@ const AUDIT_MESSAGES = {
         message: () => 'Opção de carga alta habilitada: o teste pode gerar carga significativa contra o alvo.',
         recommendation: () => 'Garanta que você tem autorização para testar a carga desta API.',
     }),
+    PERF_CLIENT_BIAS: entry<{ cpu: number; maxCpu: number; eventLoopDelayMs: number; maxEventLoopDelayMs: number }>({
+        severity: 'Warning',
+        message: ({ cpu, maxCpu, eventLoopDelayMs, maxEventLoopDelayMs }) =>
+            'Possível viés do cliente: o gerador de carga pode ter saturado durante esta execução ' +
+            `(CPU em ${cpu.toLocaleString('pt-BR')} de um núcleo, limite ${maxCpu.toLocaleString('pt-BR')}; ` +
+            `atraso p99 do event loop de ${eventLoopDelayMs.toLocaleString('pt-BR')} ms, limite ${maxEventLoopDelayMs.toLocaleString('pt-BR')} ms). ` +
+            'A nota não foi alterada.',
+        recommendation: () => 'Reduza as conexões ou a taxa do teste, ou execute o gerador de carga em um host dedicado.',
+    }),
+    PERF_CLIENT_BIAS_RUNS: entry<{ affected: number; total: number }>({
+        severity: 'Warning',
+        message: ({ affected, total }) =>
+            `Possível viés do cliente em ${affected} de ${total} execuções: o gerador de carga pode ter saturado e inflado a latência medida. A nota não foi alterada.`,
+        recommendation: () => 'Veja a CPU e o atraso do event loop de cada execução; reduza as conexões ou use um host dedicado.',
+    }),
+    PERF_RUNS_EXCLUDED: entry<{ counted: number; total: number }>({
+        severity: 'Warning',
+        message: ({ counted, total }) =>
+            `Apenas ${counted} de ${total} execuções entraram na média deste alvo; as demais não tiveram requisição válida.`,
+        recommendation: () => 'Informe path com IDs reais e payload válido para que todas as execuções respondam com sucesso.',
+    }),
+    PERF_LOW_STABILITY: entry<{ coefficientOfVariation: number; threshold: number; runs: number }>({
+        severity: 'Warning',
+        message: ({ coefficientOfVariation, threshold, runs }) =>
+            `Baixa estabilidade: a nota do pilar variou entre as ${runs} execuções (coeficiente de variação ${coefficientOfVariation.toLocaleString('pt-BR')}, ` +
+            `limite ${threshold.toLocaleString('pt-BR')}). O resultado é pouco reprodutível.`,
+        recommendation: () => 'Avalie novamente, aumente a duração ou o intervalo entre execuções, ou verifique se o ambiente alvo é compartilhado.',
+    }),
+    PERF_STABILITY_NOT_MEASURED: entry({
+        severity: 'Info',
+        message: () => 'A estabilidade não foi medida: o teste de carga rodou uma única vez (ou só uma execução teve amostra válida).',
+        recommendation: () => 'Use o modo completo (3 execuções, por padrão) para medir a dispersão entre execuções.',
+    }),
+    PERF_SAME_MACHINE: entry<{ host: string }>({
+        severity: 'Warning',
+        message: ({ host }) =>
+            `O gerador de carga e a API avaliada (${host}) compartilham a mesma máquina: os dois disputam CPU e rede, e a latência medida pode ser afetada.`,
+        recommendation: () => 'Para uma medição isolada, execute o gerador de carga em outro host (worker de carga externo).',
+    }),
+    PERF_SAME_MACHINE_UNVERIFIED: entry<{ host: string }>({
+        severity: 'Info',
+        message: ({ host }) =>
+            `Não foi possível verificar se o gerador de carga e a API avaliada compartilham a máquina: o endereço de ${host} não foi resolvido.`,
+    }),
     PERF_SKIPPED_INVALID_SPEC: entry<{ rule: string }>({
         severity: 'Error',
         message: ({ rule }) =>

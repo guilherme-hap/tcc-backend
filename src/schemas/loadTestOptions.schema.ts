@@ -5,6 +5,8 @@ import {
     DEFAULT_LOAD_LIMITS,
     ELEVATED_LOAD_LIMITS,
     DEFAULT_TARGET_LATENCY_MS,
+    MAX_REPETITIONS,
+    MAX_REST_INTERVAL_SECONDS,
     apdexWindowIssue,
     defaultDurationFor,
 } from '../utils/loadTestLimits.js';
@@ -41,6 +43,12 @@ const baseLoadTestOptionsSchema = z.object({
     body: z.string().optional(),
     allowMutatingMethods: z.boolean().optional(),
     allowHighLoad: z.boolean().optional(),
+    mode: z.enum(['complete', 'quick']).optional(),
+    repetitions: z.number().int().min(1).max(MAX_REPETITIONS).optional(),
+    restIntervalSeconds: z.number().min(0).max(MAX_REST_INTERVAL_SECONDS).optional(),
+    maxCpuUsage: z.number().positive().optional(),
+    maxEventLoopDelayMs: z.number().positive().optional(),
+    stabilityThreshold: z.number().positive().optional(),
 });
 
 type RawLoadTestOptions = z.infer<typeof baseLoadTestOptionsSchema>;
@@ -97,6 +105,14 @@ export const loadTestOptionsSchema = baseLoadTestOptionsSchema.superRefine((data
             code: 'custom',
             path: [data.duration !== undefined ? 'duration' : 'targetLatency'],
             message: windowIssue,
+        });
+    }
+
+    if (data.mode === 'quick' && data.repetitions !== undefined && data.repetitions > 1) {
+        ctx.addIssue({
+            code: 'custom',
+            path: ['repetitions'],
+            message: 'O modo rápido executa o teste uma única vez; use o modo completo para repetir.',
         });
     }
 

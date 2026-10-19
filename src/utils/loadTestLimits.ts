@@ -21,6 +21,13 @@ export const DEFAULT_DURATION_SECONDS = 10;
 export const DEFAULT_MUTATING_DURATION_SECONDS = 5;
 export const DEFAULT_TARGET_LATENCY_MS = 1000;
 export const FRUSTRATED_LATENCY_MULTIPLIER = 4;
+export const DEFAULT_REPETITIONS = 3;
+export const MAX_REPETITIONS = 10;
+export const DEFAULT_REST_INTERVAL_SECONDS = 5;
+export const MAX_REST_INTERVAL_SECONDS = 300;
+export const DEFAULT_MAX_CPU_USAGE = 0.8;
+export const DEFAULT_MAX_EVENT_LOOP_DELAY_MS = 50;
+export const DEFAULT_STABILITY_THRESHOLD = 0.1;
 
 export function defaultDurationFor(method?: string): number {
     return isMutatingMethod(method) ? DEFAULT_MUTATING_DURATION_SECONDS : DEFAULT_DURATION_SECONDS;

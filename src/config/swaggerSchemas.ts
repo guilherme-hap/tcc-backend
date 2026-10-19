@@ -133,10 +133,18 @@ export const SWAGGER_SCHEMAS = {
                     totalTargets: {
                         type: 'integer',
                     },
+                    run: {
+                        type: 'integer',
+                        description: 'Execução em andamento do teste de carga, a partir de 1.',
+                    },
+                    totalRuns: {
+                        type: 'integer',
+                        description: 'Total de execuções configuradas (loadTestOptions.repetitions).',
+                    },
                     phase: {
                         type: 'string',
-                        enum: ['QUEUED', 'RUNNING'],
-                        description: 'QUEUED: aguardando a vez, porque o auditor roda um teste de carga por vez (e nenhuma análise de contrato durante a carga). RUNNING: teste de carga em andamento.',
+                        enum: ['QUEUED', 'RUNNING', 'RESTING'],
+                        description: 'QUEUED: aguardando a vez, porque o auditor roda um teste de carga por vez em todo o sistema (e nenhuma análise de contrato ou segurança durante a carga). RUNNING: teste de carga em andamento. RESTING: intervalo entre execuções, para a API voltar ao repouso.',
                     },
                     startedAt: {
                         type: 'string',
@@ -229,6 +237,41 @@ export const SWAGGER_SCHEMAS = {
                 type: 'boolean',
                 description: 'Opt-in explícito para elevar os tetos de duration, connections, maxRequests e requestsPerSecond ao tier elevado. Use com cautela ao testar APIs de terceiros que você não controla.',
                 default: false,
+            },
+            mode: {
+                type: 'string',
+                enum: ['complete', 'quick'],
+                description: 'complete (padrão): repete o teste de carga repetitions vezes. quick: executa uma única vez (uso em CI/CD); não pode ser combinado com repetitions maior que 1.',
+                example: 'complete',
+            },
+            repetitions: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 10,
+                description: 'Número de execuções do teste de carga por avaliação (padrão 3; 1 no modo quick). O Apdex é calculado por alvo em cada execução e só depois agregado pela média; as amostras nunca são juntadas entre execuções.',
+                example: 3,
+            },
+            restIntervalSeconds: {
+                type: 'number',
+                minimum: 0,
+                maximum: 300,
+                description: 'Intervalo, em segundos, entre uma execução e a seguinte, para a API voltar ao repouso (padrão 5).',
+                example: 5,
+            },
+            maxCpuUsage: {
+                type: 'number',
+                description: 'Limiar provisório de CPU do gerador de carga, em fração de um núcleo (padrão 0,8). Acima dele a execução é marcada como possível viés do cliente; a nota não é alterada.',
+                example: 0.8,
+            },
+            maxEventLoopDelayMs: {
+                type: 'number',
+                description: 'Limiar provisório do atraso p99 do event loop do gerador, em ms, descontada a resolução da medição (padrão 50). Acima dele a execução é marcada como possível viés do cliente; a nota não é alterada.',
+                example: 50,
+            },
+            stabilityThreshold: {
+                type: 'number',
+                description: 'Limiar provisório do coeficiente de variação da nota do pilar entre execuções (padrão 0,10). Acima dele a avaliação é marcada como de baixa estabilidade.',
+                example: 0.1,
             },
         },
     },

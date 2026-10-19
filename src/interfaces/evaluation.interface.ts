@@ -66,7 +66,25 @@ export interface IPerformanceSeriesPoint {
     errors: number;
 }
 
-export interface IAutocannonResult {
+export interface ISaturation {
+    cpuUsage: number;
+    eventLoopDelayP99Ms: number;
+    exceeded: boolean;
+}
+
+export interface IDispersion {
+    stddev: number;
+    min: number;
+    max: number;
+}
+
+export interface IFirstFailure {
+    statusCode: number | null;
+    errorCode: string | null;
+    bodySnippet: string | null;
+}
+
+export interface IAutocannonRunResult {
     score: number | null;
     targetLatency: number;
     satisfied: number;
@@ -84,7 +102,23 @@ export interface IAutocannonResult {
     totalRequests: number;
     errors: number;
     timeouts: number;
+    firstFailure?: IFirstFailure | null;
     warnings: IAuditMessage[];
+    saturation: ISaturation;
+}
+
+export interface IPerformanceRun {
+    run: number;
+    result: IAutocannonRunResult | null;
+    error?: string;
+    code?: ErrorCode;
+}
+
+export interface IAutocannonResult extends Omit<IAutocannonRunResult, 'saturation'> {
+    runCount: number;
+    runsCounted: number;
+    dispersion: IDispersion | null;
+    runs: IPerformanceRun[];
 }
 
 export type SecurityLayer = 'transport' | 'access' | 'content' | 'leakage';
@@ -103,6 +137,12 @@ export interface IPerformanceTargetResult {
     code?: ErrorCode;
 }
 
+export type MeasurementMode = 'complete' | 'quick';
+
+export type SharedMachineStatus = 'shared' | 'separate' | 'unverified';
+
+export type StabilityStatus = 'stable' | 'low' | 'not_measured';
+
 export type ILoadTestOptions = Omit<LoadTestOptionsInput, 'method'> & {
     method: HttpMethod;
     payloadFactory?: () => string | undefined;
@@ -120,7 +160,9 @@ export type EvaluationStepStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED
 export interface IStepProgress {
     targetIndex: number;
     totalTargets: number;
-    phase: 'QUEUED' | 'RUNNING';
+    run: number;
+    totalRuns: number;
+    phase: 'QUEUED' | 'RUNNING' | 'RESTING';
     startedAt: string | null;
     expectedDurationSeconds: number;
     elapsedSeconds: number;
@@ -153,6 +195,30 @@ export interface IPillarScoring {
     };
     performance?: {
         targetLatency: number;
+        mode: MeasurementMode;
+        repetitions: number;
+        restIntervalSeconds: number;
+        thresholds: {
+            status: 'provisional';
+            maxCpuUsage: number;
+            maxEventLoopDelayMs: number;
+            stabilityThreshold: number;
+        };
+        execution: {
+            host: string;
+            pid: number;
+            workerMode: 'embedded' | 'external';
+            apiHost: string;
+            sameMachine: SharedMachineStatus;
+        };
+        runScores: (number | null)[];
+        stability: {
+            status: StabilityStatus;
+            coefficientOfVariation: number | null;
+            dispersion: IDispersion | null;
+            runsCounted: number;
+        };
+        warnings: IAuditMessage[];
     };
     security?: {
         layerWeights: Record<SecurityLayer, number>;

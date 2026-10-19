@@ -1,6 +1,8 @@
 import autocannon from 'autocannon';
 import {
-    IAutocannonResult,
+    IAutocannonRunResult,
+    ISaturation,
+    IFirstFailure,
     ILatencySummary,
     ILoadTestOptions,
     ILoadTestTick,
@@ -11,6 +13,10 @@ import { isMutatingMethod } from '../utils/httpMethodUtils.js';
 import { DEFAULT_TARGET_LATENCY_MS, FRUSTRATED_LATENCY_MULTIPLIER, defaultDurationFor } from '../utils/loadTestLimits.js';
 import { round } from '../utils/round.js';
 import { auditMessage, IAuditMessage } from '../messages/catalog.js';
+import { resolveMeasurementPlan } from '../utils/measurementPlan.js';
+import type { MeasurementPlan } from '../utils/measurementPlan.js';
+import { startSaturationMonitor } from '../utils/saturation.js';
+import { probeFailure } from '../utils/failureProbe.js';
 
 const MIN_SAMPLE_SIZE = 100;
 const MIN_RESPONSE_TIMEOUT_SECONDS = 10;
@@ -39,12 +45,15 @@ interface ResponseCounts {
     latencyHistogram: Uint32Array;
     currentSecond: SecondCounts;
     seconds: SecondCounts[];
+    firstServerErrorStatus: number | null;
+    firstTransportErrorCode: string | null;
 }
 
 interface LoadTestRun {
     result: autocannon.Result;
     counts: ResponseCounts;
     elapsedMs: number;
+    saturation: ISaturation;
 }
 
 export class AutocannonService {
@@ -52,7 +61,7 @@ export class AutocannonService {
         targetUrl: string,
         options: ILoadTestOptions,
         onTick?: (tick: ILoadTestTick) => void,
-    ): Promise<IAutocannonResult> {
+    ): Promise<IAutocannonRunResult> {
         const { method } = options;
         const isMutating = isMutatingMethod(method);
 
@@ -64,9 +73,29 @@ export class AutocannonService {
         const targetLatency = options.targetLatency ?? DEFAULT_TARGET_LATENCY_MS;
         const runOptions = this.buildRunOptions(targetUrl, options, duration, targetLatency);
 
-        const run = await this.run(runOptions, duration, targetLatency, onTick);
+        const plan = resolveMeasurementPlan(options);
+        const run = await this.run(runOptions, duration, targetLatency, plan, onTick);
+        const firstFailure = await this.describeFirstFailure(run.counts, targetUrl, options, isMutating);
 
-        return this.summarize(run, targetLatency, this.buildWarnings(options));
+        return this.summarize(run, targetLatency, this.buildWarnings(options), plan, firstFailure);
+    }
+
+    private async describeFirstFailure(
+        counts: ResponseCounts,
+        targetUrl: string,
+        options: ILoadTestOptions,
+        isMutating: boolean,
+    ): Promise<IFirstFailure | null> {
+        const statusCode = counts.firstServerErrorStatus;
+        const errorCode = counts.firstTransportErrorCode;
+        if (statusCode === null && errorCode === null) return null;
+
+        const probe = statusCode !== null && !isMutating
+            ? await probeFailure(targetUrl, options.method, options.headers ?? {})
+            : null;
+        const bodySnippet = probe !== null && probe.statusCode >= 500 ? probe.bodySnippet : null;
+
+        return { statusCode, errorCode, bodySnippet };
     }
 
     private buildWarnings(options: ILoadTestOptions): IAuditMessage[] {
@@ -152,10 +181,12 @@ export class AutocannonService {
     }
 
     private summarize(
-        { result, counts, elapsedMs }: LoadTestRun,
+        { result, counts, elapsedMs, saturation }: LoadTestRun,
         targetLatency: number,
         warnings: IAuditMessage[],
-    ): IAutocannonResult {
+        plan: MeasurementPlan,
+        firstFailure: IFirstFailure | null,
+    ): IAutocannonRunResult {
         const errors = result.errors ?? 0;
         const satisfied = counts.satisfied;
         const tolerating = counts.tolerating;
@@ -173,6 +204,15 @@ export class AutocannonService {
             warnings.push(auditMessage('PERF_NO_VALID_SAMPLE'));
         } else if (sampleSize < MIN_SAMPLE_SIZE) {
             warnings.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize }));
+        }
+
+        if (saturation.exceeded) {
+            warnings.push(auditMessage('PERF_CLIENT_BIAS', {
+                cpu: saturation.cpuUsage,
+                maxCpu: plan.maxCpuUsage,
+                eventLoopDelayMs: saturation.eventLoopDelayP99Ms,
+                maxEventLoopDelayMs: plan.maxEventLoopDelayMs,
+            }));
         }
 
         const score = sampleSize === 0
@@ -201,7 +241,9 @@ export class AutocannonService {
             totalRequests: result.requests?.sent ?? 0,
             errors,
             timeouts: result.timeouts ?? 0,
+            firstFailure,
             warnings,
+            saturation,
         };
     }
 
@@ -251,6 +293,21 @@ export class AutocannonService {
         options: autocannon.Options,
         durationSeconds: number,
         targetLatency: number,
+        plan: MeasurementPlan,
+        onTick?: (tick: ILoadTestTick) => void,
+    ): Promise<LoadTestRun> {
+        const monitor = startSaturationMonitor(plan);
+        return this.execute(options, durationSeconds, targetLatency, monitor, onTick).catch((err: unknown) => {
+            monitor.stop();
+            throw err;
+        });
+    }
+
+    private execute(
+        options: autocannon.Options,
+        durationSeconds: number,
+        targetLatency: number,
+        monitor: { stop: () => ISaturation },
         onTick?: (tick: ILoadTestTick) => void,
     ): Promise<LoadTestRun> {
         return new Promise((resolve, reject) => {
@@ -270,6 +327,8 @@ export class AutocannonService {
                 latencyHistogram: new Uint32Array(this.responseTimeoutSeconds(targetLatency) * 1000 + 1),
                 currentSecond: this.emptySecond(),
                 seconds: [],
+                firstServerErrorStatus: null,
+                firstTransportErrorCode: null,
             };
             const sentAtByClient = new Map<autocannon.Client, number>();
             const setupClient = (client: autocannon.Client) => {
@@ -278,6 +337,12 @@ export class AutocannonService {
                 for (const event of ['response', 'timeout', 'connError']) {
                     emitter.on(event, () => sentAtByClient.delete(client));
                 }
+                emitter.on('connError', (err: NodeJS.ErrnoException) => {
+                    counts.firstTransportErrorCode ??= err.code ?? 'UNKNOWN';
+                });
+                emitter.on('timeout', () => {
+                    counts.firstTransportErrorCode ??= 'TIMEOUT';
+                });
                 emitter.on('done', () => {
                     lastClientDoneAt = performance.now();
                 });
@@ -286,6 +351,7 @@ export class AutocannonService {
             let lastTickAt = startedAt;
             const instance = autocannon({ ...options, setupClient }, (err, res) => {
                 clearTimeout(stopTimer);
+                const saturation = monitor.stop();
                 if (err) {
                     return reject(err);
                 }
@@ -298,7 +364,7 @@ export class AutocannonService {
                 if (counts.currentSecond.responses + counts.currentSecond.errors > 0) {
                     counts.seconds.push(counts.currentSecond);
                 }
-                resolve({ result: res, counts, elapsedMs: (lastClientDoneAt ?? performance.now()) - startedAt });
+                resolve({ result: res, counts, elapsedMs: (lastClientDoneAt ?? performance.now()) - startedAt, saturation });
             });
             instance.on('response', (_client, statusCode, _resBytes, responseTime) => {
                 this.classifyResponse(counts, statusCode, responseTime, targetLatency);
@@ -346,6 +412,7 @@ export class AutocannonService {
         second.latencySum += responseTime;
 
         if (statusCode >= 500) {
+            counts.firstServerErrorStatus ??= statusCode;
             second.errors++;
             counts.serverErrors++;
             counts.frustrated++;
