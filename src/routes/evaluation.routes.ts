@@ -563,7 +563,7 @@ const evaluationController = new EvaluationController();
  *                             sameMachine:
  *                               type: string
  *                               enum: [shared, separate, unverified]
- *                               description: "shared: o gerador de carga e a API avaliada resolvem para a mesma máquina (loopback ou endereço de interface). unverified: o DNS não resolveu."
+ *                               description: "shared: o gerador de carga e a API avaliada resolvem para a mesma máquina (loopback, endereço de interface ou host.docker.internal e equivalentes). unverified: o DNS não resolveu ou, com o gerador em container, a API resolve para um endereço de rede privada que pode ser a mesma máquina."
  *                         runScores:
  *                           type: array
  *                           description: "Nota do pilar em cada execução (média dos alvos medidos naquela execução); nulo quando nenhum alvo teve amostra válida. Base do desvio e do coeficiente de variação."

@@ -120,6 +120,12 @@ const AUDIT_MESSAGES = {
         message: ({ host }) =>
             `Não foi possível verificar se o gerador de carga e a API avaliada compartilham a máquina: o endereço de ${host} não foi resolvido.`,
     }),
+    PERF_SAME_MACHINE_CONTAINER_UNVERIFIED: entry<{ host: string; address: string }>({
+        severity: 'Info',
+        message: ({ host, address }) =>
+            `O gerador de carga roda em container e ${host} resolve para um endereço de rede privada (${address}): a API pode estar na mesma máquina (no host ou em outro container), e isso não pôde ser verificado.`,
+        recommendation: () => 'Para uma medição isolada, avalie a API em outra máquina (ex.: ambiente de homologação).',
+    }),
     PERF_SKIPPED_INVALID_SPEC: entry<{ rule: string }>({
         severity: 'Error',
         message: ({ rule }) =>

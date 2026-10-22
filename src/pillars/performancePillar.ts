@@ -10,6 +10,7 @@ import { loadGate } from '../utils/loadGate.js';
 import { resolveMeasurementPlan } from '../utils/measurementPlan.js';
 import { assessStability, aggregateRuns, pillarRunScores, targetRunValues } from '../utils/aggregateRuns.js';
 import { detectSharedMachine } from '../utils/sameMachine.js';
+import type { SharedMachineCheck } from '../utils/sameMachine.js';
 import { round } from '../utils/round.js';
 import { scorePart } from '../utils/scorePart.js';
 import { auditMessage } from '../messages/catalog.js';
@@ -51,8 +52,8 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
         const spec = (await ctx.spec()).data;
         const baseUrl = await ctx.apiBaseUrl();
         const apiHost = hostnameOf(baseUrl);
-        const sharedMachine = apiHost === null
-            ? 'unverified'
+        const sharedMachine: SharedMachineCheck = apiHost === null
+            ? { status: 'unverified', cause: 'unresolved' }
             : await detectSharedMachine(apiHost);
 
         const prepared: PreparedTarget[] = targets.map((target) => {
@@ -190,9 +191,11 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
         } else if (stability.status === 'not_measured') {
             warnings.push(auditMessage('PERF_STABILITY_NOT_MEASURED'));
         }
-        if (sharedMachine === 'shared') {
+        if (sharedMachine.status === 'shared') {
             warnings.push(auditMessage('PERF_SAME_MACHINE', { host: apiHost ?? baseUrl }));
-        } else if (sharedMachine === 'unverified') {
+        } else if (sharedMachine.status === 'unverified' && sharedMachine.cause === 'container-network') {
+            warnings.push(auditMessage('PERF_SAME_MACHINE_CONTAINER_UNVERIFIED', { host: apiHost ?? baseUrl, address: sharedMachine.address }));
+        } else if (sharedMachine.status === 'unverified') {
             warnings.push(auditMessage('PERF_SAME_MACHINE_UNVERIFIED', { host: apiHost ?? baseUrl }));
         }
 
@@ -217,7 +220,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                         pid: process.pid,
                         workerMode: processRole() === 'load-worker' ? 'external' : 'embedded',
                         apiHost: apiHost ?? baseUrl,
-                        sameMachine: sharedMachine,
+                        sameMachine: sharedMachine.status,
                     },
                     runScores,
                     stability,
