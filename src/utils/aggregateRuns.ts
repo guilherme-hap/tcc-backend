@@ -2,13 +2,14 @@ import type {
     IAutocannonResult,
     IAutocannonRunResult,
     IDispersion,
-    ILatencySummary,
     IPerformanceRun,
     StabilityStatus,
 } from '../interfaces/evaluation.interface.js';
 import { auditMessage } from '../messages/catalog.js';
 import type { IAuditMessage } from '../messages/catalog.js';
 import { round } from './round.js';
+import { summarizeLatency } from './latencySamples.js';
+import type { LatencySamples } from './latencySamples.js';
 
 export interface StabilityAssessment {
     status: StabilityStatus;
@@ -75,28 +76,6 @@ export function assessStability(runScores: (number | null)[], threshold: number)
     };
 }
 
-function meanOfNonNull(values: (number | null)[]): number | null {
-    const present = values.filter((value): value is number => value !== null);
-    return present.length > 0 ? round(mean(present), 2) : null;
-}
-
-function aggregateLatency(results: IAutocannonRunResult[]): ILatencySummary | null {
-    const summaries = results.map((result) => result.latency).filter((latency): latency is ILatencySummary => latency !== null);
-    if (summaries.length === 0) return null;
-
-    const field = (key: keyof ILatencySummary) => meanOfNonNull(summaries.map((latency) => latency[key]));
-
-    return {
-        min: field('min')!,
-        mean: field('mean')!,
-        p50: field('p50')!,
-        p95: field('p95'),
-        p99: field('p99'),
-        p99_9: field('p99_9'),
-        max: field('max')!,
-    };
-}
-
 function sumStatusCodes(results: IAutocannonRunResult[]): Record<string, number> {
     const totals: Record<string, number> = {};
     for (const result of results) {
@@ -154,7 +133,7 @@ function aggregateWarnings(
     return aggregated;
 }
 
-export function aggregateRuns(runs: IPerformanceRun[]): IAutocannonResult | null {
+export function aggregateRuns(runs: IPerformanceRun[], latencySamples: LatencySamples | null): IAutocannonResult | null {
     const results = runs
         .map((run) => run.result)
         .filter((result): result is IAutocannonRunResult => result !== null);
@@ -175,7 +154,7 @@ export function aggregateRuns(runs: IPerformanceRun[]): IAutocannonResult | null
         serverErrors: sum(results.map((result) => result.serverErrors)),
         unanswered: sum(results.map((result) => result.unanswered)),
         errorRate: round(errorRate, 4),
-        latency: aggregateLatency(results),
+        latency: summarizeLatency(latencySamples),
         requestsPerSecond: round(mean(results.map((result) => result.requestsPerSecond)), 2),
         statusCodes: sumStatusCodes(results),
         series: first.series,

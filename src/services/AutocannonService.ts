@@ -3,7 +3,6 @@ import {
     IAutocannonRunResult,
     ISaturation,
     IFirstFailure,
-    ILatencySummary,
     ILoadTestOptions,
     ILoadTestTick,
     IPerformanceSeriesPoint,
@@ -17,12 +16,11 @@ import { resolveMeasurementPlan } from '../utils/measurementPlan.js';
 import type { MeasurementPlan } from '../utils/measurementPlan.js';
 import { startSaturationMonitor } from '../utils/saturation.js';
 import { probeFailure } from '../utils/failureProbe.js';
+import { createLatencySamples, recordLatency, summarizeLatency } from '../utils/latencySamples.js';
+import type { LatencySamples } from '../utils/latencySamples.js';
 
 const MIN_SAMPLE_SIZE = 100;
 const MIN_RESPONSE_TIMEOUT_SECONDS = 10;
-const P95_MIN_SAMPLE_SIZE = 20;
-const P99_MIN_SAMPLE_SIZE = 100;
-const P99_9_MIN_SAMPLE_SIZE = 1000;
 const MIN_TICK_INTERVAL_MS = 500;
 
 interface SecondCounts {
@@ -40,9 +38,7 @@ interface ResponseCounts {
     serverErrors: number;
     responses: number;
     unanswered: number;
-    measured: number;
-    latencySum: number;
-    latencyHistogram: Uint32Array;
+    latency: LatencySamples;
     currentSecond: SecondCounts;
     seconds: SecondCounts[];
     firstServerErrorStatus: number | null;
@@ -56,12 +52,17 @@ interface LoadTestRun {
     saturation: ISaturation;
 }
 
+export interface LoadTestOutcome {
+    result: IAutocannonRunResult;
+    latencySamples: LatencySamples;
+}
+
 export class AutocannonService {
     public async runLoadTest(
         targetUrl: string,
         options: ILoadTestOptions,
         onTick?: (tick: ILoadTestTick) => void,
-    ): Promise<IAutocannonRunResult> {
+    ): Promise<LoadTestOutcome> {
         const { method } = options;
         const isMutating = isMutatingMethod(method);
 
@@ -77,7 +78,10 @@ export class AutocannonService {
         const run = await this.run(runOptions, duration, targetLatency, plan, onTick);
         const firstFailure = await this.describeFirstFailure(run.counts, targetUrl, options, isMutating);
 
-        return this.summarize(run, targetLatency, this.buildWarnings(options), plan, firstFailure);
+        return {
+            result: this.summarize(run, targetLatency, this.buildWarnings(options), plan, firstFailure),
+            latencySamples: run.counts.latency,
+        };
     }
 
     private async describeFirstFailure(
@@ -232,7 +236,7 @@ export class AutocannonService {
             errorRate: totalAttempts === 0
                 ? 0
                 : round((counts.serverErrors + errors + counts.unanswered) / totalAttempts, 4),
-            latency: this.summarizeLatency(counts),
+            latency: summarizeLatency(counts.latency),
             requestsPerSecond: elapsedMs > 0 ? round(counts.responses / (elapsedMs / 1000), 2) : 0,
             statusCodes: Object.fromEntries(
                 Object.entries(result.statusCodeStats ?? {}).map(([code, stats]) => [code, stats.count ?? 0]),
@@ -245,35 +249,6 @@ export class AutocannonService {
             warnings,
             saturation,
         };
-    }
-
-    private summarizeLatency(counts: ResponseCounts): ILatencySummary | null {
-        const { measured, latencyHistogram } = counts;
-        if (measured === 0) return null;
-
-        const percentile = (perMille: number): number =>
-            this.latencyAtRank(latencyHistogram, Math.ceil((measured * perMille) / 1000));
-
-        return {
-            min: this.latencyAtRank(latencyHistogram, 1),
-            mean: round(counts.latencySum / measured, 2),
-            p50: percentile(500),
-            p95: measured >= P95_MIN_SAMPLE_SIZE ? percentile(950) : null,
-            p99: measured >= P99_MIN_SAMPLE_SIZE ? percentile(990) : null,
-            p99_9: measured >= P99_9_MIN_SAMPLE_SIZE ? percentile(999) : null,
-            max: this.latencyAtRank(latencyHistogram, measured),
-        };
-    }
-
-    private latencyAtRank(histogram: Uint32Array, rank: number): number {
-        let cumulative = 0;
-
-        for (let ms = 0; ms < histogram.length; ms++) {
-            cumulative += histogram[ms];
-            if (cumulative >= rank) return ms;
-        }
-
-        return histogram.length - 1;
     }
 
     private summarizeSecond(counts: SecondCounts, second: number): IPerformanceSeriesPoint {
@@ -322,9 +297,7 @@ export class AutocannonService {
                 serverErrors: 0,
                 responses: 0,
                 unanswered: 0,
-                measured: 0,
-                latencySum: 0,
-                latencyHistogram: new Uint32Array(this.responseTimeoutSeconds(targetLatency) * 1000 + 1),
+                latency: createLatencySamples(this.responseTimeoutSeconds(targetLatency) * 1000),
                 currentSecond: this.emptySecond(),
                 seconds: [],
                 firstServerErrorStatus: null,
@@ -404,10 +377,7 @@ export class AutocannonService {
             return;
         }
 
-        const slot = Math.min(Math.round(responseTime), counts.latencyHistogram.length - 1);
-        counts.measured++;
-        counts.latencySum += responseTime;
-        counts.latencyHistogram[slot]++;
+        recordLatency(counts.latency, responseTime);
         second.measured++;
         second.latencySum += responseTime;
 

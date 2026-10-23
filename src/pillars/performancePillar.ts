@@ -9,6 +9,8 @@ import { withLoadTestAdvisoryLock } from '../utils/advisoryLock.js';
 import { loadGate } from '../utils/loadGate.js';
 import { resolveMeasurementPlan } from '../utils/measurementPlan.js';
 import { assessStability, aggregateRuns, pillarRunScores, targetRunValues } from '../utils/aggregateRuns.js';
+import { mergeLatencySamples } from '../utils/latencySamples.js';
+import type { LatencySamples } from '../utils/latencySamples.js';
 import { detectSharedMachine } from '../utils/sameMachine.js';
 import type { SharedMachineCheck } from '../utils/sameMachine.js';
 import { round } from '../utils/round.js';
@@ -77,6 +79,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
         });
 
         const runsByTarget: IPerformanceRun[][] = prepared.map(() => []);
+        const latencyByTarget: (LatencySamples | null)[] = prepared.map(() => null);
 
         const buildResults = (): IPerformanceTargetResult[] => {
             const results: IPerformanceTargetResult[] = [];
@@ -87,7 +90,7 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                 }
                 const runs = runsByTarget[index];
                 if (runs.length === 0) break;
-                const result = aggregateRuns(runs);
+                const result = aggregateRuns(runs, latencyByTarget[index]);
                 if (result) {
                     results.push({ path: target.path, method: target.method, result });
                     continue;
@@ -141,12 +144,13 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                     ctx.report({ progress: running });
 
                     try {
-                        const result = await autocannonService.runLoadTest(
+                        const { result, latencySamples } = await autocannonService.runLoadTest(
                             target.url,
                             target.options,
                             (tick) => ctx.report({ progress: { ...running, ...tick } }),
                         );
                         runsByTarget[targetIndex].push({ run, result });
+                        latencyByTarget[targetIndex] = mergeLatencySamples(latencyByTarget[targetIndex], latencySamples);
                     } catch (err: unknown) {
                         const failure = AppError.from(err, 'LOAD_TEST_FAILED');
                         runsByTarget[targetIndex].push({ run, result: null, error: failure.message, code: failure.code });

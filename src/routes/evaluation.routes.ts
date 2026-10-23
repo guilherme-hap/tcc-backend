@@ -780,7 +780,7 @@ const evaluationController = new EvaluationController();
  *                           latency:
  *                             type: object
  *                             nullable: true
- *                             description: "Latência (ms) das respostas não 4xx, a mesma amostra de respostas do Apdex; timeouts e erros de conexão não têm latência e não entram. Apenas diagnóstico; não entra na nota. min, percentis e max têm resolução de 1 ms; mean usa os tempos exatos. Nulo quando nenhuma resposta não 4xx foi recebida. Os valores são do alvo: não há agregação entre alvos."
+ *                             description: "Latência (ms) das respostas não 4xx, a mesma amostra de respostas do Apdex; timeouts e erros de conexão não têm latência e não entram. Apenas diagnóstico; não entra na nota. min, percentis e max têm resolução de 1 ms; mean usa os tempos exatos. Nulo quando nenhuma resposta não 4xx foi recebida. Os valores são do alvo: não há agregação entre alvos. No resultado do alvo, todos os campos saem das respostas de todas as execuções juntas (min é a menor e max a maior latência observada, os percentis e os limites de amostra valem sobre o total); em runs[].result, só da execução."
  *                             properties:
  *                               min:
  *                                 type: number
