@@ -780,7 +780,7 @@ const evaluationController = new EvaluationController();
  *                           latency:
  *                             type: object
  *                             nullable: true
- *                             description: "Latência (ms) das respostas não 4xx, a mesma amostra de respostas do Apdex; timeouts e erros de conexão não têm latência e não entram. Apenas diagnóstico; não entra na nota. min, percentis e max têm resolução de 1 ms; mean usa os tempos exatos. Nulo quando nenhuma resposta não 4xx foi recebida. Os valores são do alvo: não há agregação entre alvos. No resultado do alvo, todos os campos saem das respostas de todas as execuções juntas (min é a menor e max a maior latência observada, os percentis e os limites de amostra valem sobre o total); em runs[].result, só da execução."
+ *                             description: "Latência (ms) só das respostas 2xx e 3xx: 4xx ficam fora como no Apdex, e 5xx também, para que erros rápidos não reduzam os percentis (as 5xx contam como frustradas no Apdex e entram em serverErrors); timeouts e erros de conexão não têm latência e não entram. Apenas diagnóstico; não entra na nota. min, percentis e max têm resolução de 1 ms; mean usa os tempos exatos. Nulo quando nenhuma resposta 2xx/3xx foi recebida. Os valores são do alvo: não há agregação entre alvos. No resultado do alvo, todos os campos saem das respostas de todas as execuções juntas (min é a menor e max a maior latência observada, os percentis e os limites de amostra valem sobre o total); em runs[].result, só da execução."
  *                             properties:
  *                               min:
  *                                 type: number
@@ -828,7 +828,7 @@ const evaluationController = new EvaluationController();
  *                                 meanLatency:
  *                                   type: number
  *                                   nullable: true
- *                                   description: "Latência média (ms) das respostas não 4xx do segundo. Nulo quando não houve nenhuma."
+ *                                   description: "Latência média (ms) das respostas 2xx/3xx do segundo. Nulo quando não houve nenhuma."
  *                                 errors:
  *                                   type: integer
  *                                   description: "Respostas 5xx mais erros de conexão e timeouts do segundo."

@@ -377,9 +377,11 @@ export class AutocannonService {
             return;
         }
 
-        recordLatency(counts.latency, responseTime);
-        second.measured++;
-        second.latencySum += responseTime;
+        if (statusCode < 500) {
+            recordLatency(counts.latency, responseTime);
+            second.measured++;
+            second.latencySum += responseTime;
+        }
 
         if (statusCode >= 500) {
             counts.firstServerErrorStatus ??= statusCode;
