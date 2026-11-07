@@ -672,8 +672,14 @@ const evaluationController = new EvaluationController();
  *                         properties:
  *                           endpoint:
  *                             type: string
+ *                             description: "Path da operação (ex.: /pet/{petId}), ou global quando o achado não está dentro de paths."
  *                           method:
  *                             type: string
+ *                             description: "Método da operação em maiúsculas, ou N/A fora de uma operação."
+ *                           location:
+ *                             type: string
+ *                             description: "Caminho do achado no documento, com os segmentos separados por ponto, como o Spectral informa (ex.: components.schemas.User.properties.id.type ou paths./pet/{petId}.get.parameters.0). Vazio quando o achado é do documento inteiro."
+ *                             example: "components.schemas.User.properties.id.type"
  *                           rule:
  *                             type: string
  *                           message:
@@ -710,7 +716,7 @@ const evaluationController = new EvaluationController();
  *                       result:
  *                         type: object
  *                         nullable: true
- *                         description: "Agregado das execuções do alvo (runs). score é a média do Apdex das execuções; as latências são a média dos percentis de cada execução; as contagens (satisfied, tolerating, frustrated, sampleSize, excluded4xx, serverErrors, unanswered, totalRequests, errors, timeouts, statusCodes) são a soma das execuções, só descritiva; errorRate e requestsPerSecond são a média; series é a da primeira execução; firstFailure é o da primeira execução que tiver amostra. Avaliações antigas, sem runCount, são de execução única."
+ *                         description: "Agregado das execuções do alvo (runs). score é a média do Apdex das execuções; latency sai das respostas de todas as execuções juntas; as contagens (satisfied, tolerating, frustrated, sampleSize, excluded4xx, serverErrors, unanswered, inFlightAtEnd, totalRequests, errors, timeouts, statusCodes) são a soma das execuções, só descritiva; errorRate e requestsPerSecond são a média; series é a da primeira execução; firstFailure é o da primeira execução que tiver amostra. Avaliações antigas, sem runCount, são de execução única."
  *                         properties:
  *                           runCount:
  *                             type: integer
@@ -786,7 +792,10 @@ const evaluationController = new EvaluationController();
  *                             description: "Respostas 5xx (já contadas em frustrated)."
  *                           unanswered:
  *                             type: number
- *                             description: "Requisições ainda sem resposta há mais de 4T quando o teste terminou (já contadas em frustrated). As pendentes há menos de 4T ficam fora da amostra."
+ *                             description: "Requisições ainda sem resposta há mais de 4T quando o teste terminou (já contadas em frustrated). As pendentes há menos de 4T ficam em inFlightAtEnd."
+ *                           inFlightAtEnd:
+ *                             type: number
+ *                             description: "Requisições enviadas que ainda aguardavam resposta, há menos de 4T, quando o teste terminou; ficam fora da amostra e da taxa de erro. totalRequests = respostas + errors + unanswered + inFlightAtEnd."
  *                           errorRate:
  *                             type: number
  *                             description: "(5xx + erros de conexão e timeouts + sem resposta) / (respostas + erros + sem resposta), de 0 a 1. Apenas diagnóstico; não entra na nota."
@@ -847,6 +856,7 @@ const evaluationController = new EvaluationController();
  *                                   description: "Respostas 5xx mais erros de conexão e timeouts do segundo."
  *                           totalRequests:
  *                             type: number
+ *                             description: "Requisições de fato enviadas pelo gerador de carga (contadas no envio, não no agendamento do limitador de taxa)."
  *                           errors:
  *                             type: number
  *                           timeouts:

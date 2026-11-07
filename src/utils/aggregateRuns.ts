@@ -106,7 +106,11 @@ function aggregateWarnings(
             case 'PERF_CLIENT_BIAS':
                 break;
             case 'PERF_SMALL_SAMPLE':
-                aggregated.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize: Math.min(...numericParam(group, 'sampleSize')) }));
+                aggregated.push(auditMessage('PERF_SMALL_SAMPLE', {
+                    sampleSize: Math.min(...numericParam(group, 'sampleSize')),
+                    affected: group.length,
+                    runs: totalRuns,
+                }));
                 break;
             case 'PERF_EXCLUDED_4XX':
                 aggregated.push(auditMessage('PERF_EXCLUDED_4XX', { count: sum(numericParam(group, 'count')) }));
@@ -153,6 +157,7 @@ export function aggregateRuns(runs: IPerformanceRun[], latencySamples: LatencySa
         excluded4xx: sum(results.map((result) => result.excluded4xx)),
         serverErrors: sum(results.map((result) => result.serverErrors)),
         unanswered: sum(results.map((result) => result.unanswered)),
+        inFlightAtEnd: sum(results.map((result) => result.inFlightAtEnd)),
         errorRate: round(errorRate, 4),
         latency: summarizeLatency(latencySamples),
         requestsPerSecond: round(mean(results.map((result) => result.requestsPerSecond)), 2),
