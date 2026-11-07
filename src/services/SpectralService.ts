@@ -2,6 +2,7 @@ import pkgSpectralCore from '@stoplight/spectral-core';
 import type { ISpectralDiagnostic } from '@stoplight/spectral-core';
 import pkgSpectralParsers from '@stoplight/spectral-parsers';
 import type { ISpectralAnalysis, ISpectralIssue, ISpectralRule } from '../interfaces/evaluation.interface.js';
+import { splitByDeclaredFormat } from '../utils/declaredParameterFormat.js';
 import { fetchOpenApiContent, ParsedOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 import { SEVERITY_BY_LEVEL, createOasSpectral } from '../utils/spectralRules.js';
 
@@ -15,7 +16,7 @@ const MIN_ANCHOR_DEPTH = 2;
 interface DiagnosticGroup {
     index: number;
     diagnostic: ISpectralDiagnostic;
-    messages: string[];
+    members: ISpectralDiagnostic[];
 }
 
 function samePath(a: ISpectralDiagnostic['path'], b: ISpectralDiagnostic['path']): boolean {
@@ -40,20 +41,43 @@ function groupSchemaDiagnostics(diagnostics: ISpectralDiagnostic[]): DiagnosticG
                 && (samePath(group.diagnostic.path, diagnostic.path) || isChildPath(diagnostic.path, group.diagnostic.path)))
             : undefined;
         if (anchor) {
-            anchor.messages.push(diagnostic.message);
+            anchor.members.push(diagnostic);
         } else {
-            groups.push({ index, diagnostic, messages: [diagnostic.message] });
+            groups.push({ index, diagnostic, members: [diagnostic] });
         }
     }
 
     return groups.sort((a, b) => a.index - b.index);
 }
 
-function toSpectralIssue({ diagnostic, messages }: DiagnosticGroup): ISpectralIssue {
+function valueAt(data: unknown, path: ISpectralDiagnostic['path']): unknown {
+    return path.reduce<unknown>(
+        (node, segment) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[String(segment)] : undefined),
+        data,
+    );
+}
+
+function declaredFormatOf(group: DiagnosticGroup, primary: string, rest: ISpectralDiagnostic[], data: unknown) {
+    const { diagnostic } = group;
+    if (diagnostic.code !== 'oas2-schema' || !ONE_OF_SUMMARY.test(primary) || String(diagnostic.path.at(-2)) !== 'parameters') return null;
+
+    return splitByDeclaredFormat(
+        valueAt(data, diagnostic.path),
+        rest.map((member) => ({
+            property: member.path.length > diagnostic.path.length ? String(member.path.at(-1)) : null,
+            message: member.message,
+        })),
+    );
+}
+
+function toSpectralIssue(group: DiagnosticGroup, data: unknown): ISpectralIssue {
+    const { diagnostic, members } = group;
     const [root, endpoint, method] = diagnostic.path;
     const isPathItem = root === 'paths' && endpoint !== undefined;
-    const primary = messages.find((message) => ONE_OF_SUMMARY.test(message)) ?? messages[0];
-    const details = messages.filter((message) => message !== primary);
+    const primary = members.find((member) => ONE_OF_SUMMARY.test(member.message))?.message ?? members[0].message;
+    const rest = members.filter((member) => member.message !== primary);
+    const declared = declaredFormatOf(group, primary, rest, data);
+    const details = declared ? declared.others : rest.map((member) => member.message);
 
     return {
         endpoint: isPathItem ? String(endpoint) : 'global',
@@ -61,6 +85,7 @@ function toSpectralIssue({ diagnostic, messages }: DiagnosticGroup): ISpectralIs
         method: isPathItem && method !== undefined ? String(method).toUpperCase() : 'N/A',
         rule: diagnostic.code,
         message: primary,
+        ...(declared && { declaredFormat: { in: declared.in, messages: declared.messages } }),
         ...(details.length > 0 && { details }),
         severity: SEVERITY_BY_LEVEL[diagnostic.severity] ?? 'Unknown',
     };
@@ -100,6 +125,6 @@ export class SpectralService {
                 severity: SEVERITY_BY_LEVEL[rule.severity] ?? 'Unknown',
             }));
 
-        return { issues: groupSchemaDiagnostics(diagnostics).map(toSpectralIssue), rules };
+        return { issues: groupSchemaDiagnostics(diagnostics).map((group) => toSpectralIssue(group, document.data)), rules };
     }
 }
