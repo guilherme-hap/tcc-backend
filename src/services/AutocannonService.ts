@@ -211,7 +211,7 @@ export class AutocannonService {
         if (sampleSize === 0) {
             warnings.push(auditMessage('PERF_NO_VALID_SAMPLE'));
         } else if (sampleSize < MIN_SAMPLE_SIZE) {
-            warnings.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize }));
+            warnings.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize, affected: 1, runs: 1 }));
         }
 
         if (saturation.exceeded) {

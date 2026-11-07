@@ -46,11 +46,15 @@ const AUDIT_MESSAGES = {
             'decorrem da ausência do body e são excluídas da amostra do Apdex.',
         recommendation: () => 'Informe um payload explícito para este alvo.',
     }),
-    PERF_SMALL_SAMPLE: entry<{ sampleSize: number }>({
+    PERF_SMALL_SAMPLE: entry<{ sampleSize: number; affected: number; runs: number }>({
         severity: 'Warning',
-        message: ({ sampleSize }) =>
-            `A amostra válida do Apdex tem apenas ${sampleSize} requisições (mínimo recomendado: 100); a nota é pouco confiável.`,
-        recommendation: () => 'Aumente a duração ou o número máximo de requisições do teste.',
+        message: ({ sampleSize, affected, runs }) => runs > 1
+            ? `Em ${affected} de ${runs} execuções a amostra válida do Apdex ficou abaixo do mínimo recomendado de 100 respostas ` +
+              `(a menor teve ${sampleSize.toLocaleString('pt-BR')}). Cada execução tem a sua nota Apdex, então a nota dessas execuções ` +
+              'é pouco confiável, mesmo que o total do endpoint passe de 100.'
+            : `A amostra válida do Apdex tem apenas ${sampleSize.toLocaleString('pt-BR')} respostas (mínimo recomendado: 100); ` +
+              'a nota é pouco confiável.',
+        recommendation: () => 'Aumente a duração, as requisições por segundo ou o número máximo de requisições do teste.',
     }),
     PERF_EXCLUDED_4XX: entry<{ count: number }>({
         severity: 'Info',

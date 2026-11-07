@@ -106,7 +106,11 @@ function aggregateWarnings(
             case 'PERF_CLIENT_BIAS':
                 break;
             case 'PERF_SMALL_SAMPLE':
-                aggregated.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize: Math.min(...numericParam(group, 'sampleSize')) }));
+                aggregated.push(auditMessage('PERF_SMALL_SAMPLE', {
+                    sampleSize: Math.min(...numericParam(group, 'sampleSize')),
+                    affected: group.length,
+                    runs: totalRuns,
+                }));
                 break;
             case 'PERF_EXCLUDED_4XX':
                 aggregated.push(auditMessage('PERF_EXCLUDED_4XX', { count: sum(numericParam(group, 'count')) }));
