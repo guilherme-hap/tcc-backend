@@ -58,6 +58,15 @@ const AUDIT_MESSAGES = {
             `${count.toLocaleString('pt-BR')} respostas 4xx foram excluídas da amostra do Apdex e não afetam a nota.`,
         recommendation: () => 'Se esperava respostas de sucesso, informe path com IDs reais e payload válido para este alvo.',
     }),
+    PERF_AUTH_NOT_ENFORCED: entry<{ schemes: string; successes: number }>({
+        severity: 'Warning',
+        message: ({ schemes, successes }) =>
+            `A especificação exige autenticação nesta operação (${schemes}), mas o teste de carga não enviou credencial e recebeu ` +
+            `${successes.toLocaleString('pt-BR')} respostas 2xx e nenhuma 401 ou 403: a autenticação pode não estar sendo aplicada.`,
+        recommendation: () =>
+            'Confirme que o servidor recusa pedidos sem credencial (401 ou 403). Se a operação for pública de propósito, ' +
+            'remova o requisito de security dela na especificação.',
+    }),
     PERF_NO_VALID_SAMPLE: entry({
         severity: 'Warning',
         message: () =>

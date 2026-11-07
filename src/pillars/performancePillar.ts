@@ -14,6 +14,7 @@ import type { LatencySamples } from '../utils/latencySamples.js';
 import { detectSharedMachine } from '../utils/sameMachine.js';
 import type { SharedMachineCheck } from '../utils/sameMachine.js';
 import { round } from '../utils/round.js';
+import { missingCredentialSchemes } from '../utils/operationSecurity.js';
 import { scorePart } from '../utils/scorePart.js';
 import { auditMessage } from '../messages/catalog.js';
 import type { IAuditMessage } from '../messages/catalog.js';
@@ -28,8 +29,22 @@ import { PillarError } from './PillarError.js';
 import type { Pillar } from './types.js';
 
 type PreparedTarget =
-    | { path: string; method: string; url: string; options: ILoadTestOptions; failure?: undefined }
+    | { path: string; method: string; url: string; options: ILoadTestOptions; missingCredentials: string[] | null; failure?: undefined }
     | { path: string; method: string; failure: AppError };
+
+function unenforcedAuthWarning(schemes: string[] | null, statusCodes: Record<string, number>): IAuditMessage | null {
+    if (!schemes) return null;
+
+    let successes = 0;
+    let denied = 0;
+    for (const [code, count] of Object.entries(statusCodes)) {
+        if (code.startsWith('2')) successes += count;
+        if (code === '401' || code === '403') denied += count;
+    }
+    return successes > 0 && denied === 0
+        ? auditMessage('PERF_AUTH_NOT_ENFORCED', { schemes: schemes.join(', '), successes })
+        : null;
+}
 
 function hostnameOf(baseUrl: string): string | null {
     try {
@@ -61,17 +76,20 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
         const prepared: PreparedTarget[] = targets.map((target) => {
             const method = target.method ?? loadTestOptions?.method ?? 'GET';
             try {
+                const url = resolveTargetUrl(spec, baseUrl, target.path, method, target.pathParams);
+                const options = prepareLoadTestOptions({
+                    method,
+                    payload: target.payload,
+                    loadTestOptions,
+                    spec,
+                    targetPath: target.path,
+                });
                 return {
                     path: target.path,
                     method,
-                    url: resolveTargetUrl(spec, baseUrl, target.path, method, target.pathParams),
-                    options: prepareLoadTestOptions({
-                        method,
-                        payload: target.payload,
-                        loadTestOptions,
-                        spec,
-                        targetPath: target.path,
-                    }),
+                    url,
+                    options,
+                    missingCredentials: missingCredentialSchemes(spec, target.path, method, url, options.headers),
                 };
             } catch (err: unknown) {
                 return { path: target.path, method, failure: AppError.from(err, 'LOAD_TEST_FAILED') };
@@ -92,6 +110,8 @@ export const performancePillar: Pillar<PerformanceRequestInput, 'performanceResu
                 if (runs.length === 0) break;
                 const result = aggregateRuns(runs, latencyByTarget[index]);
                 if (result) {
+                    const authWarning = unenforcedAuthWarning(target.missingCredentials, result.statusCodes);
+                    if (authWarning) result.warnings.push(authWarning);
                     results.push({ path: target.path, method: target.method, result });
                     continue;
                 }

@@ -9,6 +9,7 @@ import { acceptsRequestBody, isMutatingMethod, pathPlaceholders } from './httpMe
 import { resolveBaseUrlFromSpec } from './resolveBaseUrl.js';
 import { collectParameterDefs } from './resolvePathParameters.js';
 import { resolveRef } from './specRefs.js';
+import { requiresAuthentication } from './operationSecurity.js';
 
 function detectOasVersion(spec: any): OasVersion | null {
     if (spec.swagger !== undefined) {
@@ -26,14 +27,6 @@ function describePathParam(spec: any, name: string, definition: any): ISpecOpera
     const type = Array.isArray(declared) ? declared.find((item) => item !== 'null') : declared;
 
     return { name, type: typeof type === 'string' ? type : null };
-}
-
-function requiresAuthentication(spec: any, operation: any): boolean {
-    const security = operation.security ?? spec.security;
-
-    return Array.isArray(security)
-        && security.length > 0
-        && security.every((requirement) => isRecord(requirement) && Object.keys(requirement).length > 0);
 }
 
 function describeOperation(spec: any, path: string, method: HttpMethod, operation: any): ISpecOperation {
