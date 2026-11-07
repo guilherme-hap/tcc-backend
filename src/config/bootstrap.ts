@@ -5,6 +5,7 @@ import { AppDataSource } from './data-source.js';
 import { dbConnection } from './database.js';
 import { registerWorkers } from '../workers/index.js';
 import { jwtSecret } from '../utils/jwtSecret.js';
+import { isPublicDeployment } from './publicDeployment.js';
 
 export async function bootstrap(app: Express, port: number | string) {
     try {
@@ -31,6 +32,7 @@ export async function bootstrap(app: Express, port: number | string) {
 
         app.listen(port, () => {
             console.log(`Server is running on port ${port}`);
+            if (isPublicDeployment()) console.log('Public deployment guard enabled');
         });
     } catch (error) {
         console.error('Failed to initialize application:', error);

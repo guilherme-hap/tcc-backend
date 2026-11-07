@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml';
 import { AppError } from '../errors/AppError.js';
 import { describeFetchError, fetchRemoteText } from './fetchRemoteText.js';
+import { assertPublicTarget, blockedTargetOf } from './outboundGuard.js';
 
 export type OpenApiFormat = 'json' | 'yaml';
 
@@ -69,11 +70,12 @@ export function parseOpenApiContent(content: string): ParsedOpenApiContent {
 }
 
 export async function fetchOpenApiContent(openApiUrl: string): Promise<ParsedOpenApiContent> {
+    await assertPublicTarget(openApiUrl);
     let content: string;
     try {
         content = await fetchRemoteText(openApiUrl);
     } catch (err: unknown) {
-        throw new AppError('SPEC_FETCH_FAILED', { reason: describeFetchError(err) });
+        throw blockedTargetOf(err) ?? new AppError('SPEC_FETCH_FAILED', { reason: describeFetchError(err) });
     }
     return parseOpenApiContent(content);
 }

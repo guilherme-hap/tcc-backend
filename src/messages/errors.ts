@@ -38,6 +38,10 @@ const ERROR_MESSAGES = {
         status: 401,
         message: () => 'Autenticação obrigatória.',
     }),
+    LOAD_TEST_AUTH_REQUIRED: entry({
+        status: 401,
+        message: () => 'Entre na sua conta para rodar avaliações com teste de carga (performance e completa) nesta instalação pública.',
+    }),
     AUTH_INVALID_TOKEN: entry({
         status: 401,
         message: () => 'Token inválido ou expirado.',
@@ -75,6 +79,10 @@ const ERROR_MESSAGES = {
         message: () => 'Erro interno do servidor.',
     }),
 
+    TARGET_NOT_ALLOWED: entry<{ host: string }>({
+        status: 400,
+        message: ({ host }) => `O endereço ${host} aponta para uma rede privada ou reservada, que não pode ser acessada nesta instalação pública.`,
+    }),
     SPEC_FETCH_FAILED: entry<{ reason: string }>({
         status: 400,
         message: ({ reason }) => `Não foi possível baixar a especificação OpenAPI (${reason}).`,

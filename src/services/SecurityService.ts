@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 import { auditMessage, type IAuditMessage } from '../messages/catalog.js';
 import { AppError } from '../errors/AppError.js';
+import { blockedTargetOf, outboundAgents, outboundLookup } from '../utils/outboundGuard.js';
 import type { ISecurityCheckResult, SecurityLayer } from '../interfaces/evaluation.interface.js';
 
 type Headers = Record<string, string | undefined>;
@@ -62,6 +63,8 @@ export class SecurityService {
         try {
             return await this.requestHeaders('GET', targetUrl, { timeout: REQUEST_TIMEOUT_MS });
         } catch (error) {
+            const blocked = blockedTargetOf(error);
+            if (blocked) throw blocked;
             const detail = error instanceof Error ? error.message : String(error);
             throw new AppError('SECURITY_TARGET_UNREACHABLE', { detail });
         }
@@ -82,6 +85,7 @@ export class SecurityService {
             method,
             responseType: 'stream',
             validateStatus: () => true,
+            ...outboundAgents(),
         });
         response.data.destroy();
         return response;
@@ -148,6 +152,7 @@ export class SecurityService {
                 host: this.bareHostname(url),
                 port: Number(url.port) || 80,
                 timeout: CONNECT_PROBE_TIMEOUT_MS,
+                lookup: outboundLookup(),
             });
             const finish = (connected: boolean) => {
                 socket.destroy();

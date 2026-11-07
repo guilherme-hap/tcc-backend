@@ -16,6 +16,7 @@ import { resolveMeasurementPlan } from '../utils/measurementPlan.js';
 import type { MeasurementPlan } from '../utils/measurementPlan.js';
 import { startSaturationMonitor } from '../utils/saturation.js';
 import { probeFailure } from '../utils/failureProbe.js';
+import { assertPublicTarget } from '../utils/outboundGuard.js';
 import { createLatencySamples, recordLatency, summarizeLatency } from '../utils/latencySamples.js';
 import type { LatencySamples } from '../utils/latencySamples.js';
 
@@ -69,6 +70,7 @@ export class AutocannonService {
         if (isMutating && !options.allowMutatingMethods) {
             throw new AppError('LOAD_TEST_MUTATING_NOT_ALLOWED', { method });
         }
+        await assertPublicTarget(targetUrl);
 
         const duration = options.duration ?? defaultDurationFor(method);
         const targetLatency = options.targetLatency ?? DEFAULT_TARGET_LATENCY_MS;

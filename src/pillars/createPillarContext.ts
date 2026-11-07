@@ -1,5 +1,6 @@
 import { fetchOpenApiContent } from '../utils/fetchOpenApiSpec.js';
 import { resolveBaseUrlFromSpec } from '../utils/resolveBaseUrl.js';
+import { assertPublicTarget } from '../utils/outboundGuard.js';
 import type { PillarBaseParams, PillarResources } from './types.js';
 
 function memoize<T>(load: () => Promise<T>): () => Promise<T> {
@@ -12,9 +13,9 @@ export function createPillarContext<P extends PillarBaseParams>(params: P): Pill
 
     const apiBaseUrl = memoize(async () => {
         const informed = params.apiBaseUrl?.trim();
-        if (informed) return informed;
-        const content = await spec();
-        return resolveBaseUrlFromSpec(content.data, params.openApiUrl);
+        const baseUrl = informed || resolveBaseUrlFromSpec((await spec()).data, params.openApiUrl);
+        await assertPublicTarget(baseUrl);
+        return baseUrl;
     });
 
     return { params, spec, apiBaseUrl };
