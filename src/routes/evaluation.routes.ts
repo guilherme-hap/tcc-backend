@@ -688,11 +688,28 @@ const evaluationController = new EvaluationController();
  *                           message:
  *                             type: string
  *                             description: "Mensagem do Spectral. Nos achados agrupados de oas2-schema/oas3-schema, é o resumo do validador (must match exactly one schema in oneOf) quando ele existe, senão a primeira mensagem do trecho."
+ *                           declaredFormat:
+ *                             type: object
+ *                             description: "Só em oas2-schema, num parâmetro (location terminando em parameters.N) que não casa com nenhum formato do oneOf e declara um in válido: as mensagens do validador que pertencem ao formato declarado, isto é, as causas do erro. O Swagger 2.0 testa o parâmetro contra body, header, query, path e formData, e as falhas dos outros formatos ficam em details. A separação usa as definições do schema do Swagger 2.0 que o Spectral aplica (required, propriedades permitidas e enum de cada formato). Ausente nos demais achados, quando o in não é um dos cinco formatos ou quando nenhuma mensagem pertence ao formato declarado."
+ *                             properties:
+ *                               in:
+ *                                 type: string
+ *                                 enum: [body, header, query, path, formData]
+ *                                 description: "Valor de in declarado pelo parâmetro."
+ *                               messages:
+ *                                 type: array
+ *                                 minItems: 1
+ *                                 items:
+ *                                   type: string
+ *                             example:
+ *                               in: path
+ *                               messages:
+ *                                 - "\"0\" property must have required property \"required\"."
  *                           details:
  *                             type: array
  *                             items:
  *                               type: string
- *                             description: "Só em oas2-schema e oas3-schema: as outras mensagens do validador para o mesmo trecho, que viram uma ocorrência só. O validador emite uma mensagem por alternativa de um oneOf (ex.: um parâmetro de path sem required: true gera cerca de 10), todas com a mesma causa. Entram no grupo as mensagens no mesmo caminho e nos filhos diretos dele (location com um segmento a mais); a raiz e as seções de topo não agrupam. Ausente quando não houve agrupamento. O total bruto de mensagens é a soma de 1 + details.length."
+ *                             description: "Só em oas2-schema e oas3-schema: as outras mensagens do validador para o mesmo trecho, que viram uma ocorrência só. O validador emite uma mensagem por alternativa de um oneOf (ex.: um parâmetro de path sem required: true gera cerca de 10). Entram no grupo as mensagens no mesmo caminho e nos filhos diretos dele (location com um segmento a mais); a raiz e as seções de topo não agrupam. Com declaredFormat, traz só as falhas dos formatos que o parâmetro não declara. Ausente quando não sobra mensagem. O total bruto de mensagens é 1 + declaredFormat.messages.length + details.length."
  *                           severity:
  *                             type: string
  *                             enum: [Error, Warning, Info, Hint, Unknown]

@@ -17,8 +17,14 @@ export interface ISpectralIssue {
     location: string;
     rule: string | number;
     message: string;
+    declaredFormat?: ISpectralDeclaredFormat;
     details?: string[];
     severity: Severity;
+}
+
+export interface ISpectralDeclaredFormat {
+    in: string;
+    messages: string[];
 }
 
 export interface ISpectralRule {
