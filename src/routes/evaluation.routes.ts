@@ -370,6 +370,9 @@ const evaluationController = new EvaluationController();
  *                       status:
  *                         type: string
  *                         enum: [PENDING, RUNNING, COMPLETED, PARTIAL, FAILED]
+ *                       waitingForLoadTest:
+ *                         type: boolean
+ *                         description: "true quando a avaliação está RUNNING mas nenhuma etapa está trabalhando: há etapa pronta (queuedAt) esperando o teste de carga em andamento terminar e nenhuma com startedAt sem finishedAt. Só para exibição; o status continua RUNNING."
  *                       finalScore:
  *                         type: number
  *                         nullable: true

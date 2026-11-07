@@ -181,6 +181,7 @@ export interface IEvaluationStep {
     pillar: keyof EvaluationWeights;
     stage: number;
     status: EvaluationStepStatus;
+    queuedAt: string | null;
     startedAt: string | null;
     finishedAt: string | null;
     error?: string;

@@ -103,10 +103,17 @@ export const SWAGGER_SCHEMAS = {
                 enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED', 'INTERRUPTED'],
                 description: 'PENDING: ainda não começou. RUNNING: em execução. COMPLETED: concluída, com nota em pillarScores. FAILED: falhou (ver error e code). SKIPPED: pulada por uma pré-condição (ver error e code). INTERRUPTED: a avaliação terminou antes desta etapa terminar (falha fora dos pilares ou execução interrompida); só aparece em avaliação finalizada.',
             },
+            queuedAt: {
+                type: 'string',
+                format: 'date-time',
+                nullable: true,
+                description: 'Quando a etapa ficou pronta para rodar. Entre queuedAt e startedAt ela esperou a exclusão do teste de carga: contrato e segurança não rodam durante um teste de carga no mesmo processo, e cada teste de carga espera o anterior. Ausente em avaliações antigas.',
+            },
             startedAt: {
                 type: 'string',
                 format: 'date-time',
                 nullable: true,
+                description: 'Quando o trabalho da etapa começou de fato. Na performance, é o início da primeira execução de carga (fase diferente de QUEUED); se a etapa terminar sem chegar a ela, recebe o valor de queuedAt.',
             },
             finishedAt: {
                 type: 'string',
