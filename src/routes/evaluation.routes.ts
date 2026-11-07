@@ -856,13 +856,13 @@ const evaluationController = new EvaluationController();
  *                                   description: "Respostas 5xx mais erros de conexão e timeouts do segundo."
  *                           totalRequests:
  *                             type: number
+ *                             description: "Requisições de fato enviadas pelo gerador de carga (contadas no envio, não no agendamento do limitador de taxa)."
  *                           errors:
  *                             type: number
  *                           timeouts:
  *                             type: number
  *                           firstFailure:
  *                             type: object
- *                             description: "Requisições de fato enviadas pelo gerador de carga (contadas no envio, não no agendamento do limitador de taxa)."
  *                             nullable: true
  *                             description: "Amostra do primeiro erro observado na execução, para indicar o que conferir na API. Diagnóstico apenas: não entra na nota nem altera a carga do teste. Nulo quando a execução não teve 5xx, erro de conexão nem timeout; ausente em avaliações antigas (equivale a nulo). No agregado, vem da primeira execução que tiver amostra."
  *                             properties:

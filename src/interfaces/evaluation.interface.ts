@@ -95,8 +95,8 @@ export interface IAutocannonRunResult {
     excluded4xx: number;
     serverErrors: number;
     unanswered: number;
-    errorRate: number;
     inFlightAtEnd: number;
+    errorRate: number;
     latency: ILatencySummary | null;
     requestsPerSecond: number;
     statusCodes: Record<string, number>;
