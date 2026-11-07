@@ -38,7 +38,9 @@ interface ResponseCounts {
     excluded4xx: number;
     serverErrors: number;
     responses: number;
+    sent: number;
     unanswered: number;
+    inFlightAtEnd: number;
     latency: LatencySamples;
     currentSecond: SecondCounts;
     seconds: SecondCounts[];
@@ -235,6 +237,7 @@ export class AutocannonService {
             excluded4xx: counts.excluded4xx,
             serverErrors: counts.serverErrors,
             unanswered: counts.unanswered,
+            inFlightAtEnd: counts.inFlightAtEnd,
             errorRate: totalAttempts === 0
                 ? 0
                 : round((counts.serverErrors + errors + counts.unanswered) / totalAttempts, 4),
@@ -244,7 +247,7 @@ export class AutocannonService {
                 Object.entries(result.statusCodeStats ?? {}).map(([code, stats]) => [code, stats.count ?? 0]),
             ),
             series: counts.seconds.map((second, index) => this.summarizeSecond(second, index + 1)),
-            totalRequests: result.requests?.sent ?? 0,
+            totalRequests: counts.sent,
             errors,
             timeouts: result.timeouts ?? 0,
             firstFailure,
@@ -298,7 +301,9 @@ export class AutocannonService {
                 excluded4xx: 0,
                 serverErrors: 0,
                 responses: 0,
+                sent: 0,
                 unanswered: 0,
+                inFlightAtEnd: 0,
                 latency: createLatencySamples(this.responseTimeoutSeconds(targetLatency) * 1000),
                 currentSecond: this.emptySecond(),
                 seconds: [],
@@ -308,7 +313,10 @@ export class AutocannonService {
             const sentAtByClient = new Map<autocannon.Client, number>();
             const setupClient = (client: autocannon.Client) => {
                 const emitter: NodeJS.EventEmitter = client;
-                emitter.on('request', () => sentAtByClient.set(client, Date.now()));
+                emitter.on('request', () => {
+                    counts.sent++;
+                    sentAtByClient.set(client, Date.now());
+                });
                 for (const event of ['response', 'timeout', 'connError']) {
                     emitter.on(event, () => sentAtByClient.delete(client));
                 }
@@ -334,6 +342,8 @@ export class AutocannonService {
                 for (const sentAt of sentAtByClient.values()) {
                     if (finishedAt - sentAt > FRUSTRATED_LATENCY_MULTIPLIER * targetLatency) {
                         counts.unanswered++;
+                    } else {
+                        counts.inFlightAtEnd++;
                     }
                 }
                 if (counts.currentSecond.responses + counts.currentSecond.errors > 0) {

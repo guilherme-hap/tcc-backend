@@ -710,7 +710,7 @@ const evaluationController = new EvaluationController();
  *                       result:
  *                         type: object
  *                         nullable: true
- *                         description: "Agregado das execuções do alvo (runs). score é a média do Apdex das execuções; as latências são a média dos percentis de cada execução; as contagens (satisfied, tolerating, frustrated, sampleSize, excluded4xx, serverErrors, unanswered, totalRequests, errors, timeouts, statusCodes) são a soma das execuções, só descritiva; errorRate e requestsPerSecond são a média; series é a da primeira execução; firstFailure é o da primeira execução que tiver amostra. Avaliações antigas, sem runCount, são de execução única."
+ *                         description: "Agregado das execuções do alvo (runs). score é a média do Apdex das execuções; latency sai das respostas de todas as execuções juntas; as contagens (satisfied, tolerating, frustrated, sampleSize, excluded4xx, serverErrors, unanswered, inFlightAtEnd, totalRequests, errors, timeouts, statusCodes) são a soma das execuções, só descritiva; errorRate e requestsPerSecond são a média; series é a da primeira execução; firstFailure é o da primeira execução que tiver amostra. Avaliações antigas, sem runCount, são de execução única."
  *                         properties:
  *                           runCount:
  *                             type: integer
@@ -786,7 +786,10 @@ const evaluationController = new EvaluationController();
  *                             description: "Respostas 5xx (já contadas em frustrated)."
  *                           unanswered:
  *                             type: number
- *                             description: "Requisições ainda sem resposta há mais de 4T quando o teste terminou (já contadas em frustrated). As pendentes há menos de 4T ficam fora da amostra."
+ *                             description: "Requisições ainda sem resposta há mais de 4T quando o teste terminou (já contadas em frustrated). As pendentes há menos de 4T ficam em inFlightAtEnd."
+ *                           inFlightAtEnd:
+ *                             type: number
+ *                             description: "Requisições enviadas que ainda aguardavam resposta, há menos de 4T, quando o teste terminou; ficam fora da amostra e da taxa de erro. totalRequests = respostas + errors + unanswered + inFlightAtEnd."
  *                           errorRate:
  *                             type: number
  *                             description: "(5xx + erros de conexão e timeouts + sem resposta) / (respostas + erros + sem resposta), de 0 a 1. Apenas diagnóstico; não entra na nota."
@@ -853,6 +856,7 @@ const evaluationController = new EvaluationController();
  *                             type: number
  *                           firstFailure:
  *                             type: object
+ *                             description: "Requisições de fato enviadas pelo gerador de carga (contadas no envio, não no agendamento do limitador de taxa)."
  *                             nullable: true
  *                             description: "Amostra do primeiro erro observado na execução, para indicar o que conferir na API. Diagnóstico apenas: não entra na nota nem altera a carga do teste. Nulo quando a execução não teve 5xx, erro de conexão nem timeout; ausente em avaliações antigas (equivale a nulo). No agregado, vem da primeira execução que tiver amostra."
  *                             properties:

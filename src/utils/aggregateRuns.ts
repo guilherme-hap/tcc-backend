@@ -157,6 +157,7 @@ export function aggregateRuns(runs: IPerformanceRun[], latencySamples: LatencySa
         latency: summarizeLatency(latencySamples),
         requestsPerSecond: round(mean(results.map((result) => result.requestsPerSecond)), 2),
         statusCodes: sumStatusCodes(results),
+        inFlightAtEnd: sum(results.map((result) => result.inFlightAtEnd)),
         series: first.series,
         totalRequests: sum(results.map((result) => result.totalRequests)),
         errors: sum(results.map((result) => result.errors)),
