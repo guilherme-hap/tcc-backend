@@ -672,8 +672,14 @@ const evaluationController = new EvaluationController();
  *                         properties:
  *                           endpoint:
  *                             type: string
+ *                             description: "Path da operação (ex.: /pet/{petId}), ou global quando o achado não está dentro de paths."
  *                           method:
  *                             type: string
+ *                             description: "Método da operação em maiúsculas, ou N/A fora de uma operação."
+ *                           location:
+ *                             type: string
+ *                             description: "Caminho do achado no documento, com os segmentos separados por ponto, como o Spectral informa (ex.: components.schemas.User.properties.id.type ou paths./pet/{petId}.get.parameters.0). Vazio quando o achado é do documento inteiro."
+ *                             example: "components.schemas.User.properties.id.type"
  *                           rule:
  *                             type: string
  *                           message:

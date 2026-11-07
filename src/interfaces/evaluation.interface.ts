@@ -14,6 +14,7 @@ import type {
 export interface ISpectralIssue {
     endpoint: string;
     method: string;
+    location: string;
     rule: string | number;
     message: string;
     severity: Severity;

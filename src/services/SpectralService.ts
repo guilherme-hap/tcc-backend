@@ -14,6 +14,7 @@ function toSpectralIssue(diagnostic: ISpectralDiagnostic): ISpectralIssue {
 
     return {
         endpoint: isPathItem ? String(endpoint) : 'global',
+        location: diagnostic.path.map(String).join('.'),
         method: isPathItem && method !== undefined ? String(method).toUpperCase() : 'N/A',
         rule: diagnostic.code,
         message: diagnostic.message,
