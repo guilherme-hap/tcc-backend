@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: specping
+      POSTGRES_PASSWORD: specping
+      POSTGRES_DB: specping
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U specping -d specping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: specping
+      DB_PASSWORD: specping
+      DB_NAME: specping
+      DB_AUTO_CREATE: "false"
+      DB_SYNCHRONIZE: "true"
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      LOAD_WORKER_MODE: embedded
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  db-data:
