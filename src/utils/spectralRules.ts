@@ -5,6 +5,7 @@ import { AppError } from '../errors/AppError.js';
 import type { ISpectralCatalogRule, OasVersion } from '../interfaces/evaluation.interface.js';
 import type { Severity } from '../types/severity.js';
 import { createFetchDeadline, describeFetchError, fetchRemoteText } from './fetchRemoteText.js';
+import { assertPublicTarget, blockedTargetOf } from './outboundGuard.js';
 
 const { Spectral } = pkgSpectralCore;
 const { Resolver } = pkgSpectralRefResolver;
@@ -38,10 +39,11 @@ function createRefResolver() {
     const resolve = async (ref: { href(): string }): Promise<string> => {
         const url = ref.href();
         deadline ??= createFetchDeadline();
+        await assertPublicTarget(url);
         try {
             return await fetchRemoteText(url, deadline);
         } catch (err: unknown) {
-            throw new AppError('SPEC_REF_FETCH_FAILED', { url, reason: describeFetchError(err) });
+            throw blockedTargetOf(err) ?? new AppError('SPEC_REF_FETCH_FAILED', { url, reason: describeFetchError(err) });
         }
     };
 

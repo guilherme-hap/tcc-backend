@@ -42,7 +42,7 @@ const controller = new SpecController();
  *             schema:
  *               $ref: '#/components/schemas/SpecOperations'
  *       400:
- *         description: "openApiUrl ausente ou sem protocolo http/https (VALIDATION_FAILED); especificação que não pôde ser baixada (SPEC_FETCH_FAILED), que não é JSON nem YAML (SPEC_PARSE_FAILED), cuja raiz não é um objeto (SPEC_INVALID_ROOT) ou que não declara openapi nem swagger (SPEC_NOT_OPENAPI)."
+ *         description: "openApiUrl ausente ou sem protocolo http/https (VALIDATION_FAILED); especificação que não pôde ser baixada (SPEC_FETCH_FAILED), URL que aponta para rede privada ou reservada numa instalação pública (TARGET_NOT_ALLOWED), que não é JSON nem YAML (SPEC_PARSE_FAILED), cuja raiz não é um objeto (SPEC_INVALID_ROOT) ou que não declara openapi nem swagger (SPEC_NOT_OPENAPI)."
  *         content:
  *           application/json:
  *             schema:

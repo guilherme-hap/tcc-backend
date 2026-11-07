@@ -33,6 +33,10 @@ export const PIPELINES: Pipelines = {
     },
 };
 
+export function runsLoadTest(type: EvaluationType): boolean {
+    return PIPELINES[type].stages.some((stage) => stage.some((pillar) => pillar.name === 'performance'));
+}
+
 export function initialSteps(type: EvaluationType): IEvaluationStep[] {
     const stages: readonly (readonly { name: PillarName }[])[] = PIPELINES[type].stages;
 

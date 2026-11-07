@@ -5,7 +5,8 @@ import { evaluationQueue } from '../queues/EvaluationQueue.js';
 import { AppError } from '../errors/AppError.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { EVALUATION_SCHEMAS } from '../schemas/evaluation.schema.js';
-import { initialSteps } from '../pillars/pipelines.js';
+import { initialSteps, runsLoadTest } from '../pillars/pipelines.js';
+import { isPublicDeployment } from '../config/publicDeployment.js';
 import type { FullEvaluationRequestInput } from '../schemas/evaluation.schema.js';
 import type { EvaluationType, IEvaluationRequestSettings } from '../interfaces/evaluation.interface.js';
 
@@ -34,6 +35,9 @@ export class EvaluationUsecase {
     }
 
     async execute<T extends EvaluationType>(type: T, data: unknown, userId?: string | null) {
+        if (isPublicDeployment() && runsLoadTest(type) && !userId) {
+            throw new AppError('LOAD_TEST_AUTH_REQUIRED');
+        }
         const params = parseOrThrow(EVALUATION_SCHEMAS[type], data);
         const request: PersistedRequestFields = params;
 

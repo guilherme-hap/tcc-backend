@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { EvaluationController } from '../controllers/EvaluationController.js';
 import { optionalAuth } from '../middlewares/optionalAuth.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { loadTestAuth } from '../middlewares/loadTestAuth.js';
 import { validate } from '../middlewares/validate.js';
 import { validateIdParam } from '../middlewares/validateIdParam.js';
 import {
@@ -141,6 +142,12 @@ const evaluationController = new EvaluationController();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: "Token enviado, mas inválido ou expirado (AUTH_INVALID_TOKEN), ou pedido sem token numa instalação pública (PUBLIC_DEPLOYMENT=true), que exige conta para avaliações com teste de carga (LOAD_TEST_AUTH_REQUIRED)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  * /api/evaluations/full:
  *   post:
@@ -223,6 +230,12 @@ const evaluationController = new EvaluationController();
  *                   example: "PENDING"
  *       400:
  *         description: "Erro de validação da requisição (exemplo: openApiUrl/targets ausentes, pesos inválidos, método mutante sem allowMutatingMethods, DELETE com parâmetro de path sem valor em pathParams ou limite de duração total excedido)."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: "Token enviado, mas inválido ou expirado (AUTH_INVALID_TOKEN), ou pedido sem token numa instalação pública (PUBLIC_DEPLOYMENT=true), que exige conta para avaliações com teste de carga (LOAD_TEST_AUTH_REQUIRED)."
  *         content:
  *           application/json:
  *             schema:
@@ -929,7 +942,7 @@ const evaluationController = new EvaluationController();
  *                 errorCode:
  *                   type: string
  *                   nullable: true
- *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver steps), EXECUTION_FAILED quando a falha ocorreu fora dos pilares, EXECUTION_INTERRUPTED quando a execução foi interrompida (falha ou reinício do auditor) e não foi retomada."
+ *                   description: "Código estável do motivo, sempre presente quando o status for FAILED: o código da causa quando ela é única (ex.: SPEC_FETCH_FAILED, ou TARGET_NOT_ALLOWED quando a especificação, uma referência externa ou a URL base aponta para rede privada ou reservada numa instalação pública), EVALUATION_PILLARS_FAILED quando os pilares falharam por causas diferentes (ver steps), EXECUTION_FAILED quando a falha ocorreu fora dos pilares, EXECUTION_INTERRUPTED quando a execução foi interrompida (falha ou reinício do auditor) e não foi retomada."
  *                   example: "SPEC_FETCH_FAILED"
  *                 startedAt:
  *                   type: string
@@ -1013,9 +1026,9 @@ const evaluationController = new EvaluationController();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/contract', optionalAuth, validate(contractRequestSchema), evaluationController.evaluate('contract'));
-router.post('/performance', optionalAuth, validate(performanceRequestSchema), evaluationController.evaluate('performance'));
+router.post('/performance', loadTestAuth, validate(performanceRequestSchema), evaluationController.evaluate('performance'));
 router.post('/security', optionalAuth, validate(securityRequestSchema), evaluationController.evaluate('security'));
-router.post('/full', optionalAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluate('full'));
+router.post('/full', loadTestAuth, validate(fullEvaluationRequestSchema), evaluationController.evaluate('full'));
 router.get('/', requireAuth, evaluationController.listEvaluations);
 router.get('/:id', optionalAuth, validateIdParam('EVALUATION_NOT_FOUND'), evaluationController.getEvaluation);
 router.get('/:id/progress', optionalAuth, validateIdParam('EVALUATION_NOT_FOUND'), evaluationController.getProgress);

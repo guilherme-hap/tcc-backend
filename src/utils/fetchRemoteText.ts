@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { outboundAgents } from './outboundGuard.js';
 
 const FETCH_TIMEOUT_MS = Number(process.env.OPENAPI_FETCH_TIMEOUT_MS) || 15_000;
 const MAX_CONTENT_BYTES = 5 * 1024 * 1024;
@@ -15,6 +16,7 @@ export async function fetchRemoteText(url: string, deadline: AbortSignal = creat
         maxRedirects: 3,
         responseType: 'text',
         transformResponse: (r) => r,
+        ...outboundAgents(),
     });
     return response.data;
 }
