@@ -32,15 +32,17 @@ export class EvaluationWorker {
                     run.skip(pillar, blocked);
                     return;
                 }
+                const loadTest = pillar.name === 'performance';
                 const execute = async () => {
-                    run.begin(pillar);
+                    run.begin(pillar, !loadTest);
                     try {
                         run.succeed(pillar, await pillar.run({ ...resources, report: (update) => run.report(pillar, update) }));
                     } catch (reason: unknown) {
                         run.fail(pillar, reason);
                     }
                 };
-                await (pillar.name === 'performance' ? execute() : loadGate.runPhaseOne(execute));
+                run.queue(pillar);
+                await (loadTest ? execute() : loadGate.runPhaseOne(execute));
             }));
         }
 

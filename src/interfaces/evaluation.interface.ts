@@ -17,6 +17,7 @@ export interface ISpectralIssue {
     location: string;
     rule: string | number;
     message: string;
+    details?: string[];
     severity: Severity;
 }
 
@@ -181,6 +182,7 @@ export interface IEvaluationStep {
     pillar: keyof EvaluationWeights;
     stage: number;
     status: EvaluationStepStatus;
+    queuedAt: string | null;
     startedAt: string | null;
     finishedAt: string | null;
     error?: string;

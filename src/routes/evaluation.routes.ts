@@ -370,6 +370,9 @@ const evaluationController = new EvaluationController();
  *                       status:
  *                         type: string
  *                         enum: [PENDING, RUNNING, COMPLETED, PARTIAL, FAILED]
+ *                       waitingForLoadTest:
+ *                         type: boolean
+ *                         description: "true quando a avaliação está RUNNING mas nenhuma etapa está trabalhando: há etapa pronta (queuedAt) esperando o teste de carga em andamento terminar e nenhuma com startedAt sem finishedAt. Só para exibição; o status continua RUNNING."
  *                       finalScore:
  *                         type: number
  *                         nullable: true
@@ -684,6 +687,12 @@ const evaluationController = new EvaluationController();
  *                             type: string
  *                           message:
  *                             type: string
+ *                             description: "Mensagem do Spectral. Nos achados agrupados de oas2-schema/oas3-schema, é o resumo do validador (must match exactly one schema in oneOf) quando ele existe, senão a primeira mensagem do trecho."
+ *                           details:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             description: "Só em oas2-schema e oas3-schema: as outras mensagens do validador para o mesmo trecho, que viram uma ocorrência só. O validador emite uma mensagem por alternativa de um oneOf (ex.: um parâmetro de path sem required: true gera cerca de 10), todas com a mesma causa. Entram no grupo as mensagens no mesmo caminho e nos filhos diretos dele (location com um segmento a mais); a raiz e as seções de topo não agrupam. Ausente quando não houve agrupamento. O total bruto de mensagens é a soma de 1 + details.length."
  *                           severity:
  *                             type: string
  *                             enum: [Error, Warning, Info, Hint, Unknown]
@@ -698,6 +707,7 @@ const evaluationController = new EvaluationController();
  *                           description: "Regras com ao menos uma ocorrência."
  *                         occurrencesByRule:
  *                           type: object
+ *                           description: "Ocorrências por regra, contadas em issues, já com o agrupamento de oas2-schema/oas3-schema. Só descritivo: a nota conta regras violadas, não ocorrências."
  *                           additionalProperties:
  *                             type: integer
  *                 performanceResults:

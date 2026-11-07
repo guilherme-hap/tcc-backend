@@ -44,6 +44,7 @@ export function initialSteps(type: EvaluationType): IEvaluationStep[] {
         pillar: pillar.name,
         stage: index,
         status: 'PENDING',
+        queuedAt: null,
         startedAt: null,
         finishedAt: null,
     })));

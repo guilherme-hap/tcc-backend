@@ -58,8 +58,13 @@ export class EvaluationRun {
         this.scoring = { pillarWeights };
     }
 
-    begin(pillar: PillarRef): void {
-        Object.assign(this.step(pillar), { status: 'RUNNING', startedAt: now() });
+    queue(pillar: PillarRef): void {
+        this.step(pillar).queuedAt = now();
+        this.save({});
+    }
+
+    begin(pillar: PillarRef, started: boolean): void {
+        Object.assign(this.step(pillar), { status: 'RUNNING', ...(started && { startedAt: now() }) });
         this.save({});
     }
 
@@ -70,7 +75,11 @@ export class EvaluationRun {
             storeResult(patch, pillar.column, update.result);
         }
         if (update.progress !== undefined) {
-            this.step(pillar).progress = update.progress;
+            const step = this.step(pillar);
+            step.progress = update.progress;
+            if (!step.startedAt && update.progress.phase !== 'QUEUED') {
+                step.startedAt = now();
+            }
         }
         this.save(patch);
     }
@@ -167,6 +176,9 @@ export class EvaluationRun {
     private finish(pillar: PillarRef, status: IEvaluationStep['status'], error?: string, code?: FailureCode): void {
         const step = this.step(pillar);
         delete step.progress;
+        if (step.queuedAt && !step.startedAt) {
+            step.startedAt = step.queuedAt;
+        }
         Object.assign(step, { status, finishedAt: now(), ...(code && { error, code }) });
     }
 

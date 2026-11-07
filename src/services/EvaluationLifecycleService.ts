@@ -135,7 +135,7 @@ export class EvaluationLifecycleService {
         if (period.length > 0) where.createdAt = And(...period);
 
         const [items, total] = await this.repository.findAndCount({
-            select: { id: true, evaluationType: true, status: true, finalScore: true, openApiUrl: true, createdAt: true },
+            select: { id: true, evaluationType: true, status: true, steps: true, finalScore: true, openApiUrl: true, createdAt: true },
             where,
             order: { createdAt: 'DESC', id: 'DESC' },
             skip: (query.page - 1) * query.limit,

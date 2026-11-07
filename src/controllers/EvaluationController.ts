@@ -8,7 +8,7 @@ import type { Evaluation } from '../entities/Evaluation.js';
 import { parseOrThrow } from '../utils/parseOrThrow.js';
 import { listEvaluationsQuerySchema } from '../schemas/evaluation.schema.js';
 import { evaluationPassed } from '../utils/qualityGate.js';
-import { visibleSteps } from '../utils/evaluationSteps.js';
+import { visibleSteps, waitingForLoadTest } from '../utils/evaluationSteps.js';
 
 function toEvaluationResponse(evaluation: Evaluation) {
     return {
@@ -61,6 +61,7 @@ export class EvaluationController {
                 id: evaluation.id,
                 evaluationType: evaluation.evaluationType,
                 status: evaluation.status,
+                waitingForLoadTest: waitingForLoadTest(evaluation),
                 finalScore: evaluation.finalScore,
                 openApiUrl: evaluation.openApiUrl,
                 createdAt: evaluation.createdAt,
