@@ -873,7 +873,7 @@ const evaluationController = new EvaluationController();
  *                                 example: "{\"error\":\"db down\"}"
  *                           warnings:
  *                             type: array
- *                             description: "Avisos estruturados sobre a execução do teste (ex.: método mutante, body ausente). Use code para identificar o aviso."
+ *                             description: "Avisos estruturados sobre a execução do teste (ex.: método mutante, body ausente). Use code para identificar o aviso. PERF_AUTH_NOT_ENFORCED: a especificação exige autenticação na operação, nenhuma credencial foi enviada (cabeçalho, query ou cookie dos esquemas declarados, Authorization ou Cookie) e o alvo respondeu 2xx sem nenhuma 401 ou 403; é só informativo e não altera a nota."
  *                             items:
  *                               type: object
  *                               properties:
