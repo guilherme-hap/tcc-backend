@@ -18,6 +18,11 @@ export interface IAuditMessage {
 
 const entry = <P extends MessageParams | void = void>(e: CatalogEntry<P>) => e;
 
+const VALID_REQUEST_HINT = 'informe path com IDs reais e payload válido';
+const CREDENTIAL_HINT =
+    'a credencial foi recusada; confira o cabeçalho de autenticação (nome, formato e validade) e se ela tem permissão para esta operação';
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 const AUDIT_MESSAGES = {
     PERF_MUTATING_METHOD: entry<{ method: string }>({
         severity: 'Warning',
@@ -56,11 +61,16 @@ const AUDIT_MESSAGES = {
               'a nota é pouco confiável.',
         recommendation: () => 'Aumente a duração, as requisições por segundo ou o número máximo de requisições do teste.',
     }),
-    PERF_EXCLUDED_4XX: entry<{ count: number }>({
+    PERF_EXCLUDED_4XX: entry<{ count: number; rejectedAuth: number }>({
         severity: 'Info',
         message: ({ count }) =>
             `${count.toLocaleString('pt-BR')} respostas 4xx foram excluídas da amostra do Apdex e não afetam a nota.`,
-        recommendation: () => 'Se esperava respostas de sucesso, informe path com IDs reais e payload válido para este alvo.',
+        recommendation: ({ count, rejectedAuth }) => {
+            if (rejectedAuth === 0) return `Se esperava respostas de sucesso, ${VALID_REQUEST_HINT} para este alvo.`;
+            if (rejectedAuth === count) return `Todas foram 401 ou 403: ${CREDENTIAL_HINT}.`;
+            return `${rejectedAuth.toLocaleString('pt-BR')} foram 401 ou 403: ${CREDENTIAL_HINT}. ` +
+                `Para as demais, ${VALID_REQUEST_HINT}.`;
+        },
     }),
     PERF_AUTH_NOT_ENFORCED: entry<{ schemes: string; successes: number }>({
         severity: 'Warning',
@@ -71,11 +81,13 @@ const AUDIT_MESSAGES = {
             'Confirme que o servidor recusa pedidos sem credencial (401 ou 403). Se a operação for pública de propósito, ' +
             'remova o requisito de security dela na especificação.',
     }),
-    PERF_NO_VALID_SAMPLE: entry({
+    PERF_NO_VALID_SAMPLE: entry<{ rejectedAuth: number }>({
         severity: 'Warning',
         message: () =>
             'Nenhuma requisição válida foi medida (todas as respostas foram 4xx ou não houve resposta); o alvo não recebeu nota.',
-        recommendation: () => 'Informe path com IDs reais e payload válido para que o endpoint responda com sucesso.',
+        recommendation: ({ rejectedAuth }) => rejectedAuth > 0
+            ? `O servidor respondeu 401 ou 403: ${CREDENTIAL_HINT}.`
+            : `${capitalize(VALID_REQUEST_HINT)} para que o endpoint responda com sucesso.`,
     }),
     PERF_NO_RESPONSE: entry<{ attempts: number }>({
         severity: 'Warning',
@@ -104,11 +116,13 @@ const AUDIT_MESSAGES = {
             `Possível viés do cliente em ${affected} de ${total} execuções: o gerador de carga pode ter saturado e inflado a latência medida. A nota não foi alterada.`,
         recommendation: () => 'Veja a CPU e o atraso do event loop de cada execução; reduza as conexões ou use um host dedicado.',
     }),
-    PERF_RUNS_EXCLUDED: entry<{ counted: number; total: number }>({
+    PERF_RUNS_EXCLUDED: entry<{ counted: number; total: number; rejectedAuth: number }>({
         severity: 'Warning',
         message: ({ counted, total }) =>
             `Apenas ${counted} de ${total} execuções entraram na média deste alvo; as demais não tiveram requisição válida.`,
-        recommendation: () => 'Informe path com IDs reais e payload válido para que todas as execuções respondam com sucesso.',
+        recommendation: ({ rejectedAuth }) => rejectedAuth > 0
+            ? `As execuções excluídas receberam 401 ou 403: ${CREDENTIAL_HINT}.`
+            : `${capitalize(VALID_REQUEST_HINT)} para que todas as execuções respondam com sucesso.`,
     }),
     PERF_LOW_STABILITY: entry<{ coefficientOfVariation: number; threshold: number; runs: number }>({
         severity: 'Warning',

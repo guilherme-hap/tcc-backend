@@ -113,13 +113,18 @@ function aggregateWarnings(
                 }));
                 break;
             case 'PERF_EXCLUDED_4XX':
-                aggregated.push(auditMessage('PERF_EXCLUDED_4XX', { count: sum(numericParam(group, 'count')) }));
+                aggregated.push(auditMessage('PERF_EXCLUDED_4XX', {
+                    count: sum(numericParam(group, 'count')),
+                    rejectedAuth: sum(numericParam(group, 'rejectedAuth')),
+                }));
                 break;
             case 'PERF_NO_RESPONSE':
                 aggregated.push(auditMessage('PERF_NO_RESPONSE', { attempts: sum(numericParam(group, 'attempts')) }));
                 break;
             case 'PERF_NO_VALID_SAMPLE':
-                if (runsCounted === 0) aggregated.push(group[0]);
+                if (runsCounted === 0) {
+                    aggregated.push(auditMessage('PERF_NO_VALID_SAMPLE', { rejectedAuth: sum(numericParam(group, 'rejectedAuth')) }));
+                }
                 break;
             default:
                 aggregated.push(group[0]);
@@ -131,7 +136,11 @@ function aggregateWarnings(
         aggregated.push(auditMessage('PERF_CLIENT_BIAS_RUNS', { affected: biased, total: totalRuns }));
     }
     if (runsCounted > 0 && runsCounted < totalRuns) {
-        aggregated.push(auditMessage('PERF_RUNS_EXCLUDED', { counted: runsCounted, total: totalRuns }));
+        aggregated.push(auditMessage('PERF_RUNS_EXCLUDED', {
+            counted: runsCounted,
+            total: totalRuns,
+            rejectedAuth: sum(numericParam(byCode.get('PERF_NO_VALID_SAMPLE') ?? [], 'rejectedAuth')),
+        }));
     }
 
     return aggregated;

@@ -24,6 +24,7 @@ import type { LatencySamples } from '../utils/latencySamples.js';
 const MIN_SAMPLE_SIZE = 100;
 const MIN_RESPONSE_TIMEOUT_SECONDS = 10;
 const MIN_TICK_INTERVAL_MS = 500;
+const AUTH_REJECTION_STATUSES = new Set([401, 403]);
 
 interface SecondCounts {
     responses: number;
@@ -37,6 +38,7 @@ interface ResponseCounts {
     tolerating: number;
     frustrated: number;
     excluded4xx: number;
+    rejectedAuth: number;
     serverErrors: number;
     responses: number;
     sent: number;
@@ -204,13 +206,13 @@ export class AutocannonService {
         const totalAttempts = counts.responses + errors + counts.unanswered;
 
         if (counts.excluded4xx > 0) {
-            warnings.push(auditMessage('PERF_EXCLUDED_4XX', { count: counts.excluded4xx }));
+            warnings.push(auditMessage('PERF_EXCLUDED_4XX', { count: counts.excluded4xx, rejectedAuth: counts.rejectedAuth }));
         }
         if (counts.responses === 0 && totalAttempts > 0) {
             warnings.push(auditMessage('PERF_NO_RESPONSE', { attempts: totalAttempts }));
         }
         if (sampleSize === 0) {
-            warnings.push(auditMessage('PERF_NO_VALID_SAMPLE'));
+            warnings.push(auditMessage('PERF_NO_VALID_SAMPLE', { rejectedAuth: counts.rejectedAuth }));
         } else if (sampleSize < MIN_SAMPLE_SIZE) {
             warnings.push(auditMessage('PERF_SMALL_SAMPLE', { sampleSize, affected: 1, runs: 1 }));
         }
@@ -300,6 +302,7 @@ export class AutocannonService {
                 tolerating: 0,
                 frustrated: 0,
                 excluded4xx: 0,
+                rejectedAuth: 0,
                 serverErrors: 0,
                 responses: 0,
                 sent: 0,
@@ -387,6 +390,7 @@ export class AutocannonService {
 
         if (statusCode >= 400 && statusCode < 500) {
             counts.excluded4xx++;
+            if (AUTH_REJECTION_STATUSES.has(statusCode)) counts.rejectedAuth++;
             return;
         }
 
