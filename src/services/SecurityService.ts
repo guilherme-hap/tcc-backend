@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 import { auditMessage, type IAuditMessage } from '../messages/catalog.js';
 import { AppError } from '../errors/AppError.js';
+import { withUserAgent } from '../config/userAgent.js';
 import { blockedTargetOf, outboundAgents, outboundLookup } from '../utils/outboundGuard.js';
 import type { ISecurityCheckResult, SecurityLayer } from '../interfaces/evaluation.interface.js';
 
@@ -81,6 +82,7 @@ export class SecurityService {
     private async requestHeaders(method: 'HEAD' | 'GET', url: string, options: ProbeOptions): Promise<AxiosResponse> {
         const response = await axios.request({
             ...options,
+            headers: withUserAgent(options.headers),
             url,
             method,
             responseType: 'stream',

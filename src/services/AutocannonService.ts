@@ -17,6 +17,7 @@ import type { MeasurementPlan } from '../utils/measurementPlan.js';
 import { startSaturationMonitor } from '../utils/saturation.js';
 import { probeFailure } from '../utils/failureProbe.js';
 import { assertPublicTarget } from '../utils/outboundGuard.js';
+import { withUserAgent } from '../config/userAgent.js';
 import { createLatencySamples, recordLatency, summarizeLatency } from '../utils/latencySamples.js';
 import type { LatencySamples } from '../utils/latencySamples.js';
 
@@ -99,7 +100,7 @@ export class AutocannonService {
         if (statusCode === null && errorCode === null) return null;
 
         const probe = statusCode !== null && !isMutating
-            ? await probeFailure(targetUrl, options.method, options.headers ?? {})
+            ? await probeFailure(targetUrl, options.method, withUserAgent(options.headers))
             : null;
         const bodySnippet = probe !== null && probe.statusCode >= 500 ? probe.bodySnippet : null;
 
@@ -141,7 +142,7 @@ export class AutocannonService {
         const maxRequests = options.maxRequests ?? (isMutating ? 50 : undefined);
         const connections = Math.min(options.connections ?? (isMutating ? 2 : 10), maxRequests ?? Infinity);
 
-        const headers: Record<string, string> = { ...options.headers };
+        const headers = withUserAgent({ ...options.headers });
         if ((body || payloadFactory) && !headers['content-type'] && !headers['Content-Type']) {
             headers['content-type'] = 'application/json';
         }
