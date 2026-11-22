@@ -8,6 +8,7 @@ import { SavedApi } from '../entities/SavedApi.js';
 import { CustomRule } from '../entities/CustomRule.js';
 import { dbConnection } from './database.js';
 import { Baseline1795305307365 } from '../migrations/1795305307365-Baseline.js';
+import { AddUserTokenVersion1795305307366 } from '../migrations/1795305307366-AddUserTokenVersion.js';
 
 export const AppDataSource = new DataSource({
     type: 'postgres',
@@ -19,6 +20,6 @@ export const AppDataSource = new DataSource({
     synchronize: false,
     logging: process.env.DB_LOGGING ? process.env.DB_LOGGING === 'true' : false,
     entities: [Evaluation, EvaluationJob, User, SavedApi, CustomRule],
-    migrations: [Baseline1795305307365],
+    migrations: [Baseline1795305307365, AddUserTokenVersion1795305307366],
     subscribers: [],
 });

@@ -5,8 +5,8 @@ export interface AuthenticatedRequest extends Request {
     userId?: string;
 }
 
-export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction): void {
-    const payload = verifyToken(req.headers.authorization);
+export async function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
+    const payload = await verifyToken(req.headers.authorization);
     if (payload) {
         req.userId = payload.sub;
     }

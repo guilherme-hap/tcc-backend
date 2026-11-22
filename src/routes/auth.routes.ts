@@ -165,9 +165,27 @@ const authController = new AuthController();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *
+ * /api/auth/logout:
+ *   post:
+ *     summary: "Encerra as sessões do usuário"
+ *     description: "Revoga no servidor todos os tokens já emitidos para a conta."
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       204:
+ *         description: "Sessões encerradas."
+ *       401:
+ *         description: "Token ausente, inválido, expirado, revogado ou de uma conta que não existe mais."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/register', validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);
+router.post('/logout', requireAuth, authController.logout);
 router.get('/me', requireAuth, authController.me);
 
 export default router;

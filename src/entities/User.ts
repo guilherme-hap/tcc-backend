@@ -17,6 +17,9 @@ export class User {
     @Column({ name: 'password_hash', type: 'varchar' })
     passwordHash!: string;
 
+    @Column({ name: 'token_version', type: 'int', default: 0 })
+    tokenVersion!: number;
+
     @OneToMany(() => SavedApi, (api) => api.user)
     savedApis!: Relation<SavedApi>[];
 
