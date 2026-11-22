@@ -55,6 +55,7 @@ jobs:
           DB_AUTO_CREATE: 'false'
           JWT_SECRET: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
+          export CREDENTIALS_KEY="$(openssl rand -base64 32)"
           npm ci
           npm run build
           npm start > auditor.log 2>&1 &

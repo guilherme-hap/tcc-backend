@@ -26,6 +26,7 @@ services:
       DB_NAME: specping
       DB_AUTO_CREATE: "false"
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      CREDENTIALS_KEY: ${CREDENTIALS_KEY:?defina CREDENTIALS_KEY no .env}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       LOAD_WORKER_MODE: embedded
     ports:
