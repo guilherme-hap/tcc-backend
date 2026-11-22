@@ -25,7 +25,6 @@ services:
       DB_PASSWORD: specping
       DB_NAME: specping
       DB_AUTO_CREATE: "false"
-      DB_SYNCHRONIZE: "true"
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       LOAD_WORKER_MODE: embedded

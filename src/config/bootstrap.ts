@@ -27,6 +27,8 @@ export async function bootstrap(app: Express, port: number | string) {
         await AppDataSource.initialize();
         console.log('Data Source initialized successfully');
 
+        await AppDataSource.runMigrations();
+
         await registerWorkers();
         console.log('Workers registered successfully');
 

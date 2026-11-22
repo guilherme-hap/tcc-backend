@@ -7,6 +7,7 @@ import { User } from '../entities/User.js';
 import { SavedApi } from '../entities/SavedApi.js';
 import { CustomRule } from '../entities/CustomRule.js';
 import { dbConnection } from './database.js';
+import { Baseline1795305307365 } from '../migrations/1795305307365-Baseline.js';
 
 export const AppDataSource = new DataSource({
     type: 'postgres',
@@ -15,9 +16,9 @@ export const AppDataSource = new DataSource({
     username: dbConnection.user,
     password: dbConnection.password,
     database: dbConnection.database,
-    synchronize: process.env.DB_SYNCHRONIZE ? process.env.DB_SYNCHRONIZE === 'true' : true,
+    synchronize: false,
     logging: process.env.DB_LOGGING ? process.env.DB_LOGGING === 'true' : false,
     entities: [Evaluation, EvaluationJob, User, SavedApi, CustomRule],
-    migrations: [],
+    migrations: [Baseline1795305307365],
     subscribers: [],
 });
