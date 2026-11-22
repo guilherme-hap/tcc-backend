@@ -4,7 +4,7 @@ import {
 } from 'typeorm';
 import type { Relation } from 'typeorm';
 import { User } from './User.js';
-import type { LoadTestOptionsInput } from '../schemas/loadTestOptions.schema.js';
+import type { SavedApiSettings } from '../utils/savedApiSettings.js';
 
 @Entity('saved_apis')
 @Unique(['userId', 'name'])
@@ -29,10 +29,7 @@ export class SavedApi {
     apiBaseUrl!: string | null;
 
     @Column({ name: 'default_settings', type: 'jsonb', nullable: true })
-    defaultSettings!: {
-        rulesConfig?: Record<string, boolean>;
-        loadTestOptions?: LoadTestOptionsInput;
-    } | null;
+    defaultSettings!: SavedApiSettings | null;
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;

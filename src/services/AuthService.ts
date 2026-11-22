@@ -62,9 +62,13 @@ export class AuthService {
         return { id: user.id, email: user.email };
     }
 
+    async logout(userId: string): Promise<void> {
+        await this.repository.increment({ id: userId }, 'tokenVersion', 1);
+    }
+
     private toAuthResult(user: User): AuthResult {
         const expiresIn = (process.env.JWT_EXPIRES_IN || '8h') as jwt.SignOptions['expiresIn'];
-        const token = jwt.sign({ sub: user.id, email: user.email }, jwtSecret(), { expiresIn });
+        const token = jwt.sign({ sub: user.id, email: user.email, ver: user.tokenVersion }, jwtSecret(), { expiresIn });
 
         return { user: { id: user.id, email: user.email }, token };
     }

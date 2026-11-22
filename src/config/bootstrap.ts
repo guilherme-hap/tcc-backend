@@ -4,12 +4,14 @@ import pg from 'pg';
 import { AppDataSource } from './data-source.js';
 import { dbConnection } from './database.js';
 import { registerWorkers } from '../workers/index.js';
+import { credentialsKey } from '../utils/credentialCipher.js';
 import { jwtSecret } from '../utils/jwtSecret.js';
 import { isPublicDeployment } from './publicDeployment.js';
 
 export async function bootstrap(app: Express, port: number | string) {
     try {
         jwtSecret();
+        credentialsKey();
 
         const autoCreate = process.env.DB_AUTO_CREATE !== 'false';
 
@@ -26,6 +28,8 @@ export async function bootstrap(app: Express, port: number | string) {
 
         await AppDataSource.initialize();
         console.log('Data Source initialized successfully');
+
+        await AppDataSource.runMigrations();
 
         await registerWorkers();
         console.log('Workers registered successfully');
