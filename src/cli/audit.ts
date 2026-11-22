@@ -28,6 +28,9 @@ Opções:
   --output <arquivo>    grava o resultado completo em JSON
   --help                mostra esta ajuda
 
+Variáveis de ambiente:
+  AUDITOR_TOKEN         token de uma conta do Specping, exigido para performance e full em uma instalação pública
+
 Sem nota mínima, a avaliação é aprovada quando termina COMPLETED.`;
 
 interface ApiError {
@@ -137,7 +140,9 @@ async function readRequest(path: string): Promise<Record<string, unknown>> {
 async function callApi(url: string, init?: RequestInit): Promise<{ status: number; body: unknown }> {
     let response: Response;
     try {
-        response = await fetch(url, { ...init, headers: { ...init?.headers, connection: 'close' } });
+        const token = process.env.AUDITOR_TOKEN;
+        const authorization: Record<string, string> = token ? { authorization: `Bearer ${token}` } : {};
+        response = await fetch(url, { ...init, headers: { ...init?.headers, ...authorization, connection: 'close' } });
     } catch (error) {
         const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : String(error);
         fail(`não foi possível acessar o Specping em ${url} (${cause}).`);
