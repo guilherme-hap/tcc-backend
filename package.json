@@ -9,11 +9,12 @@
     "start": "node dist/index.js",
     "worker:load": "tsx src/loadWorker.ts",
     "start:worker:load": "node dist/loadWorker.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
     "migration:generate": "tsx node_modules/typeorm/cli.js migration:generate -d src/config/data-source.ts --esm",
     "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/config/data-source.ts",
     "migration:revert": "tsx node_modules/typeorm/cli.js migration:revert -d src/config/data-source.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit"
   },
   "keywords": [],
   "type": "module",
@@ -51,6 +52,7 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.6",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
   }
 }
